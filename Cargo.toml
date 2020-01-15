@@ -15,3 +15,4 @@ capstone4 = ["falcon/capstone4"]
 [dependencies]
 clap = "2.33.0"
 falcon = "0.4.7"
+falcon_muasm = { git = "https://github.com/emmanuel099/falcon-muasm" }
