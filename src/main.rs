@@ -13,5 +13,5 @@ fn main() {
         )
         .get_matches();
 
-    let filename = Path::new(matches.value_of("FILE").unwrap());
+    let _filename = Path::new(matches.value_of("FILE").unwrap());
 }
