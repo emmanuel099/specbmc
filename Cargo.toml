@@ -1,0 +1,12 @@
+[package]
+name = "specbmc"
+version = "0.1.0"
+authors = ["Emmanuel Pescosta <emmanuelpescosta099@gmail.com>"]
+description = "Bounded model checker for speculative non-interference."
+license = "Apache-2.0"
+edition = "2018"
+repository = "https://github.com/emmanuel099/specbmc"
+readme = "README.md"
+
+[dependencies]
+clap = "2.33.0"
