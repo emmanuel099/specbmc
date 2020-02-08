@@ -39,9 +39,6 @@ impl Node {
 
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.address {
-            Some(address) => write!(f, "{:X} {}", address, self.operation),
-            None => write!(f, "{}", self.operation),
-        }
+        write!(f, "{}", self.operation)
     }
 }
