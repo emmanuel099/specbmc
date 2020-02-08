@@ -1,4 +1,5 @@
-use crate::ir::Node;
+use crate::error::Result;
+use crate::ir::{Expression, Node, Operation, Variable};
 use falcon::graph;
 use std::fmt;
 
@@ -30,6 +31,21 @@ impl Block {
 
     pub fn nodes_mut(&mut self) -> &mut [Node] {
         &mut self.nodes
+    }
+
+    pub fn add_let(&mut self, var: Variable, expr: Expression) -> Result<&mut Node> {
+        self.nodes.push(Node::new(Operation::new_let(var, expr)?));
+        Ok(self.nodes.last_mut().unwrap())
+    }
+
+    pub fn add_assert(&mut self, cond: Expression) -> Result<&mut Node> {
+        self.nodes.push(Node::new(Operation::new_assert(cond)?));
+        Ok(self.nodes.last_mut().unwrap())
+    }
+
+    pub fn add_assume(&mut self, cond: Expression) -> Result<&mut Node> {
+        self.nodes.push(Node::new(Operation::new_assume(cond)?));
+        Ok(self.nodes.last_mut().unwrap())
     }
 }
 
