@@ -3,7 +3,7 @@ use std::fmt;
 #[derive(Clone, Debug)]
 pub enum Sort {
     Bool,
-    BitVector(u32),
+    BitVector(usize),
     Memory,
 }
 

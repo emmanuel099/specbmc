@@ -1,3 +1,4 @@
+use crate::error::Result;
 use crate::ir::{Expression, Variable};
 use std::fmt;
 
@@ -20,18 +21,18 @@ pub enum Operation {
 
 impl Operation {
     /// Create a new `Operation::Let`.
-    pub fn new_let(var: Variable, expr: Expression) -> Self {
-        Self::Let { var, expr }
+    pub fn new_let(var: Variable, expr: Expression) -> Result<Self> {
+        Ok(Self::Let { var, expr })
     }
 
     /// Create a new `Operation::Assert`.
-    pub fn new_assert(cond: Expression) -> Self {
-        Self::Assert { cond }
+    pub fn new_assert(cond: Expression) -> Result<Self> {
+        Ok(Self::Assert { cond })
     }
 
     /// Create a new `Operation::Assume`.
-    pub fn new_assume(cond: Expression) -> Self {
-        Self::Assume { cond }
+    pub fn new_assume(cond: Expression) -> Result<Self> {
+        Ok(Self::Assume { cond })
     }
 
     pub fn is_let(&self) -> bool {
