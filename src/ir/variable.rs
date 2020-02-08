@@ -5,6 +5,7 @@ use std::fmt;
 pub struct Variable {
     name: String,
     sort: Sort,
+    version: Option<usize>, // Version in SSA form
 }
 
 impl Variable {
@@ -16,6 +17,7 @@ impl Variable {
         Self {
             name: name.into(),
             sort,
+            version: None,
         }
     }
 
@@ -28,11 +30,30 @@ impl Variable {
     pub fn sort(&self) -> &Sort {
         &self.sort
     }
+
+    // Gets the SSA version of the `Variable` or None if no SSA version is set.
+    pub fn version(&self) -> Option<usize> {
+        self.version.clone()
+    }
+
+    // Sets the SSA version of the `Variable`.
+    pub fn set_version(&mut self, version: Option<usize>) {
+        self.version = version;
+    }
+
+    /// An identifier for the `Variable`.
+    pub fn identifier(&self) -> String {
+        let version_str = match self.version() {
+            Some(version) => format!(".{}", version),
+            None => String::default(),
+        };
+        format!("{}{}", self.name, version_str)
+    }
 }
 
 impl fmt::Display for Variable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}", self.name(), self.sort())
+        write!(f, "{}:{}", self.identifier(), self.sort())
     }
 }
 
