@@ -71,10 +71,8 @@ impl BlockGraph {
     }
 
     /// Creates a new basic block, adds it to the graph, and returns it
-    pub fn new_block(&mut self, index: usize) -> Result<&mut Block> {
-        let block = Block::new(index);
-        self.graph.insert_vertex(block)?;
-        Ok(self.graph.vertex_mut(index).unwrap())
+    pub fn add_block(&mut self, block: Block) -> Result<()> {
+        Ok(self.graph.insert_vertex(block)?)
     }
 
     /// Creates an edge from one block to another block
