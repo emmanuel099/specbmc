@@ -22,16 +22,19 @@ pub enum Operation {
 impl Operation {
     /// Create a new `Operation::Let`.
     pub fn new_let(var: Variable, expr: Expression) -> Result<Self> {
+        expr.sort().expect_sort(var.sort())?;
         Ok(Self::Let { var, expr })
     }
 
     /// Create a new `Operation::Assert`.
     pub fn new_assert(cond: Expression) -> Result<Self> {
+        cond.sort().expect_bool()?;
         Ok(Self::Assert { cond })
     }
 
     /// Create a new `Operation::Assume`.
     pub fn new_assume(cond: Expression) -> Result<Self> {
+        cond.sort().expect_bool()?;
         Ok(Self::Assume { cond })
     }
 
