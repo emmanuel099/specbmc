@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::ir::{Expression, Node, Operation, Variable};
+use crate::ir::{Boolean, Expression, Node, Operation, Variable};
 use falcon::graph;
 use std::fmt;
 
@@ -10,7 +10,7 @@ pub struct Block {
     /// The instructions for this block.
     nodes: Vec<Node>,
     // The execution condition of this block.
-    //execution_condition: Expression,
+    execution_condition: Expression,
 }
 
 impl Block {
@@ -18,6 +18,7 @@ impl Block {
         Block {
             index,
             nodes: Vec::new(),
+            execution_condition: Boolean::constant(false).into(),
         }
     }
 
@@ -31,6 +32,14 @@ impl Block {
 
     pub fn nodes_mut(&mut self) -> &mut [Node] {
         &mut self.nodes
+    }
+
+    pub fn execution_condition(&self) -> &Expression {
+        &self.execution_condition
+    }
+
+    pub fn set_execution_condition(&mut self, expr: Expression) {
+        self.execution_condition = expr;
     }
 
     pub fn add_let(&mut self, var: Variable, expr: Expression) -> Result<&mut Node> {
@@ -61,7 +70,7 @@ impl graph::Vertex for Block {
 
 impl fmt::Display for Block {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "[ Block: 0x{:X} ]", self.index)?;
+        writeln!(f, "Block 0x{:X} [{}]", self.index, self.execution_condition)?;
         for node in self.nodes() {
             writeln!(f, "{}", node)?;
         }
