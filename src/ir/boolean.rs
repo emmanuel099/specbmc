@@ -22,7 +22,7 @@ impl fmt::Display for Boolean {
         match *self {
             Self::Not => write!(f, "not"),
             Self::Imply => write!(f, "=>"),
-            Self::And => write!(f, "ite"),
+            Self::And => write!(f, "and"),
             Self::Or => write!(f, "or"),
             Self::Xor => write!(f, "xor"),
         }
@@ -62,6 +62,22 @@ impl Boolean {
         ))
     }
 
+    pub fn conjunction(formulas: &[Expression]) -> Result<Expression> {
+        if formulas.is_empty() {
+            return Ok(Self::constant(true).into());
+        }
+
+        for formula in formulas {
+            formula.sort().expect_bool()?;
+        }
+
+        Ok(Expression::new(
+            Boolean::And.into(),
+            formulas.to_vec(),
+            Sort::Bool,
+        ))
+    }
+
     pub fn or(lhs: Expression, rhs: Expression) -> Result<Expression> {
         lhs.sort().expect_bool()?;
         rhs.sort().expect_bool()?;
@@ -69,6 +85,22 @@ impl Boolean {
         Ok(Expression::new(
             Boolean::Or.into(),
             vec![lhs, rhs],
+            Sort::Bool,
+        ))
+    }
+
+    pub fn disjunction(formulas: &[Expression]) -> Result<Expression> {
+        if formulas.is_empty() {
+            return Ok(Self::constant(false).into());
+        }
+
+        for formula in formulas {
+            formula.sort().expect_bool()?;
+        }
+
+        Ok(Expression::new(
+            Boolean::Or.into(),
+            formulas.to_vec(),
             Sort::Bool,
         ))
     }
