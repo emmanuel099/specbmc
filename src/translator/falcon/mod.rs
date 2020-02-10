@@ -28,6 +28,16 @@ fn translate_control_flow_graph(cfg: &il::ControlFlowGraph) -> Result<ir::BlockG
     Ok(block_graph)
 }
 
+fn transition_condition(predecessor: &ir::Block, edge: &il::Edge) -> Result<ir::Expression> {
+    match edge.condition() {
+        Some(condition) => ir::Boolean::and(
+            predecessor.execution_condition_variable().clone().into(),
+            translate_expr(condition)?,
+        ),
+        None => Ok(predecessor.execution_condition_variable().clone().into()), // unconditional transition
+    }
+}
+
 /// Computes the execution condition of the block.
 ///
 /// The execution condition is defined as:
@@ -48,14 +58,7 @@ fn compute_execution_condition(
     for pred_index in predecessors {
         let predecessor = block_graph.block(pred_index)?;
         let edge = cfg.edge(pred_index, block_index)?;
-        let transition = match edge.condition() {
-            Some(condition) => ir::Boolean::and(
-                predecessor.execution_condition_variable().clone().into(),
-                translate_expr(condition)?,
-            )?,
-            None => predecessor.execution_condition_variable().clone().into(), // unconditional transition
-        };
-        transitions.push(transition);
+        transitions.push(transition_condition(predecessor, edge)?);
     }
 
     ir::Boolean::disjunction(&transitions)
@@ -72,9 +75,30 @@ fn translate_block(
     let src_block = cfg.block(block_index)?;
 
     for phi_node in src_block.phi_nodes() {
-        let var = translate_scalar(phi_node.out())?;
-        let expr = ir::Expression::constant(ir::BitVector::constant(42, 64));
-        block.add_let(var, expr)?;
+        let mut phi_expr: Option<ir::Expression> = None;
+
+        if let Some(scalar) = phi_node.entry_scalar() {
+            let phi_var = translate_scalar(scalar)?;
+            phi_expr = Some(phi_var.into());
+        }
+
+        for pred_index in cfg.predecessor_indices(block_index)? {
+            let predecessor = block_graph.block(pred_index)?;
+            let edge = cfg.edge(pred_index, block_index)?;
+            let phi_cond = transition_condition(predecessor, edge)?;
+            let phi_var = translate_scalar(phi_node.incoming_scalar(pred_index).unwrap())?;
+
+            if let Some(expr) = phi_expr {
+                phi_expr = Some(ir::Expression::ite(phi_cond, phi_var.into(), expr)?);
+            } else {
+                phi_expr = Some(phi_var.into());
+            }
+        }
+
+        if let Some(expr) = phi_expr {
+            let var = translate_scalar(phi_node.out())?;
+            block.add_let(var, expr)?;
+        }
     }
 
     for instruction in src_block.instructions() {
@@ -93,8 +117,8 @@ fn translate_block(
                 node.set_address(instruction.address());
             }
             il::Operation::Store { index, src } => {
-                let mem_old = ir::Variable::new("memory", ir::Sort::Memory(64));
-                let mem_new = ir::Variable::new("memory", ir::Sort::Memory(64));
+                let mem_old = ir::Variable::new("_memory", ir::Sort::Memory(64));
+                let mem_new = ir::Variable::new("_memory", ir::Sort::Memory(64));
                 let addr = translate_expr(index)?;
                 let value = translate_expr(src)?;
                 let node = block.add_let(mem_new, ir::Memory::store(mem_old, addr, value)?)?;
@@ -103,7 +127,7 @@ fn translate_block(
             il::Operation::Load { dst, index } => {
                 let bit_width = dst.bits();
                 let var = translate_scalar(dst)?;
-                let mem = ir::Variable::new("memory", ir::Sort::Memory(64));
+                let mem = ir::Variable::new("_memory", ir::Sort::Memory(64));
                 let addr = translate_expr(index)?;
                 let node = block.add_let(var, ir::Memory::load(bit_width, mem, addr)?)?;
                 node.set_address(instruction.address());
