@@ -1,9 +1,9 @@
 use crate::error::Result;
-use crate::ir::{Boolean, Expression, Node, Operation, Sort, Variable};
+use crate::lir::{Boolean, Expression, Node, Operation, Sort, Variable};
 use falcon::graph;
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Block {
     /// The index of this block.
     index: usize,

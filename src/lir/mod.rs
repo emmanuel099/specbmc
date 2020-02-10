@@ -1,4 +1,4 @@
-//! SpecBMC IR
+//! SpecBMC LIR
 
 mod bitvector;
 mod block;

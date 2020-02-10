@@ -1,8 +1,8 @@
 use crate::error::Result;
-use crate::ir::{Expression, Variable};
+use crate::lir::{Expression, Variable};
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Operation {
     // Bind the expression to a variable.
     Let {

@@ -1,8 +1,8 @@
 use crate::error::Result;
-use crate::ir::{Expression, Operator, Sort, Variable};
+use crate::lir::{Expression, Operator, Sort, Variable};
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Memory {
     Store(usize),
     Load(usize),

@@ -1,7 +1,7 @@
-use crate::ir::Operation;
+use crate::lir::Operation;
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Node {
     operation: Operation,
     address: Option<u64>,

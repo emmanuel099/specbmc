@@ -1,10 +1,10 @@
 use crate::error::{ErrorKind, Result};
-use crate::ir::{Constant, Expression, Operator, Sort};
+use crate::lir::{Constant, Expression, Operator, Sort};
 use num_bigint::BigUint;
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Value {
     value: BigUint,
     bits: usize,
@@ -129,7 +129,7 @@ impl fmt::Display for Value {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum BitVector {
     ToBoolean,
     FromBoolean(usize),

@@ -1,7 +1,7 @@
 use crate::error::Result;
 use std::fmt;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
 pub enum Sort {
     Bool,
     BitVector(usize),

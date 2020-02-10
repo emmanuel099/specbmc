@@ -1,9 +1,9 @@
 use crate::error::*;
-use crate::ir::{Block, Edge};
+use crate::lir::{Block, Edge};
 use falcon::graph::Graph;
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct BlockGraph {
     graph: Graph<Block, Edge>,
     entry: Option<usize>,

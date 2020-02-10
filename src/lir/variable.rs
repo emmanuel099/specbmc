@@ -1,7 +1,7 @@
-use crate::ir::{Expression, Sort};
+use crate::lir::{Expression, Sort};
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Variable {
     name: String,
     sort: Sort,

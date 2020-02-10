@@ -1,8 +1,8 @@
 use crate::error::Result;
-use crate::ir::{BitVector, Boolean, Constant, Memory, Sort, Variable};
+use crate::lir::{BitVector, Boolean, Constant, Memory, Sort, Variable};
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Operator {
     Variable(Variable),
     Constant(Constant),
@@ -29,7 +29,7 @@ impl fmt::Display for Operator {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Expression {
     operator: Operator,
     operands: Vec<Expression>,
@@ -85,6 +85,34 @@ impl Expression {
             vec![lhs, rhs],
             Sort::Bool,
         ))
+    }
+
+    /// Returns all `Variables` used in this `Expression`
+    pub fn variables(&self) -> Vec<&Variable> {
+        let mut variables: Vec<&Variable> = Vec::new();
+        match &self.operator {
+            Operator::Variable(variable) => variables.push(variable),
+            _ => {
+                for operand in &self.operands {
+                    variables.append(&mut operand.variables())
+                }
+            }
+        }
+        variables
+    }
+
+    /// Return mutable references to all `Variables` in this `Expression`.
+    pub fn variables_mut(&mut self) -> Vec<&mut Variable> {
+        let mut variables: Vec<&mut Variable> = Vec::new();
+        match &mut self.operator {
+            Operator::Variable(variable) => variables.push(variable),
+            _ => {
+                for operand in &mut self.operands {
+                    variables.append(&mut operand.variables_mut())
+                }
+            }
+        }
+        variables
     }
 }
 

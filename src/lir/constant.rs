@@ -1,7 +1,7 @@
-use crate::ir::{bitvector, Expression, Sort};
+use crate::lir::{bitvector, Expression, Sort};
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Constant {
     Boolean(bool),
     BitVector(bitvector::Value),

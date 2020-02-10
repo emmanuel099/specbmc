@@ -4,8 +4,9 @@ extern crate error_chain;
 extern crate num_bigint;
 extern crate num_traits;
 
+pub mod hir;
+pub mod lir;
 pub mod translator;
-pub mod ir;
 
 pub mod error {
     error_chain! {

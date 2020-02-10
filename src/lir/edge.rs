@@ -1,7 +1,7 @@
 use falcon::graph;
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Edge {
     head: usize,
     tail: usize,
@@ -12,10 +12,12 @@ impl Edge {
         Self { head, tail }
     }
 
+    /// Retrieve the index of the head `Vertex` for this `Edge`.
     pub fn head(&self) -> usize {
         self.head
     }
 
+    /// Retrieve the index of the tail `Vertex` for this `Edge`.
     pub fn tail(&self) -> usize {
         self.tail
     }

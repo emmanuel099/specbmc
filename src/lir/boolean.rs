@@ -1,8 +1,8 @@
 use crate::error::Result;
-use crate::ir::{Constant, Expression, Operator, Sort};
+use crate::lir::{Constant, Expression, Operator, Sort};
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Boolean {
     Not,
     Imply,
