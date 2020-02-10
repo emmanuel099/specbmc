@@ -70,7 +70,7 @@ impl BlockGraph {
         Ok(self.graph.successor_indices(index)?)
     }
 
-    /// Creates a new basic block, adds it to the graph, and returns it
+    /// Adds the basic block to the graph
     pub fn add_block(&mut self, block: Block) -> Result<()> {
         Ok(self.graph.insert_vertex(block)?)
     }

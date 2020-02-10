@@ -9,24 +9,67 @@ pub fn translate_function(function: &il::Function) -> Result<ir::Program> {
 }
 
 fn translate_control_flow_graph(cfg: &il::ControlFlowGraph) -> Result<ir::BlockGraph> {
+    let entry = cfg.entry().ok_or("CFG entry must be set")?;
+
     let mut block_graph = ir::BlockGraph::new();
 
-    for block in cfg.blocks() {
-        block_graph.add_block(translate_block(block)?)?;
+    let topological_ordering = cfg.graph().compute_topological_ordering(entry)?;
+    for block_index in topological_ordering {
+        let block = translate_block(&block_graph, cfg, block_index)?;
+        block_graph.add_block(block)?;
     }
+
     for edge in cfg.edges() {
         block_graph.add_edge(edge.head(), edge.tail())?;
     }
 
-    if let Some(entry) = cfg.entry() {
-        block_graph.set_entry(entry)?;
-    }
+    block_graph.set_entry(entry)?;
 
     Ok(block_graph)
 }
 
-fn translate_block(src_block: &il::Block) -> Result<ir::Block> {
-    let mut block = ir::Block::new(src_block.index());
+/// Computes the execution condition of the block.
+///
+/// The execution condition is defined as:
+///    exec(b) = true                                               if pred(b) is empty
+///              Disjunction of p in pred(b). (exec(p) /\ t(p, b))  otherwise
+fn compute_execution_condition(
+    block_graph: &ir::BlockGraph,
+    cfg: &il::ControlFlowGraph,
+    block_index: usize,
+) -> Result<ir::Expression> {
+    let mut transitions = vec![];
+
+    let predecessors = cfg.predecessor_indices(block_index)?;
+    if predecessors.is_empty() {
+        return Ok(ir::Boolean::constant(true).into());
+    }
+
+    for pred_index in predecessors {
+        let predecessor = block_graph.block(pred_index)?;
+        let edge = cfg.edge(pred_index, block_index)?;
+        let transition = match edge.condition() {
+            Some(condition) => ir::Boolean::and(
+                predecessor.execution_condition_variable().clone().into(),
+                translate_expr(condition)?,
+            )?,
+            None => predecessor.execution_condition_variable().clone().into(), // unconditional transition
+        };
+        transitions.push(transition);
+    }
+
+    ir::Boolean::disjunction(&transitions)
+}
+
+fn translate_block(
+    block_graph: &ir::BlockGraph,
+    cfg: &il::ControlFlowGraph,
+    block_index: usize,
+) -> Result<ir::Block> {
+    let mut block = ir::Block::new(block_index);
+    block.set_execution_condition(compute_execution_condition(&block_graph, cfg, block_index)?);
+
+    let src_block = cfg.block(block_index)?;
 
     for phi_node in src_block.phi_nodes() {
         let var = translate_scalar(phi_node.out())?;

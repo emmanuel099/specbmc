@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::ir::{Boolean, Expression, Node, Operation, Variable};
+use crate::ir::{Boolean, Expression, Node, Operation, Sort, Variable};
 use falcon::graph;
 use std::fmt;
 
@@ -9,8 +9,11 @@ pub struct Block {
     index: usize,
     /// The instructions for this block.
     nodes: Vec<Node>,
-    // The execution condition of this block.
+    /// The execution condition of this block.
     execution_condition: Expression,
+    /// The variable which refers to the execution condition of this block.
+    /// Use the variable instead of the expression to reduce the length of the formulas.
+    execution_condition_variable: Variable,
 }
 
 impl Block {
@@ -19,6 +22,7 @@ impl Block {
             index,
             nodes: Vec::new(),
             execution_condition: Boolean::constant(false).into(),
+            execution_condition_variable: Variable::new(format!("_exec_{}", index), Sort::Bool),
         }
     }
 
@@ -42,18 +46,26 @@ impl Block {
         self.execution_condition = expr;
     }
 
+    pub fn execution_condition_variable(&self) -> &Variable {
+        &self.execution_condition_variable
+    }
+
+    pub fn add_node(&mut self, node: Node) {
+        self.nodes.push(node);
+    }
+
     pub fn add_let(&mut self, var: Variable, expr: Expression) -> Result<&mut Node> {
-        self.nodes.push(Node::new(Operation::new_let(var, expr)?));
+        self.add_node(Node::new(Operation::new_let(var, expr)?));
         Ok(self.nodes.last_mut().unwrap())
     }
 
     pub fn add_assert(&mut self, cond: Expression) -> Result<&mut Node> {
-        self.nodes.push(Node::new(Operation::new_assert(cond)?));
+        self.add_node(Node::new(Operation::new_assert(cond)?));
         Ok(self.nodes.last_mut().unwrap())
     }
 
     pub fn add_assume(&mut self, cond: Expression) -> Result<&mut Node> {
-        self.nodes.push(Node::new(Operation::new_assume(cond)?));
+        self.add_node(Node::new(Operation::new_assume(cond)?));
         Ok(self.nodes.last_mut().unwrap())
     }
 }
@@ -70,7 +82,11 @@ impl graph::Vertex for Block {
 
 impl fmt::Display for Block {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "Block 0x{:X} [{}]", self.index, self.execution_condition)?;
+        writeln!(
+            f,
+            "Block 0x{:X} [{} = {}]",
+            self.index, self.execution_condition_variable, self.execution_condition
+        )?;
         for node in self.nodes() {
             writeln!(f, "{}", node)?;
         }
