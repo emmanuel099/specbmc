@@ -24,6 +24,10 @@ impl fmt::Display for Memory {
 }
 
 impl Memory {
+    pub fn variable(address_width: usize) -> Variable {
+        Variable::new("_memory", Sort::Memory(address_width))
+    }
+
     pub fn load(bit_width: usize, memory: Variable, addr: Expression) -> Result<Expression> {
         memory.sort().expect_memory()?;
         addr.sort().expect_bit_vector()?;

@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::lir::{Constant, Expression, Operator, Sort};
+use crate::lir::{Constant, Expression, Operator, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -32,6 +32,10 @@ impl fmt::Display for Boolean {
 impl Boolean {
     pub fn constant(value: bool) -> Constant {
         Constant::Boolean(value)
+    }
+
+    pub fn variable(name: &str) -> Variable {
+        Variable::new(name, Sort::Bool)
     }
 
     pub fn not(expr: Expression) -> Result<Expression> {

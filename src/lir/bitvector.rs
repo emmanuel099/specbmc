@@ -1,5 +1,5 @@
 use crate::error::{ErrorKind, Result};
-use crate::lir::{Constant, Expression, Operator, Sort};
+use crate::lir::{Constant, Expression, Operator, Sort, Variable};
 use num_bigint::BigUint;
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::fmt;
@@ -251,6 +251,10 @@ impl BitVector {
 
     pub fn constant_big(value: BigUint, bits: usize) -> Constant {
         Constant::BitVector(Value::new_big(value, bits))
+    }
+
+    pub fn variable(name: &str, bits: usize) -> Variable {
+        Variable::new(name, Sort::BitVector(bits))
     }
 
     pub fn to_boolean(expr: Expression) -> Result<Expression> {
