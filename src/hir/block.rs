@@ -19,7 +19,7 @@ pub struct Block {
 impl Block {
     pub fn new(index: usize) -> Self {
         Self {
-            index: index,
+            index,
             next_instruction_index: 0,
             instructions: Vec::new(),
             phi_nodes: Vec::new(),
@@ -47,7 +47,7 @@ impl Block {
     ///
     /// Instruction indices are updated accordingly.
     pub fn append(&mut self, other: &Block) {
-        other.instructions().into_iter().for_each(|instruction| {
+        other.instructions().iter().for_each(|instruction| {
             let index = self.new_instruction_index();
             self.instructions.push(instruction.clone_new_index(index));
         })
@@ -97,7 +97,7 @@ impl Block {
             .map(|index| {
                 self.instructions.remove(index);
             })
-            .ok_or(format!("No instruction with index {} found", index).into())
+            .ok_or_else(|| format!("No instruction with index {} found", index).into())
     }
 
     /// Returns phi nodes of this `Block`

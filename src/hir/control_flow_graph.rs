@@ -255,7 +255,7 @@ impl ControlFlowGraph {
                 for edge in self.graph.edges_out(successor_index).unwrap() {
                     let head = merge_index;
                     let tail = edge.tail();
-                    let condition = edge.condition().clone();
+                    let condition = edge.condition();
                     let edge = Edge::new(head, tail, condition.cloned());
                     new_edges.push(edge);
                 }
@@ -386,16 +386,10 @@ impl ControlFlowGraph {
 impl fmt::Display for ControlFlowGraph {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for block in self.blocks() {
-            match writeln!(f, "{}", block) {
-                Err(e) => return Err(e),
-                Ok(_) => {}
-            }
+            writeln!(f, "{}", block)?;
         }
         for edge in self.edges() {
-            match writeln!(f, "edge {}", edge) {
-                Err(e) => return Err(e),
-                Ok(_) => {}
-            }
+            writeln!(f, "edge {}", edge)?;
         }
         Ok(())
     }

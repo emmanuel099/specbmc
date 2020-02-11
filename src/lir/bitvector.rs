@@ -15,7 +15,7 @@ impl Value {
     pub fn new(value: u64, bits: usize) -> Self {
         Self {
             value: Self::trim_value(BigUint::from_u64(value).unwrap(), bits),
-            bits: bits,
+            bits,
         }
     }
 
@@ -23,27 +23,25 @@ impl Value {
     pub fn new_big(value: BigUint, bits: usize) -> Self {
         Self {
             value: Self::trim_value(value, bits),
-            bits: bits,
+            bits,
         }
     }
 
     /// Crates a constant from a decimal string of the value
-    pub fn from_decimal_string(s: &String, bits: usize) -> Result<Self> {
+    pub fn from_decimal_string(s: &str, bits: usize) -> Result<Self> {
         let constant = Self::new_big(s.parse()?, bits);
-        Ok(if constant.bits() < bits {
-            constant.zext(bits)?
-        } else if constant.bits() > bits {
-            constant.trun(bits)?
-        } else {
-            constant
-        })
+        match constant.bits() {
+            b if b < bits => constant.zext(bits),
+            b if b > bits => constant.trun(bits),
+            _ => Ok(constant),
+        }
     }
 
     /// Create a new `Value` with the given bits and a value of zero
     pub fn new_zero(bits: usize) -> Self {
         Value {
             value: BigUint::from_u64(0).unwrap(),
-            bits: bits,
+            bits,
         }
     }
 
@@ -60,12 +58,10 @@ impl Value {
 
     /// Sign-extend the constant out to 64-bits, and return it as an `i64`
     pub fn value_i64(&self) -> Option<i64> {
-        if self.bits() > 64 {
-            None
-        } else if self.bits() == 64 {
-            self.value.to_u64().map(|v| v as i64)
-        } else {
-            self.sext(64).ok()?.value.to_u64().map(|v| v as i64)
+        match self.bits() {
+            b if b < 64 => self.sext(64).ok()?.value.to_u64().map(|v| v as i64),
+            b if b == 64 => self.value.to_u64().map(|v| v as i64),
+            _ => None,
         }
     }
 
@@ -257,22 +253,22 @@ impl BitVector {
         Constant::BitVector(Value::new_big(value, bits))
     }
 
-    pub fn to_boolean(src: Expression) -> Result<Expression> {
-        src.sort().expect_bit_vector()?;
+    pub fn to_boolean(expr: Expression) -> Result<Expression> {
+        expr.sort().expect_bit_vector()?;
 
         Ok(Expression::new(
             BitVector::ToBoolean.into(),
-            vec![src],
+            vec![expr],
             Sort::Bool,
         ))
     }
 
-    pub fn from_boolean(bits: usize, src: Expression) -> Result<Expression> {
-        src.sort().expect_bool()?;
+    pub fn from_boolean(bits: usize, expr: Expression) -> Result<Expression> {
+        expr.sort().expect_bool()?;
 
         Ok(Expression::new(
             BitVector::FromBoolean(bits).into(),
-            vec![src],
+            vec![expr],
             Sort::BitVector(bits),
         ))
     }
@@ -305,42 +301,42 @@ impl BitVector {
     bv_comp!(sgt, BitVector::SGt);
     bv_comp!(sge, BitVector::SGe);
 
-    pub fn zero_extend(bits: usize, src: Expression) -> Result<Expression> {
-        src.sort().expect_bit_vector()?;
+    pub fn zero_extend(bits: usize, expr: Expression) -> Result<Expression> {
+        expr.sort().expect_bit_vector()?;
 
         Ok(Expression::new(
             BitVector::ZeroExtend(bits).into(),
-            vec![src],
+            vec![expr],
             Sort::BitVector(bits),
         ))
     }
 
-    pub fn sign_extend(bits: usize, src: Expression) -> Result<Expression> {
-        src.sort().expect_bit_vector()?;
+    pub fn sign_extend(bits: usize, expr: Expression) -> Result<Expression> {
+        expr.sort().expect_bit_vector()?;
 
         Ok(Expression::new(
             BitVector::SignExtend(bits).into(),
-            vec![src],
+            vec![expr],
             Sort::BitVector(bits),
         ))
     }
 
-    pub fn extract(highest_bit: usize, lowest_bit: usize, src: Expression) -> Result<Expression> {
-        src.sort().expect_bit_vector()?;
+    pub fn extract(highest_bit: usize, lowest_bit: usize, expr: Expression) -> Result<Expression> {
+        expr.sort().expect_bit_vector()?;
 
         Ok(Expression::new(
             BitVector::Extract(highest_bit, lowest_bit).into(),
-            vec![src],
+            vec![expr],
             Sort::BitVector(highest_bit - lowest_bit + 1),
         ))
     }
 
-    pub fn truncate(bits: usize, src: Expression) -> Result<Expression> {
-        src.sort().expect_bit_vector()?;
+    pub fn truncate(bits: usize, expr: Expression) -> Result<Expression> {
+        expr.sort().expect_bit_vector()?;
 
         Ok(Expression::new(
             BitVector::Truncate(bits).into(),
-            vec![src],
+            vec![expr],
             Sort::BitVector(bits),
         ))
     }

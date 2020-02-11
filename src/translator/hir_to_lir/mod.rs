@@ -128,8 +128,7 @@ fn translate_block(
                 )?;
                 node.set_address(instruction.address());
             }
-            hir::Operation::Branch { .. } => continue,
-            hir::Operation::Barrier => continue,
+            hir::Operation::Branch { .. } | hir::Operation::Barrier => continue,
         }
     }
 

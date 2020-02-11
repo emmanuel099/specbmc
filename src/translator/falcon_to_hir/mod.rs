@@ -67,8 +67,7 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
                 let target = translate_expr(target)?;
                 block.branch(target);
             }
-            il::Operation::Intrinsic { .. } => continue,
-            il::Operation::Nop => continue,
+            il::Operation::Intrinsic { .. } | il::Operation::Nop => continue,
         }
     }
 

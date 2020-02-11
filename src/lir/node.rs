@@ -29,7 +29,7 @@ impl Node {
     }
 
     pub fn address(&self) -> Option<u64> {
-        self.address.clone()
+        self.address
     }
 
     pub fn set_address(&mut self, address: Option<u64>) {

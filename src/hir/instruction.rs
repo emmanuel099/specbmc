@@ -102,7 +102,7 @@ impl Instruction {
 
     /// Get the optional address for this `Instruction`
     pub fn address(&self) -> Option<u64> {
-        self.address.clone()
+        self.address
     }
 
     /// Set the optional address for this `Instruction`
@@ -114,7 +114,7 @@ impl Instruction {
     pub fn clone_new_index(&self, index: usize) -> Instruction {
         Instruction {
             operation: self.operation.clone(),
-            index: index,
+            index,
             address: self.address,
         }
     }

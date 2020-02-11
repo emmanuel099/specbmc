@@ -33,7 +33,7 @@ impl Variable {
 
     // Gets the SSA version of the `Variable` or None if no SSA version is set.
     pub fn version(&self) -> Option<usize> {
-        self.version.clone()
+        self.version
     }
 
     // Sets the SSA version of the `Variable`.
