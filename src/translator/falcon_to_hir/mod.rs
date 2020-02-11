@@ -67,7 +67,11 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
                 let target = translate_expr(target)?;
                 block.branch(target);
             }
-            il::Operation::Intrinsic { .. } | il::Operation::Nop => continue,
+            il::Operation::Intrinsic { intrinsic } => match intrinsic.mnemonic() {
+                "mfence" | "lfence" | "spbarr" => block.barrier(),
+                _ => continue,
+            },
+            il::Operation::Nop => continue,
         }
     }
 
