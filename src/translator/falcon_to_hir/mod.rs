@@ -120,13 +120,28 @@ fn translate_expr(expr: &il::Expression) -> Result<lir::Expression> {
             lir::BitVector::smod(translate_expr(lhs)?, translate_expr(rhs)?)
         }
         il::Expression::And(lhs, rhs) => {
-            lir::BitVector::and(translate_expr(lhs)?, translate_expr(rhs)?)
+            let lhs = translate_expr(lhs)?;
+            let rhs = translate_expr(rhs)?;
+            match lhs.sort() {
+                lir::Sort::Bool => lir::Boolean::and(lhs, rhs),
+                _ => lir::BitVector::and(lhs, rhs),
+            }
         }
         il::Expression::Or(lhs, rhs) => {
-            lir::BitVector::or(translate_expr(lhs)?, translate_expr(rhs)?)
+            let lhs = translate_expr(lhs)?;
+            let rhs = translate_expr(rhs)?;
+            match lhs.sort() {
+                lir::Sort::Bool => lir::Boolean::or(lhs, rhs),
+                _ => lir::BitVector::or(lhs, rhs),
+            }
         }
         il::Expression::Xor(lhs, rhs) => {
-            lir::BitVector::xor(translate_expr(lhs)?, translate_expr(rhs)?)
+            let lhs = translate_expr(lhs)?;
+            let rhs = translate_expr(rhs)?;
+            match lhs.sort() {
+                lir::Sort::Bool => lir::Boolean::xor(lhs, rhs),
+                _ => lir::BitVector::xor(lhs, rhs),
+            }
         }
         il::Expression::Shl(lhs, rhs) => {
             lir::BitVector::shl(translate_expr(lhs)?, translate_expr(rhs)?)
