@@ -17,5 +17,5 @@ clap = "2.33.0"
 error-chain = "0.12"
 num-bigint = "0.2"
 num-traits = "0.2.1"
-falcon = "0.4.7"
+falcon = "0.4.9"
 falcon_muasm = { git = "https://github.com/emmanuel099/falcon-muasm" }
