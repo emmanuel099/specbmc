@@ -252,7 +252,7 @@ impl Sort2Smt for lir::Sort {
         Writer: ::std::io::Write,
     {
         match self {
-            lir::Sort::Bool => write!(w, "Bool")?,
+            lir::Sort::Boolean => write!(w, "Bool")?,
             lir::Sort::BitVector(width) => write!(w, "(_ BitVec {})", width)?,
             lir::Sort::Array { range, domain } => {
                 write!(w, "(Array ")?;

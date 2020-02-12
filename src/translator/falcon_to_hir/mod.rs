@@ -80,8 +80,8 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
 
 fn maybe_cast(expr: lir::Expression, target_sort: &lir::Sort) -> Result<lir::Expression> {
     match (target_sort, expr.sort()) {
-        (lir::Sort::Bool, lir::Sort::BitVector(1)) => lir::BitVector::to_boolean(expr),
-        (lir::Sort::BitVector(bit_width), lir::Sort::Bool) => {
+        (lir::Sort::Boolean, lir::Sort::BitVector(1)) => lir::BitVector::to_boolean(expr),
+        (lir::Sort::BitVector(bit_width), lir::Sort::Boolean) => {
             lir::BitVector::from_boolean(*bit_width, expr)
         }
         _ => Ok(expr),
@@ -127,7 +127,7 @@ fn translate_expr(expr: &il::Expression) -> Result<lir::Expression> {
             let lhs = translate_expr(lhs)?;
             let rhs = translate_expr(rhs)?;
             match lhs.sort() {
-                lir::Sort::Bool => lir::Boolean::and(lhs, rhs),
+                lir::Sort::Boolean => lir::Boolean::and(lhs, rhs),
                 _ => lir::BitVector::and(lhs, rhs),
             }
         }
@@ -135,7 +135,7 @@ fn translate_expr(expr: &il::Expression) -> Result<lir::Expression> {
             let lhs = translate_expr(lhs)?;
             let rhs = translate_expr(rhs)?;
             match lhs.sort() {
-                lir::Sort::Bool => lir::Boolean::or(lhs, rhs),
+                lir::Sort::Boolean => lir::Boolean::or(lhs, rhs),
                 _ => lir::BitVector::or(lhs, rhs),
             }
         }
@@ -143,7 +143,7 @@ fn translate_expr(expr: &il::Expression) -> Result<lir::Expression> {
             let lhs = translate_expr(lhs)?;
             let rhs = translate_expr(rhs)?;
             match lhs.sort() {
-                lir::Sort::Bool => lir::Boolean::xor(lhs, rhs),
+                lir::Sort::Boolean => lir::Boolean::xor(lhs, rhs),
                 _ => lir::BitVector::xor(lhs, rhs),
             }
         }
@@ -168,7 +168,7 @@ fn translate_expr(expr: &il::Expression) -> Result<lir::Expression> {
         il::Expression::Zext(bits, src) => {
             let expr = translate_expr(src)?;
             match expr.sort() {
-                lir::Sort::Bool => lir::BitVector::from_boolean(*bits, expr),
+                lir::Sort::Boolean => lir::BitVector::from_boolean(*bits, expr),
                 _ => lir::BitVector::zero_extend(*bits, expr),
             }
         }
@@ -191,9 +191,9 @@ fn translate_expr(expr: &il::Expression) -> Result<lir::Expression> {
 
 fn translate_scalar(scalar: &il::Scalar) -> Result<lir::Variable> {
     let sort = if scalar.bits() > 1 {
-        lir::Sort::BitVector(scalar.bits())
+        lir::Sort::bit_vector(scalar.bits())
     } else {
-        lir::Sort::Bool
+        lir::Sort::boolean()
     };
     Ok(lir::Variable::new(scalar.name(), sort))
 }

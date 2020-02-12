@@ -72,7 +72,7 @@ impl Expression {
     }
 
     pub fn ite(cond: Expression, then: Expression, else_: Expression) -> Result<Expression> {
-        cond.sort().expect_bool()?;
+        cond.sort().expect_boolean()?;
         then.sort().expect_sort(else_.sort())?;
 
         let result_sort = then.sort().clone();
@@ -86,7 +86,11 @@ impl Expression {
     pub fn equal(lhs: Expression, rhs: Expression) -> Result<Expression> {
         lhs.sort().expect_sort(rhs.sort())?;
 
-        Ok(Expression::new(Operator::Equal, vec![lhs, rhs], Sort::Bool))
+        Ok(Expression::new(
+            Operator::Equal,
+            vec![lhs, rhs],
+            Sort::boolean(),
+        ))
     }
 
     pub fn unequal(lhs: Expression, rhs: Expression) -> Result<Expression> {

@@ -239,7 +239,7 @@ macro_rules! bv_comp {
             lhs.sort().expect_bit_vector()?;
             rhs.sort().expect_sort(lhs.sort())?;
 
-            Ok(Expression::new($op.into(), vec![lhs, rhs], Sort::Bool))
+            Ok(Expression::new($op.into(), vec![lhs, rhs], Sort::boolean()))
         }
     };
 }
@@ -263,12 +263,12 @@ impl BitVector {
         Ok(Expression::new(
             BitVector::ToBoolean.into(),
             vec![expr],
-            Sort::Bool,
+            Sort::boolean(),
         ))
     }
 
     pub fn from_boolean(bits: usize, expr: Expression) -> Result<Expression> {
-        expr.sort().expect_bool()?;
+        expr.sort().expect_boolean()?;
 
         Ok(Expression::new(
             BitVector::FromBoolean(bits).into(),

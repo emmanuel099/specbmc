@@ -60,7 +60,7 @@ impl Set {
         Ok(Expression::new(
             Set::Contains.into(),
             vec![set, value],
-            Sort::Bool,
+            Sort::boolean(),
         ))
     }
 }

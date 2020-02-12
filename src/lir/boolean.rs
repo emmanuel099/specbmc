@@ -35,34 +35,38 @@ impl Boolean {
     }
 
     pub fn variable(name: &str) -> Variable {
-        Variable::new(name, Sort::Bool)
+        Variable::new(name, Sort::boolean())
     }
 
     pub fn not(expr: Expression) -> Result<Expression> {
-        expr.sort().expect_bool()?;
+        expr.sort().expect_boolean()?;
 
-        Ok(Expression::new(Boolean::Not.into(), vec![expr], Sort::Bool))
+        Ok(Expression::new(
+            Boolean::Not.into(),
+            vec![expr],
+            Sort::boolean(),
+        ))
     }
 
     pub fn imply(lhs: Expression, rhs: Expression) -> Result<Expression> {
-        lhs.sort().expect_bool()?;
-        rhs.sort().expect_bool()?;
+        lhs.sort().expect_boolean()?;
+        rhs.sort().expect_boolean()?;
 
         Ok(Expression::new(
             Boolean::Imply.into(),
             vec![lhs, rhs],
-            Sort::Bool,
+            Sort::boolean(),
         ))
     }
 
     pub fn and(lhs: Expression, rhs: Expression) -> Result<Expression> {
-        lhs.sort().expect_bool()?;
-        rhs.sort().expect_bool()?;
+        lhs.sort().expect_boolean()?;
+        rhs.sort().expect_boolean()?;
 
         Ok(Expression::new(
             Boolean::And.into(),
             vec![lhs, rhs],
-            Sort::Bool,
+            Sort::boolean(),
         ))
     }
 
@@ -72,24 +76,24 @@ impl Boolean {
         }
 
         for formula in formulas {
-            formula.sort().expect_bool()?;
+            formula.sort().expect_boolean()?;
         }
 
         Ok(Expression::new(
             Boolean::And.into(),
             formulas.to_vec(),
-            Sort::Bool,
+            Sort::boolean(),
         ))
     }
 
     pub fn or(lhs: Expression, rhs: Expression) -> Result<Expression> {
-        lhs.sort().expect_bool()?;
-        rhs.sort().expect_bool()?;
+        lhs.sort().expect_boolean()?;
+        rhs.sort().expect_boolean()?;
 
         Ok(Expression::new(
             Boolean::Or.into(),
             vec![lhs, rhs],
-            Sort::Bool,
+            Sort::boolean(),
         ))
     }
 
@@ -99,24 +103,24 @@ impl Boolean {
         }
 
         for formula in formulas {
-            formula.sort().expect_bool()?;
+            formula.sort().expect_boolean()?;
         }
 
         Ok(Expression::new(
             Boolean::Or.into(),
             formulas.to_vec(),
-            Sort::Bool,
+            Sort::boolean(),
         ))
     }
 
     pub fn xor(lhs: Expression, rhs: Expression) -> Result<Expression> {
-        lhs.sort().expect_bool()?;
-        rhs.sort().expect_bool()?;
+        lhs.sort().expect_boolean()?;
+        rhs.sort().expect_boolean()?;
 
         Ok(Expression::new(
             Boolean::Xor.into(),
             vec![lhs, rhs],
-            Sort::Bool,
+            Sort::boolean(),
         ))
     }
 }

@@ -10,8 +10,8 @@ pub enum Constant {
 impl Constant {
     pub fn sort(&self) -> Sort {
         match self {
-            Constant::Boolean(_) => Sort::Bool,
-            Constant::BitVector(value) => Sort::BitVector(value.bits()),
+            Constant::Boolean(_) => Sort::boolean(),
+            Constant::BitVector(value) => Sort::bit_vector(value.bits()),
         }
     }
 }

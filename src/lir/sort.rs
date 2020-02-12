@@ -3,7 +3,7 @@ use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Sort {
-    Bool,
+    Boolean,
     BitVector(usize),
     Array { range: Box<Sort>, domain: Box<Sort> },
     Set { range: Box<Sort> },
@@ -12,6 +12,10 @@ pub enum Sort {
 }
 
 impl Sort {
+    pub fn boolean() -> Self {
+        Self::Boolean
+    }
+
     pub fn bit_vector(width: usize) -> Self {
         Self::BitVector(width)
     }
@@ -37,9 +41,9 @@ impl Sort {
         Self::Cache
     }
 
-    pub fn is_bool(&self) -> bool {
+    pub fn is_boolean(&self) -> bool {
         match self {
-            Sort::Bool => true,
+            Sort::Boolean => true,
             _ => false,
         }
     }
@@ -79,11 +83,11 @@ impl Sort {
         }
     }
 
-    pub fn expect_bool(&self) -> Result<()> {
-        if self.is_bool() {
+    pub fn expect_boolean(&self) -> Result<()> {
+        if self.is_boolean() {
             Ok(())
         } else {
-            Err(format!("Expected Bool but was {}", self).into())
+            Err(format!("Expected Boolean but was {}", self).into())
         }
     }
 
@@ -160,7 +164,7 @@ impl Sort {
 impl fmt::Display for Sort {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Sort::Bool => write!(f, "Bool"),
+            Sort::Boolean => write!(f, "Boolean"),
             Sort::BitVector(width) => write!(f, "BitVec<{}>", width),
             Sort::Array { range, domain } => write!(f, "Array<{}, {}>", range, domain),
             Sort::Set { range } => write!(f, "Set<{}>", range),

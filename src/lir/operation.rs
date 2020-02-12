@@ -28,13 +28,13 @@ impl Operation {
 
     /// Create a new `Operation::Assert`.
     pub fn new_assert(cond: Expression) -> Result<Self> {
-        cond.sort().expect_bool()?;
+        cond.sort().expect_boolean()?;
         Ok(Self::Assert { cond })
     }
 
     /// Create a new `Operation::Assume`.
     pub fn new_assume(cond: Expression) -> Result<Self> {
-        cond.sort().expect_bool()?;
+        cond.sort().expect_boolean()?;
         Ok(Self::Assume { cond })
     }
 
