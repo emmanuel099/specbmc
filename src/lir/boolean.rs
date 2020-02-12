@@ -19,7 +19,7 @@ impl Into<Operator> for Boolean {
 
 impl fmt::Display for Boolean {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
+        match self {
             Self::Not => write!(f, "not"),
             Self::Imply => write!(f, "=>"),
             Self::And => write!(f, "and"),

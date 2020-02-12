@@ -8,7 +8,6 @@ pub enum Operator {
     Constant(Constant),
     Ite,
     Equal,
-    Unequal,
     Boolean(Boolean),
     BitVector(BitVector),
     Memory(Memory),
@@ -16,15 +15,14 @@ pub enum Operator {
 
 impl fmt::Display for Operator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Self::Variable(ref v) => v.fmt(f),
-            Self::Constant(ref c) => c.fmt(f),
+        match self {
+            Self::Variable(v) => v.fmt(f),
+            Self::Constant(c) => c.fmt(f),
             Self::Ite => write!(f, "ite"),
             Self::Equal => write!(f, "="),
-            Self::Unequal => write!(f, "!="),
-            Self::Boolean(ref op) => op.fmt(f),
-            Self::BitVector(ref op) => op.fmt(f),
-            Self::Memory(ref op) => op.fmt(f),
+            Self::Boolean(op) => op.fmt(f),
+            Self::BitVector(op) => op.fmt(f),
+            Self::Memory(op) => op.fmt(f),
         }
     }
 }
@@ -43,6 +41,14 @@ impl Expression {
             operands,
             sort,
         }
+    }
+
+    pub fn operator(&self) -> &Operator {
+        &self.operator
+    }
+
+    pub fn operands(&self) -> &[Expression] {
+        &self.operands
     }
 
     pub fn sort(&self) -> &Sort {
@@ -78,13 +84,7 @@ impl Expression {
     }
 
     pub fn unequal(lhs: Expression, rhs: Expression) -> Result<Expression> {
-        lhs.sort().expect_sort(rhs.sort())?;
-
-        Ok(Expression::new(
-            Operator::Unequal,
-            vec![lhs, rhs],
-            Sort::Bool,
-        ))
+        Boolean::not(Self::equal(lhs, rhs)?)
     }
 
     /// Returns all `Variables` used in this `Expression`
