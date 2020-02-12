@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::lir::{Expression, Operator, Variable};
+use crate::lir::{Expression, Operator};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -24,7 +24,7 @@ impl fmt::Display for Array {
 }
 
 impl Array {
-    pub fn select(arr: Variable, index: Expression) -> Result<Expression> {
+    pub fn select(arr: Expression, index: Expression) -> Result<Expression> {
         arr.sort().expect_array()?;
         let (range, domain) = arr.sort().unwrap_array();
         index.sort().expect_sort(range)?;
@@ -32,12 +32,12 @@ impl Array {
         let result_sort = domain.clone();
         Ok(Expression::new(
             Array::Select.into(),
-            vec![arr.into(), index],
+            vec![arr, index],
             result_sort,
         ))
     }
 
-    pub fn store(arr: Variable, index: Expression, value: Expression) -> Result<Expression> {
+    pub fn store(arr: Expression, index: Expression, value: Expression) -> Result<Expression> {
         arr.sort().expect_array()?;
         let (range, domain) = arr.sort().unwrap_array();
         index.sort().expect_sort(range)?;
@@ -46,7 +46,7 @@ impl Array {
         let result_sort = arr.sort().clone();
         Ok(Expression::new(
             Array::Store.into(),
-            vec![arr.into(), index, value],
+            vec![arr, index, value],
             result_sort,
         ))
     }

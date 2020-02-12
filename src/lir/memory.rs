@@ -28,18 +28,18 @@ impl Memory {
         Variable::new("_memory", Sort::memory())
     }
 
-    pub fn load(bit_width: usize, memory: Variable, addr: Expression) -> Result<Expression> {
+    pub fn load(bit_width: usize, memory: Expression, addr: Expression) -> Result<Expression> {
         memory.sort().expect_memory()?;
         addr.sort().expect_bit_vector()?;
 
         Ok(Expression::new(
             Memory::Load(bit_width).into(),
-            vec![memory.into(), addr],
+            vec![memory, addr],
             Sort::BitVector(bit_width),
         ))
     }
 
-    pub fn store(memory: Variable, addr: Expression, value: Expression) -> Result<Expression> {
+    pub fn store(memory: Expression, addr: Expression, value: Expression) -> Result<Expression> {
         memory.sort().expect_memory()?;
         addr.sort().expect_bit_vector()?;
         value.sort().expect_bit_vector()?;
@@ -49,7 +49,7 @@ impl Memory {
         let result_sort = memory.sort().clone();
         Ok(Expression::new(
             Memory::Store(bit_width).into(),
-            vec![memory.into(), addr, value],
+            vec![memory, addr, value],
             result_sort,
         ))
     }

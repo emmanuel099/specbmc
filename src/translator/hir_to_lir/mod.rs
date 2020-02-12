@@ -109,7 +109,7 @@ fn translate_block(
             } => {
                 let node = block.add_let(
                     new_memory.clone(),
-                    lir::Memory::store(memory.clone(), address.clone(), expr.clone())?,
+                    lir::Memory::store(memory.clone().into(), address.clone(), expr.clone())?,
                 )?;
                 node.set_address(instruction.address());
             }
@@ -124,7 +124,7 @@ fn translate_block(
                 };
                 let node = block.add_let(
                     variable.clone(),
-                    lir::Memory::load(bit_width, memory.clone(), address.clone())?,
+                    lir::Memory::load(bit_width, memory.clone().into(), address.clone())?,
                 )?;
                 node.set_address(instruction.address());
             }
