@@ -345,5 +345,26 @@ impl BitVector {
         ))
     }
 
-    // TODO concat, not, neg, comp, repeat, rotateleft, rotateright
+    pub fn concat(exprs: &[Expression]) -> Result<Expression> {
+        for expr in exprs {
+            expr.sort().expect_bit_vector()?;
+        }
+
+        if exprs.len() == 1 {
+            return Ok(exprs[0].clone());
+        }
+
+        let result_width = exprs
+            .iter()
+            .map(|expr| expr.sort().unwrap_bit_vector())
+            .sum();
+
+        Ok(Expression::new(
+            BitVector::Concat.into(),
+            exprs.to_vec(),
+            Sort::bit_vector(result_width),
+        ))
+    }
+
+    // TODO not, neg, comp, repeat, rotateleft, rotateright
 }
