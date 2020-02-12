@@ -5,10 +5,26 @@ use std::fmt;
 pub enum Sort {
     Bool,
     BitVector(usize),
+    Array { range: Box<Sort>, domain: Box<Sort> },
     Memory,
 }
 
 impl Sort {
+    pub fn bit_vector(width: usize) -> Self {
+        Self::BitVector(width)
+    }
+
+    pub fn array(range: &Sort, domain: &Sort) -> Self {
+        Self::Array {
+            range: Box::new(range.clone()),
+            domain: Box::new(domain.clone()),
+        }
+    }
+
+    pub fn memory() -> Self {
+        Self::Memory
+    }
+
     pub fn is_bool(&self) -> bool {
         match self {
             Sort::Bool => true,
@@ -19,6 +35,13 @@ impl Sort {
     pub fn is_bit_vector(&self) -> bool {
         match self {
             Sort::BitVector(..) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_array(&self) -> bool {
+        match self {
+            Sort::Array { .. } => true,
             _ => false,
         }
     }
@@ -46,6 +69,14 @@ impl Sort {
         }
     }
 
+    pub fn expect_array(&self) -> Result<()> {
+        if self.is_array() {
+            Ok(())
+        } else {
+            Err(format!("Expected Array but was {}", self).into())
+        }
+    }
+
     pub fn expect_memory(&self) -> Result<()> {
         if self.is_memory() {
             Ok(())
@@ -61,6 +92,20 @@ impl Sort {
             Err(format!("Expected {} but was {}", sort, self).into())
         }
     }
+
+    pub fn unwrap_bit_vector(&self) -> usize {
+        match self {
+            Sort::BitVector(width) => *width,
+            _ => panic!("Expected BitVec"),
+        }
+    }
+
+    pub fn unwrap_array(&self) -> (&Sort, &Sort) {
+        match self {
+            Sort::Array { range, domain } => (range, domain),
+            _ => panic!("Expected Array"),
+        }
+    }
 }
 
 impl fmt::Display for Sort {
@@ -68,6 +113,7 @@ impl fmt::Display for Sort {
         match self {
             Sort::Bool => write!(f, "Bool"),
             Sort::BitVector(width) => write!(f, "BitVec<{}>", width),
+            Sort::Array { range, domain } => write!(f, "Array<{}, {}>", range, domain),
             Sort::Memory => write!(f, "Memory"),
         }
     }

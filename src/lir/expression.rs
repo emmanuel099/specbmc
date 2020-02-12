@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::lir::{BitVector, Boolean, Constant, Memory, Sort, Variable};
+use crate::lir::{Array, BitVector, Boolean, Constant, Memory, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -10,6 +10,7 @@ pub enum Operator {
     Equal,
     Boolean(Boolean),
     BitVector(BitVector),
+    Array(Array),
     Memory(Memory),
 }
 
@@ -22,6 +23,7 @@ impl fmt::Display for Operator {
             Self::Equal => write!(f, "="),
             Self::Boolean(op) => op.fmt(f),
             Self::BitVector(op) => op.fmt(f),
+            Self::Array(op) => op.fmt(f),
             Self::Memory(op) => op.fmt(f),
         }
     }

@@ -254,7 +254,7 @@ impl BitVector {
     }
 
     pub fn variable(name: &str, bits: usize) -> Variable {
-        Variable::new(name, Sort::BitVector(bits))
+        Variable::new(name, Sort::bit_vector(bits))
     }
 
     pub fn to_boolean(expr: Expression) -> Result<Expression> {
@@ -273,7 +273,7 @@ impl BitVector {
         Ok(Expression::new(
             BitVector::FromBoolean(bits).into(),
             vec![expr],
-            Sort::BitVector(bits),
+            Sort::bit_vector(bits),
         ))
     }
 
@@ -311,7 +311,7 @@ impl BitVector {
         Ok(Expression::new(
             BitVector::ZeroExtend(bits).into(),
             vec![expr],
-            Sort::BitVector(bits),
+            Sort::bit_vector(bits),
         ))
     }
 
@@ -321,7 +321,7 @@ impl BitVector {
         Ok(Expression::new(
             BitVector::SignExtend(bits).into(),
             vec![expr],
-            Sort::BitVector(bits),
+            Sort::bit_vector(bits),
         ))
     }
 
@@ -331,7 +331,7 @@ impl BitVector {
         Ok(Expression::new(
             BitVector::Extract(highest_bit, lowest_bit).into(),
             vec![expr],
-            Sort::BitVector(highest_bit - lowest_bit + 1),
+            Sort::bit_vector(highest_bit - lowest_bit + 1),
         ))
     }
 
@@ -341,7 +341,7 @@ impl BitVector {
         Ok(Expression::new(
             BitVector::Truncate(bits).into(),
             vec![expr],
-            Sort::BitVector(bits),
+            Sort::bit_vector(bits),
         ))
     }
 

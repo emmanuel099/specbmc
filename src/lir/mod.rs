@@ -1,5 +1,6 @@
 //! SpecBMC LIR
 
+mod array;
 mod bitvector;
 mod block;
 mod block_graph;
@@ -14,6 +15,7 @@ mod program;
 mod sort;
 mod variable;
 
+pub use self::array::Array;
 pub use self::bitvector::BitVector;
 pub use self::block::Block;
 pub use self::block_graph::BlockGraph;
