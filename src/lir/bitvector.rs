@@ -227,7 +227,7 @@ macro_rules! bv_arith {
             lhs.sort().expect_bit_vector()?;
             rhs.sort().expect_sort(lhs.sort())?;
 
-            let result_sort = *lhs.sort();
+            let result_sort = lhs.sort().clone();
             Ok(Expression::new($op.into(), vec![lhs, rhs], result_sort))
         }
     };

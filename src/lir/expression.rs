@@ -56,7 +56,7 @@ impl Expression {
     }
 
     pub fn variable(variable: Variable) -> Expression {
-        let result_sort = *variable.sort();
+        let result_sort = variable.sort().clone();
         Expression::new(Operator::Variable(variable), vec![], result_sort)
     }
 
@@ -69,7 +69,7 @@ impl Expression {
         cond.sort().expect_bool()?;
         then.sort().expect_sort(else_.sort())?;
 
-        let result_sort = *then.sort();
+        let result_sort = then.sort().clone();
         Ok(Expression::new(
             Operator::Ite,
             vec![cond, then, else_],

@@ -49,7 +49,7 @@ impl Memory {
             _ => 0,
         };
 
-        let result_sort = *memory.sort();
+        let result_sort = memory.sort().clone();
         Ok(Expression::new(
             Memory::Store(bit_width).into(),
             vec![memory.into(), addr, value],
