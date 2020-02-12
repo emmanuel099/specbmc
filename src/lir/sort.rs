@@ -8,6 +8,7 @@ pub enum Sort {
     Array { range: Box<Sort>, domain: Box<Sort> },
     Set { range: Box<Sort> },
     Memory,
+    Cache,
 }
 
 impl Sort {
@@ -30,6 +31,10 @@ impl Sort {
 
     pub fn memory() -> Self {
         Self::Memory
+    }
+
+    pub fn cache() -> Self {
+        Self::Cache
     }
 
     pub fn is_bool(&self) -> bool {
@@ -63,6 +68,13 @@ impl Sort {
     pub fn is_memory(&self) -> bool {
         match self {
             Sort::Memory => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_cache(&self) -> bool {
+        match self {
+            Sort::Cache => true,
             _ => false,
         }
     }
@@ -107,6 +119,14 @@ impl Sort {
         }
     }
 
+    pub fn expect_cache(&self) -> Result<()> {
+        if self.is_cache() {
+            Ok(())
+        } else {
+            Err(format!("Expected Cache but was {}", self).into())
+        }
+    }
+
     pub fn expect_sort(&self, sort: &Sort) -> Result<()> {
         if self == sort {
             Ok(())
@@ -145,6 +165,7 @@ impl fmt::Display for Sort {
             Sort::Array { range, domain } => write!(f, "Array<{}, {}>", range, domain),
             Sort::Set { range } => write!(f, "Set<{}>", range),
             Sort::Memory => write!(f, "Memory"),
+            Sort::Cache => write!(f, "Cache"),
         }
     }
 }

@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::lir::{Array, BitVector, Boolean, Constant, Memory, Set, Sort, Variable};
+use crate::lir::{Array, BitVector, Boolean, Cache, Constant, Memory, Set, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -13,6 +13,7 @@ pub enum Operator {
     Array(Array),
     Set(Set),
     Memory(Memory),
+    Cache(Cache),
 }
 
 impl fmt::Display for Operator {
@@ -27,6 +28,7 @@ impl fmt::Display for Operator {
             Self::Array(op) => op.fmt(f),
             Self::Set(op) => op.fmt(f),
             Self::Memory(op) => op.fmt(f),
+            Self::Cache(op) => op.fmt(f),
         }
     }
 }
