@@ -19,3 +19,4 @@ num-bigint = "0.2"
 num-traits = "0.2.1"
 falcon = "0.4.9"
 falcon_muasm = { git = "https://github.com/emmanuel099/falcon-muasm" }
+rsmt2 = "0.10.0"

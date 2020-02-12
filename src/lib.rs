@@ -3,6 +3,7 @@ extern crate falcon;
 extern crate error_chain;
 extern crate num_bigint;
 extern crate num_traits;
+extern crate rsmt2;
 
 pub mod hir;
 pub mod lir;
@@ -17,6 +18,8 @@ pub mod error {
         foreign_links {
             Falcon(::falcon::error::Error);
             ParseBigIntError(::num_bigint::ParseBigIntError);
+            RSmt2(::rsmt2::errors::Error);
+            IOError(::std::io::Error);
             NullError(::std::ffi::NulError);
         }
 
