@@ -173,7 +173,14 @@ fn translate_expr(expr: &il::Expression) -> Result<lir::Expression> {
             }
         }
         il::Expression::Sext(bits, src) => lir::BitVector::sign_extend(*bits, translate_expr(src)?),
-        il::Expression::Trun(bits, src) => lir::BitVector::truncate(*bits, translate_expr(src)?),
+        il::Expression::Trun(bits, src) => {
+            let expr = translate_expr(src)?;
+            if *bits > 1 {
+                lir::BitVector::truncate(*bits, expr)
+            } else {
+                lir::BitVector::to_boolean(expr)
+            }
+        }
         il::Expression::Ite(cond, then, else_) => lir::Expression::ite(
             translate_expr(cond)?,
             translate_expr(then)?,
