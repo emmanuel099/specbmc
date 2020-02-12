@@ -286,7 +286,7 @@ mod tests {
     use super::*;
 
     fn memory() -> lir::Variable {
-        lir::Memory::variable(64)
+        lir::Memory::variable()
     }
 
     fn memory_ssa(version: usize) -> lir::Variable {

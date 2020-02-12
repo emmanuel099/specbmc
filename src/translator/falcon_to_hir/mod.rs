@@ -52,14 +52,14 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
                 block.assign(variable, expr);
             }
             il::Operation::Store { index, src } => {
-                let memory = lir::Memory::variable(64); // FIXME get address width from Falcon
+                let memory = lir::Memory::variable();
                 let address = translate_expr(index)?;
                 let expr = translate_expr(src)?;
                 block.store(memory, address, expr);
             }
             il::Operation::Load { dst, index } => {
                 let variable = translate_scalar(dst)?;
-                let memory = lir::Memory::variable(64); // FIXME get address width from Falcon
+                let memory = lir::Memory::variable();
                 let address = translate_expr(index)?;
                 block.load(variable, memory, address);
             }

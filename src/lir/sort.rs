@@ -5,7 +5,7 @@ use std::fmt;
 pub enum Sort {
     Bool,
     BitVector(usize),
-    Memory(usize),
+    Memory,
 }
 
 impl Sort {
@@ -25,7 +25,7 @@ impl Sort {
 
     pub fn is_memory(&self) -> bool {
         match self {
-            Sort::Memory(..) => true,
+            Sort::Memory => true,
             _ => false,
         }
     }
@@ -68,7 +68,7 @@ impl fmt::Display for Sort {
         match *self {
             Sort::Bool => write!(f, "Bool"),
             Sort::BitVector(width) => write!(f, "BitVec<{}>", width),
-            Sort::Memory(width) => write!(f, "Memory<{}>", width),
+            Sort::Memory => write!(f, "Memory"),
         }
     }
 }
