@@ -6,6 +6,7 @@ pub enum Sort {
     Bool,
     BitVector(usize),
     Array { range: Box<Sort>, domain: Box<Sort> },
+    Set { range: Box<Sort> },
     Memory,
 }
 
@@ -18,6 +19,12 @@ impl Sort {
         Self::Array {
             range: Box::new(range.clone()),
             domain: Box::new(domain.clone()),
+        }
+    }
+
+    pub fn set(range: &Sort) -> Self {
+        Self::Set {
+            range: Box::new(range.clone()),
         }
     }
 
@@ -42,6 +49,13 @@ impl Sort {
     pub fn is_array(&self) -> bool {
         match self {
             Sort::Array { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_set(&self) -> bool {
+        match self {
+            Sort::Set { .. } => true,
             _ => false,
         }
     }
@@ -77,6 +91,14 @@ impl Sort {
         }
     }
 
+    pub fn expect_set(&self) -> Result<()> {
+        if self.is_set() {
+            Ok(())
+        } else {
+            Err(format!("Expected Set but was {}", self).into())
+        }
+    }
+
     pub fn expect_memory(&self) -> Result<()> {
         if self.is_memory() {
             Ok(())
@@ -106,6 +128,13 @@ impl Sort {
             _ => panic!("Expected Array"),
         }
     }
+
+    pub fn unwrap_set(&self) -> &Sort {
+        match self {
+            Sort::Set { range } => range,
+            _ => panic!("Expected Set"),
+        }
+    }
 }
 
 impl fmt::Display for Sort {
@@ -114,6 +143,7 @@ impl fmt::Display for Sort {
             Sort::Bool => write!(f, "Bool"),
             Sort::BitVector(width) => write!(f, "BitVec<{}>", width),
             Sort::Array { range, domain } => write!(f, "Array<{}, {}>", range, domain),
+            Sort::Set { range } => write!(f, "Set<{}>", range),
             Sort::Memory => write!(f, "Memory"),
         }
     }

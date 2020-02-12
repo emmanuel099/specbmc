@@ -12,6 +12,7 @@ mod memory;
 mod node;
 mod operation;
 mod program;
+mod set;
 mod sort;
 mod variable;
 
@@ -28,5 +29,6 @@ pub use self::memory::Memory;
 pub use self::node::Node;
 pub use self::operation::Operation;
 pub use self::program::Program;
+pub use self::set::Set;
 pub use self::sort::Sort;
 pub use self::variable::Variable;
