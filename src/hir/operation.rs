@@ -98,82 +98,70 @@ impl Operation {
     }
 
     /// Get each `Variable` read by this `Operation`.
-    pub fn variables_read(&self) -> Option<Vec<&Variable>> {
+    pub fn variables_read(&self) -> Vec<&Variable> {
         match self {
-            Operation::Assign { expr, .. } => Some(expr.variables()),
+            Operation::Assign { expr, .. } => expr.variables(),
             Operation::Store {
                 memory,
                 address,
                 expr,
                 ..
-            } => Some(
-                vec![memory]
-                    .into_iter()
-                    .chain(address.variables().into_iter())
-                    .chain(expr.variables().into_iter())
-                    .collect(),
-            ),
+            } => vec![memory]
+                .into_iter()
+                .chain(address.variables().into_iter())
+                .chain(expr.variables().into_iter())
+                .collect(),
             Operation::Load {
                 memory, address, ..
-            } => Some(
-                vec![memory]
-                    .into_iter()
-                    .chain(address.variables().into_iter())
-                    .collect(),
-            ),
-            Operation::Branch { target } => Some(target.variables()),
-            Operation::Barrier => Some(Vec::new()),
+            } => vec![memory]
+                .into_iter()
+                .chain(address.variables().into_iter())
+                .collect(),
+            Operation::Branch { target } => target.variables(),
+            Operation::Barrier => Vec::new(),
         }
     }
 
     /// Get a mutable reference to each `Variable` read by this `Operation`.
-    pub fn variables_read_mut(&mut self) -> Option<Vec<&mut Variable>> {
+    pub fn variables_read_mut(&mut self) -> Vec<&mut Variable> {
         match self {
-            Operation::Assign { expr, .. } => Some(expr.variables_mut()),
+            Operation::Assign { expr, .. } => expr.variables_mut(),
             Operation::Store {
                 memory,
                 address,
                 expr,
                 ..
-            } => Some(
-                vec![memory]
-                    .into_iter()
-                    .chain(address.variables_mut().into_iter())
-                    .chain(expr.variables_mut().into_iter())
-                    .collect(),
-            ),
+            } => vec![memory]
+                .into_iter()
+                .chain(address.variables_mut().into_iter())
+                .chain(expr.variables_mut().into_iter())
+                .collect(),
             Operation::Load {
                 memory, address, ..
-            } => Some(
-                vec![memory]
-                    .into_iter()
-                    .chain(address.variables_mut().into_iter())
-                    .collect(),
-            ),
-            Operation::Branch { target } => Some(target.variables_mut()),
-            Operation::Barrier => Some(Vec::new()),
+            } => vec![memory]
+                .into_iter()
+                .chain(address.variables_mut().into_iter())
+                .collect(),
+            Operation::Branch { target } => target.variables_mut(),
+            Operation::Barrier => Vec::new(),
         }
     }
 
     /// Get a Vec of the `Variable`s written by this `Operation`
-    pub fn variables_written(&self) -> Option<Vec<&Variable>> {
+    pub fn variables_written(&self) -> Vec<&Variable> {
         match self {
-            Operation::Assign { variable, .. } | Operation::Load { variable, .. } => {
-                Some(vec![variable])
-            }
-            Operation::Store { new_memory, .. } => Some(vec![new_memory]),
-            Operation::Branch { .. } | Operation::Barrier => Some(Vec::new()),
+            Operation::Assign { variable, .. } | Operation::Load { variable, .. } => vec![variable],
+            Operation::Store { new_memory, .. } => vec![new_memory],
+            Operation::Branch { .. } | Operation::Barrier => Vec::new(),
         }
     }
 
     /// Get a Vec of mutable referencer to the `Variable`s written by this `Operation`
-    pub fn variables_written_mut(&mut self) -> Option<Vec<&mut Variable>> {
+    pub fn variables_written_mut(&mut self) -> Vec<&mut Variable> {
         match self {
-            Operation::Assign { variable, .. } | Operation::Load { variable, .. } => {
-                Some(vec![variable])
-            }
-            Operation::Store { new_memory, .. } => Some(vec![new_memory]),
-            Operation::Branch { .. } | Operation::Barrier => Some(Vec::new()),
+            Operation::Assign { variable, .. } | Operation::Load { variable, .. } => vec![variable],
+            Operation::Store { new_memory, .. } => vec![new_memory],
+            Operation::Branch { .. } | Operation::Barrier => Vec::new(),
         }
     }
 }

@@ -120,22 +120,22 @@ impl Instruction {
     }
 
     /// Get the variables which will be written by this `Instruction`.
-    pub fn variables_written(&self) -> Option<Vec<&Variable>> {
+    pub fn variables_written(&self) -> Vec<&Variable> {
         self.operation.variables_written()
     }
 
     /// Get a mutable reference to the variables which will be written by this `Instruction`.
-    pub fn variable_written_mut(&mut self) -> Option<Vec<&mut Variable>> {
+    pub fn variable_written_mut(&mut self) -> Vec<&mut Variable> {
         self.operation.variables_written_mut()
     }
 
     /// Get the variables read by this `Instruction`.
-    pub fn variables_read(&self) -> Option<Vec<&Variable>> {
+    pub fn variables_read(&self) -> Vec<&Variable> {
         self.operation.variables_read()
     }
 
     /// Get a mutable reference to the variables read by this `Instruction`.
-    pub fn variables_read_mut(&mut self) -> Option<Vec<&mut Variable>> {
+    pub fn variables_read_mut(&mut self) -> Vec<&mut Variable> {
         self.operation.variables_read_mut()
     }
 }

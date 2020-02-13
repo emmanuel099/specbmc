@@ -72,7 +72,7 @@ fn variables_mutated_in_block(block: &hir::Block) -> HashSet<&expr::Variable> {
     block
         .instructions()
         .iter()
-        .flat_map(|inst| inst.variables_written().unwrap_or_default())
+        .flat_map(|inst| inst.variables_written())
         .collect()
 }
 
@@ -104,19 +104,15 @@ fn compute_non_local_variables(cfg: &hir::ControlFlowGraph) -> HashSet<expr::Var
 
         block.instructions().iter().for_each(|inst| {
             inst.variables_read()
-                .unwrap_or_default()
                 .into_iter()
                 .filter(|variable| !killed.contains(variable))
                 .for_each(|variable| {
                     non_locals.insert(variable.clone());
                 });
 
-            inst.variables_written()
-                .unwrap_or_default()
-                .into_iter()
-                .for_each(|variable| {
-                    killed.insert(variable);
-                });
+            inst.variables_written().into_iter().for_each(|variable| {
+                killed.insert(variable);
+            });
         });
     }
 
@@ -189,17 +185,13 @@ impl SSARename for expr::Expression {
 impl SSARename for hir::Instruction {
     fn rename_variables(&mut self, versioning: &mut VariableVersioning) -> Result<()> {
         // rename all read variables
-        if let Some(mut variables_read) = self.variables_read_mut() {
-            for variable in variables_read.iter_mut() {
-                variable.set_version(versioning.get_version(variable));
-            }
+        for variable in self.variables_read_mut() {
+            variable.set_version(versioning.get_version(variable));
         }
 
         // introduce new SSA names for written variables
-        if let Some(mut variable_written) = self.variable_written_mut() {
-            for variable in variable_written.iter_mut() {
-                variable.set_version(versioning.new_version(variable));
-            }
+        for variable in self.variable_written_mut() {
+            variable.set_version(versioning.new_version(variable));
         }
 
         Ok(())
