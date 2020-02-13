@@ -52,7 +52,7 @@ fn compute_execution_condition(
 
     let predecessors = cfg.predecessor_indices(block_index)?;
     if predecessors.is_empty() {
-        return Ok(lir::Boolean::constant(true).into());
+        return Ok(lir::Boolean::constant(true));
     }
 
     for pred_index in predecessors {

@@ -1,11 +1,10 @@
 use crate::error::Result;
-use crate::lir::{Array, BitVector, Boolean, Cache, Constant, Memory, Set, Sort, Variable};
+use crate::lir::{Array, BitVector, Boolean, Cache, Memory, Set, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Operator {
     Variable(Variable),
-    Constant(Constant),
     Ite,
     Equal,
     Boolean(Boolean),
@@ -20,7 +19,6 @@ impl fmt::Display for Operator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Variable(v) => v.fmt(f),
-            Self::Constant(c) => c.fmt(f),
             Self::Ite => write!(f, "ite"),
             Self::Equal => write!(f, "="),
             Self::Boolean(op) => op.fmt(f),
@@ -64,11 +62,6 @@ impl Expression {
     pub fn variable(variable: Variable) -> Expression {
         let result_sort = variable.sort().clone();
         Expression::new(Operator::Variable(variable), vec![], result_sort)
-    }
-
-    pub fn constant(constant: Constant) -> Expression {
-        let result_sort = constant.sort();
-        Expression::new(Operator::Constant(constant), vec![], result_sort)
     }
 
     pub fn ite(cond: Expression, then: Expression, else_: Expression) -> Result<Expression> {

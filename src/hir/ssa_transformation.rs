@@ -296,7 +296,7 @@ mod tests {
     }
 
     fn expr_const(value: u64) -> lir::Expression {
-        lir::BitVector::constant(value, 64).into()
+        lir::BitVector::constant(value, 64)
     }
 
     fn variable(name: &str) -> lir::Variable {

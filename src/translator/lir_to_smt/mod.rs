@@ -84,7 +84,6 @@ impl Expr2Smt<()> for lir::Operator {
     {
         match self {
             lir::Operator::Variable(v) => v.sym_to_smt2(w, i),
-            lir::Operator::Constant(c) => c.expr_to_smt2(w, i),
             lir::Operator::Ite => {
                 write!(w, "ite")?;
                 Ok(())
@@ -109,6 +108,8 @@ impl Expr2Smt<()> for lir::Boolean {
         Writer: ::std::io::Write,
     {
         let s = match self {
+            lir::Boolean::True => "true",
+            lir::Boolean::False => "false",
             lir::Boolean::Not => "not",
             lir::Boolean::Imply => "=>",
             lir::Boolean::And => "and",
@@ -126,6 +127,7 @@ impl Expr2Smt<()> for lir::BitVector {
         Writer: ::std::io::Write,
     {
         let s = match self {
+            lir::BitVector::Constant(bv) => format!("(_ bv{} {})", bv.value(), bv.bits()),
             lir::BitVector::ToBoolean => "bv2bool".to_owned(), // FIXME
             lir::BitVector::FromBoolean(i) => format!("(bool2bv {})", i), // FIXME
             lir::BitVector::Concat => "concat".to_owned(),
@@ -223,19 +225,6 @@ impl Expr2Smt<()> for lir::Cache {
     }
 }
 
-impl Expr2Smt<()> for lir::Constant {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
-    where
-        Writer: ::std::io::Write,
-    {
-        match self {
-            lir::Constant::Boolean(value) => write!(w, "{}", value),
-            lir::Constant::BitVector(bv) => write!(w, "(_ bv{} {})", bv.value(), bv.bits()),
-        }?;
-        Ok(())
-    }
-}
-
 impl Sym2Smt<()> for lir::Variable {
     fn sym_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
     where
@@ -292,7 +281,7 @@ fn define_memory<T>(
                 lir::Variable::new("mem", mem_array_sort.clone()).into(),
                 lir::BitVector::add(
                     lir::Variable::new("addr", addr_sort.clone()).into(),
-                    lir::BitVector::constant(byte.try_into().unwrap(), address_bits).into(),
+                    lir::BitVector::constant(byte.try_into().unwrap(), address_bits),
                 )?,
             )?);
         }
@@ -314,7 +303,7 @@ fn define_memory<T>(
                 store_expr,
                 lir::BitVector::add(
                     lir::Variable::new("addr", addr_sort.clone()).into(),
-                    lir::BitVector::constant(byte.try_into().unwrap(), address_bits).into(),
+                    lir::BitVector::constant(byte.try_into().unwrap(), address_bits),
                 )?,
                 lir::BitVector::extract(
                     bit_offset + 7,
@@ -358,7 +347,7 @@ fn define_cache<T>(
                 insert_expr,
                 lir::BitVector::add(
                     lir::Variable::new("addr", addr_sort.clone()).into(),
-                    lir::BitVector::constant(byte.try_into().unwrap(), address_bits).into(),
+                    lir::BitVector::constant(byte.try_into().unwrap(), address_bits),
                 )?,
             )?;
         }

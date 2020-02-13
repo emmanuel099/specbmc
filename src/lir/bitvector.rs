@@ -1,5 +1,5 @@
 use crate::error::{ErrorKind, Result};
-use crate::lir::{Constant, Expression, Operator, Sort, Variable};
+use crate::lir::{Expression, Operator, Sort, Variable};
 use num_bigint::BigUint;
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::fmt;
@@ -121,12 +121,13 @@ impl Value {
 
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "0x{:X}", self.value())
+        write!(f, "0x{:X}:{}", self.value(), self.bits())
     }
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum BitVector {
+    Constant(Value),
     ToBoolean,
     FromBoolean(usize),
     Concat,
@@ -176,7 +177,8 @@ impl Into<Operator> for BitVector {
 
 impl fmt::Display for BitVector {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let s = match *self {
+        let s = match self {
+            Self::Constant(value) => format!("{}", value),
             Self::ToBoolean => "bv2bool".to_owned(),
             Self::FromBoolean(i) => format!("(bool2bv {})", i),
             Self::Concat => "bvconcat".to_owned(),
@@ -245,16 +247,26 @@ macro_rules! bv_comp {
 }
 
 impl BitVector {
-    pub fn constant(value: u64, bits: usize) -> Constant {
-        Constant::BitVector(Value::new(value, bits))
-    }
-
-    pub fn constant_big(value: BigUint, bits: usize) -> Constant {
-        Constant::BitVector(Value::new_big(value, bits))
-    }
-
     pub fn variable(name: &str, bits: usize) -> Variable {
         Variable::new(name, Sort::bit_vector(bits))
+    }
+
+    pub fn constant(value: u64, bits: usize) -> Expression {
+        let bv = Value::new(value, bits);
+        Expression::new(
+            BitVector::Constant(bv).into(),
+            vec![],
+            Sort::bit_vector(bits),
+        )
+    }
+
+    pub fn constant_big(value: BigUint, bits: usize) -> Expression {
+        let bv = Value::new_big(value, bits);
+        Expression::new(
+            BitVector::Constant(bv).into(),
+            vec![],
+            Sort::bit_vector(bits),
+        )
     }
 
     pub fn to_boolean(expr: Expression) -> Result<Expression> {

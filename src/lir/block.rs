@@ -21,7 +21,7 @@ impl Block {
         Block {
             index,
             nodes: Vec::new(),
-            execution_condition: Boolean::constant(false).into(),
+            execution_condition: Boolean::constant(false),
             execution_condition_variable: Variable::new(
                 format!("_exec_{}", index),
                 Sort::boolean(),

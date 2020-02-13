@@ -1,9 +1,11 @@
 use crate::error::Result;
-use crate::lir::{Constant, Expression, Operator, Sort, Variable};
+use crate::lir::{Expression, Operator, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Boolean {
+    True,
+    False,
     Not,
     Imply,
     And,
@@ -20,6 +22,8 @@ impl Into<Operator> for Boolean {
 impl fmt::Display for Boolean {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::True => write!(f, "true"),
+            Self::False => write!(f, "false"),
             Self::Not => write!(f, "not"),
             Self::Imply => write!(f, "=>"),
             Self::And => write!(f, "and"),
@@ -30,12 +34,13 @@ impl fmt::Display for Boolean {
 }
 
 impl Boolean {
-    pub fn constant(value: bool) -> Constant {
-        Constant::Boolean(value)
-    }
-
     pub fn variable(name: &str) -> Variable {
         Variable::new(name, Sort::boolean())
+    }
+
+    pub fn constant(value: bool) -> Expression {
+        let op = if value { Boolean::True } else { Boolean::False };
+        Expression::new(op.into(), vec![], Sort::boolean())
     }
 
     pub fn not(expr: Expression) -> Result<Expression> {
@@ -72,7 +77,7 @@ impl Boolean {
 
     pub fn conjunction(formulas: &[Expression]) -> Result<Expression> {
         if formulas.is_empty() {
-            return Ok(Self::constant(true).into());
+            return Ok(Self::constant(true));
         }
 
         for formula in formulas {
@@ -99,7 +104,7 @@ impl Boolean {
 
     pub fn disjunction(formulas: &[Expression]) -> Result<Expression> {
         if formulas.is_empty() {
-            return Ok(Self::constant(false).into());
+            return Ok(Self::constant(false));
         }
 
         for formula in formulas {

@@ -100,7 +100,7 @@ fn translate_expr(expr: &il::Expression) -> Result<lir::Expression> {
             } else {
                 lir::Boolean::constant(constant.is_one())
             };
-            Ok(constant.into())
+            Ok(constant)
         }
         il::Expression::Add(lhs, rhs) => {
             lir::BitVector::add(translate_expr(lhs)?, translate_expr(rhs)?)
