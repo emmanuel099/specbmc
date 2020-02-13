@@ -400,20 +400,20 @@ mod tests {
     #[test]
     fn test_renaming_of_barrier_instruction() {
         // Given: barrier
-        let mut instruction = hir::Instruction::barrier(0);
+        let mut instruction = hir::Instruction::barrier();
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
         instruction.rename_variables(&mut versioning).unwrap();
 
         // Expected: barrier
-        assert_eq!(instruction, hir::Instruction::barrier(0));
+        assert_eq!(instruction, hir::Instruction::barrier());
     }
 
     #[test]
     fn test_renaming_of_assign_instruction() {
         // Given: x := x
-        let mut instruction = hir::Instruction::assign(0, variable("x"), variable("x").into());
+        let mut instruction = hir::Instruction::assign(variable("x"), variable("x").into());
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
@@ -423,15 +423,14 @@ mod tests {
         // Expected: x_2 := x_1
         assert_eq!(
             instruction,
-            hir::Instruction::assign(0, variable_ssa("x", 2), variable_ssa("x", 1).into(),)
+            hir::Instruction::assign(variable_ssa("x", 2), variable_ssa("x", 1).into(),)
         );
     }
 
     #[test]
     fn test_renaming_of_load_instruction() {
         // Given: x := load(mem, x)
-        let mut instruction =
-            hir::Instruction::load(0, variable("x"), memory(), variable("x").into());
+        let mut instruction = hir::Instruction::load(variable("x"), memory(), variable("x").into());
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
@@ -443,7 +442,6 @@ mod tests {
         assert_eq!(
             instruction,
             hir::Instruction::load(
-                0,
                 variable_ssa("x", 2),
                 memory_ssa(1),
                 variable_ssa("x", 1).into()
@@ -455,7 +453,7 @@ mod tests {
     fn test_renaming_of_store_instruction() {
         // Given: [x] := x
         let mut instruction =
-            hir::Instruction::store(0, variable("x").into(), variable("x").into());
+            hir::Instruction::store(variable("x").into(), variable("x").into());
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
@@ -467,7 +465,6 @@ mod tests {
         assert_eq!(
             instruction,
             hir::Instruction::store(
-                0,
                 variable_ssa("x", 1).into(),
                 variable_ssa("x", 1).into()
             )
@@ -477,7 +474,7 @@ mod tests {
     #[test]
     fn test_renaming_of_branch_instruction() {
         // Given: branch x
-        let mut instruction = hir::Instruction::branch(0, variable("x").into());
+        let mut instruction = hir::Instruction::branch(variable("x").into());
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
@@ -487,7 +484,7 @@ mod tests {
         // Expected: branch x_1
         assert_eq!(
             instruction,
-            hir::Instruction::branch(0, variable_ssa("x", 1).into())
+            hir::Instruction::branch(variable_ssa("x", 1).into())
         );
     }
 

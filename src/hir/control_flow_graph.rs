@@ -293,7 +293,7 @@ impl ControlFlowGraph {
         let mut block_map: BTreeMap<usize, usize> = BTreeMap::new();
         for block in other.graph().vertices() {
             // we need to clone the underlying block
-            let new_block = block.clone_new_index(self.next_index);
+            let new_block = block.clone();
             block_map.insert(block.index(), self.next_index);
             self.next_index += 1;
             self.graph.insert_vertex(new_block)?;
@@ -355,7 +355,7 @@ impl ControlFlowGraph {
 
         // insert all the blocks
         for block in other.graph().vertices() {
-            let new_block = block.clone_new_index(self.next_index);
+            let new_block = block.clone();
             block_map.insert(block.index(), self.next_index);
             if block.index() == other.entry().unwrap() {
                 entry_index = Some(self.next_index);

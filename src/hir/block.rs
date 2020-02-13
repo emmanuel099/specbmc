@@ -8,8 +8,6 @@ use std::fmt;
 pub struct Block {
     /// The index of the block.
     index: usize,
-    /// an internal counter for the next block-unique instruction.
-    next_instruction_index: usize,
     /// The instructions for this block.
     instructions: Vec<Instruction>,
     /// The phi nodes for this block.
@@ -20,20 +18,25 @@ impl Block {
     pub fn new(index: usize) -> Self {
         Self {
             index,
-            next_instruction_index: 0,
             instructions: Vec::new(),
             phi_nodes: Vec::new(),
         }
     }
 
-    fn new_instruction_index(&mut self) -> usize {
-        let instruction_index = self.next_instruction_index;
-        self.next_instruction_index = instruction_index + 1;
-        instruction_index
-    }
-
     fn push(&mut self, instruction: Instruction) {
         self.instructions.push(instruction);
+    }
+
+    /// Appends the contents of another `Block` to this `Block`.
+    ///
+    /// Instruction indices are updated accordingly.
+    pub fn append(&mut self, other: &Block) {
+        other.instructions().into_iter().for_each(|instruction| {
+            self.instructions.push(instruction.clone());
+        });
+        other.phi_nodes().into_iter().for_each(|phi_node| {
+            self.phi_nodes.push(phi_node.clone());
+        });
     }
 
     /// Get the address of the first instruction in this block
@@ -41,16 +44,6 @@ impl Block {
         self.instructions
             .first()
             .and_then(|instruction| instruction.address())
-    }
-
-    /// Appends the contents of another `Block` to this `Block`.
-    ///
-    /// Instruction indices are updated accordingly.
-    pub fn append(&mut self, other: &Block) {
-        other.instructions().iter().for_each(|instruction| {
-            let index = self.new_instruction_index();
-            self.instructions.push(instruction.clone_new_index(index));
-        })
     }
 
     /// Returns the index of this `Block`
@@ -73,31 +66,24 @@ impl Block {
         self.instructions.is_empty()
     }
 
-    /// Returns an `Instruction` by index, or `None` if the instruction does not
-    /// exist.
+    /// Returns an `Instruction` by index, or `None` if the instruction does not exist.
     pub fn instruction(&self, index: usize) -> Option<&Instruction> {
-        self.instructions
-            .iter()
-            .find(|instruction| instruction.index() == index)
+        self.instructions.get(index)
     }
 
     /// Returns a mutable reference to an `Instruction` by index, or `None` if
     /// the `Instruction` does not exist.
     pub fn instruction_mut(&mut self, index: usize) -> Option<&mut Instruction> {
-        self.instructions
-            .iter_mut()
-            .find(|instruction| instruction.index() == index)
+        self.instructions.get_mut(index)
     }
 
     /// Deletes an `Instruction` by its index.
     pub fn remove_instruction(&mut self, index: usize) -> Result<()> {
-        self.instructions
-            .iter()
-            .position(|instruction| instruction.index() == index)
-            .map(|index| {
-                self.instructions.remove(index);
-            })
-            .ok_or_else(|| format!("No instruction with index {} found", index).into())
+        if index >= self.instructions.len() {
+            return Err(format!("No instruction with index {} found", index).into());
+        }
+        self.instructions.remove(index);
+        Ok(())
     }
 
     /// Returns phi nodes of this `Block`
@@ -126,41 +112,29 @@ impl Block {
         self.phi_nodes.push(phi_node);
     }
 
-    /// Clone this block and set a new index.
-    pub(crate) fn clone_new_index(&self, index: usize) -> Block {
-        let mut clone = self.clone();
-        clone.index = index;
-        clone
-    }
-
     /// Adds an assign operation to the end of this block.
     pub fn assign(&mut self, variable: Variable, expr: Expression) {
-        let index = self.new_instruction_index();
-        self.push(Instruction::assign(index, variable, expr));
+        self.push(Instruction::assign(variable, expr));
     }
 
     /// Adds a store operation to the end of this block.
     pub fn store(&mut self, memory: Variable, address: Expression, expr: Expression) {
-        let index = self.new_instruction_index();
-        self.push(Instruction::store(index, memory, address, expr))
+        self.push(Instruction::store(memory, address, expr))
     }
 
     /// Adds a load operation to the end of this block.
     pub fn load(&mut self, variable: Variable, memory: Variable, address: Expression) {
-        let index = self.new_instruction_index();
-        self.push(Instruction::load(index, variable, memory, address));
+        self.push(Instruction::load(variable, memory, address));
     }
 
     /// Adds a conditional branch operation to the end of this block.
     pub fn branch(&mut self, target: Expression) {
-        let index = self.new_instruction_index();
-        self.push(Instruction::branch(index, target));
+        self.push(Instruction::branch(target));
     }
 
     /// Adds a barrier operation to the end of this block.
     pub fn barrier(&mut self) {
-        let index = self.new_instruction_index();
-        self.push(Instruction::barrier(index));
+        self.push(Instruction::barrier());
     }
 }
 

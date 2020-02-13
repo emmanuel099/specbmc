@@ -8,54 +8,42 @@ use std::fmt;
 pub struct Instruction {
     operation: Operation,
     effects: Vec<Effect>,
-    index: usize,
     address: Option<u64>,
 }
 
 impl Instruction {
     /// Create a new instruction with the given index and operation.
-    pub fn new(index: usize, operation: Operation) -> Self {
+    pub fn new(operation: Operation) -> Self {
         Self {
             operation,
             effects: vec![],
-            index,
             address: None,
         }
     }
 
     /// Create a new `Assign` instruction.
-    pub fn assign(index: usize, variable: Variable, expr: Expression) -> Instruction {
-        Instruction::new(index, Operation::assign(variable, expr))
+    pub fn assign(variable: Variable, expr: Expression) -> Instruction {
+        Instruction::new(Operation::assign(variable, expr))
     }
 
     /// Create a new `Store` instruction.
-    pub fn store(
-        index: usize,
-        memory: Variable,
-        address: Expression,
-        expr: Expression,
-    ) -> Instruction {
-        Instruction::new(index, Operation::store(memory, address, expr))
+    pub fn store(memory: Variable, address: Expression, expr: Expression) -> Instruction {
+        Instruction::new(Operation::store(memory, address, expr))
     }
 
     /// Create a new `Load` instruction.
-    pub fn load(
-        index: usize,
-        variable: Variable,
-        memory: Variable,
-        address: Expression,
-    ) -> Instruction {
-        Instruction::new(index, Operation::load(variable, memory, address))
+    pub fn load(variable: Variable, memory: Variable, address: Expression) -> Instruction {
+        Instruction::new(Operation::load(variable, memory, address))
     }
 
     /// Create a new `Branch` instruction.
-    pub fn branch(index: usize, target: Expression) -> Instruction {
-        Instruction::new(index, Operation::branch(target))
+    pub fn branch(target: Expression) -> Instruction {
+        Instruction::new(Operation::branch(target))
     }
 
     /// Create a new `Barrier` instruction.
-    pub fn barrier(index: usize) -> Instruction {
-        Instruction::new(index, Operation::barrier())
+    pub fn barrier() -> Instruction {
+        Instruction::new(Operation::barrier())
     }
 
     /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Assign`
@@ -108,15 +96,6 @@ impl Instruction {
         &mut self.effects
     }
 
-    /// Get the index for this `Instruction`.
-    ///
-    /// An `Instruction` index is assigned by its parent `Block` and uniquely identifies the
-    /// `Instruction` within the `Block`. `Instruction` indices need not be continuous, nor
-    /// in order.
-    pub fn index(&self) -> usize {
-        self.index
-    }
-
     /// Get the optional address for this `Instruction`
     pub fn address(&self) -> Option<u64> {
         self.address
@@ -125,16 +104,6 @@ impl Instruction {
     /// Set the optional address for this `Instruction`
     pub fn set_address(&mut self, address: Option<u64>) {
         self.address = address;
-    }
-
-    /// Clone this instruction with a new index.
-    pub fn clone_new_index(&self, index: usize) -> Instruction {
-        Instruction {
-            operation: self.operation.clone(),
-            effects: self.effects.clone(),
-            index,
-            address: self.address,
-        }
     }
 
     /// Get the variables which will be written by this `Instruction`.
@@ -177,8 +146,8 @@ impl Instruction {
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let prefix = match self.address {
-            Some(address) => format!("{:X} {:02X} {}", address, self.index, self.operation),
-            None => format!("{:02X} {}", self.index, self.operation),
+            Some(address) => format!("{:X} {}", address, self.operation),
+            None => format!("{}", self.operation),
         };
         write!(f, "{}", prefix)?;
         for effect in &self.effects {
