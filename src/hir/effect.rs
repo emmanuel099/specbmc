@@ -1,4 +1,4 @@
-use crate::expr::{Expression, Variable};
+use crate::expr::{Cache, Expression, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -13,10 +13,10 @@ pub enum Effect {
 
 impl Effect {
     /// Create a new `Effect::CacheFetch`.
-    pub fn cache_fetch(cache: Variable, address: Expression) -> Self {
+    pub fn cache_fetch(address: Expression) -> Self {
         Self::CacheFetch {
-            new_cache: cache.clone(),
-            cache,
+            new_cache: Cache::variable(),
+            cache: Cache::variable(),
             address,
         }
     }

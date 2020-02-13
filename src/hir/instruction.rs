@@ -86,6 +86,11 @@ impl Instruction {
         self.effects.push(effect);
     }
 
+    /// Add multiple effects to this `Instruction`
+    pub fn add_effects(&mut self, effects: &[Effect]) {
+        self.effects.extend_from_slice(effects);
+    }
+
     /// Get the effects of this `Instruction`
     pub fn effects(&self) -> &[Effect] {
         &self.effects

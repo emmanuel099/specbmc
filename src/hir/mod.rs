@@ -1,5 +1,6 @@
 //! SpecBMC HIR
 
+mod add_effects;
 mod block;
 mod control_flow_graph;
 mod edge;
@@ -10,6 +11,7 @@ mod phi_node;
 mod program;
 mod ssa_transformation;
 
+pub use self::add_effects::add_effects;
 pub use self::block::Block;
 pub use self::control_flow_graph::ControlFlowGraph;
 pub use self::edge::Edge;
