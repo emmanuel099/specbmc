@@ -1,13 +1,13 @@
 use crate::error::Result;
 use crate::expr;
-use crate::mir;
+use crate::lir;
 use rsmt2::print::{Expr2Smt, Sort2Smt, Sym2Smt};
 use rsmt2::{SmtRes, Solver};
 use std::convert::TryInto;
 use std::fs::File;
 use std::path::Path;
 
-pub fn encode_program(program: &mir::Program, debug_file_path: Option<&Path>) -> Result<()> {
+pub fn encode_program(program: &lir::Program, debug_file_path: Option<&Path>) -> Result<()> {
     let parser = ();
     let mut solver = Solver::default_z3(parser)?;
 
@@ -21,29 +21,12 @@ pub fn encode_program(program: &mir::Program, debug_file_path: Option<&Path>) ->
     define_memory(&mut solver, word_size, &access_widths)?;
     define_cache(&mut solver, word_size, &access_widths)?;
 
-    for block in program.block_graph().blocks() {
-        encode_block(&mut solver, block)?;
-    }
-
-    Ok(())
-}
-
-fn encode_block<T>(solver: &mut Solver<T>, block: &mir::Block) -> Result<()> {
-    solver.comment(&format!("Block 0x{:X}", block.index()))?;
-
-    define_variable(
-        solver,
-        block.execution_condition_variable(),
-        block.execution_condition(),
-    )?;
-
-    for node in block.nodes() {
-        match node.operation() {
-            mir::Operation::Let { var, expr } => {
-                define_variable(solver, var, expr)?;
-            }
-            mir::Operation::Assert { .. } => bail!("not implemented"), // TODO
-            mir::Operation::Assume { cond } => solver.assert(&cond)?,
+    for node in program.nodes() {
+        match node {
+            lir::Node::Comment(text) => solver.comment(&text)?,
+            lir::Node::Let { var, expr } => define_variable(&mut solver, var, expr)?,
+            lir::Node::Assert { .. } => bail!("not implemented"), // TODO
+            lir::Node::Assume { cond } => solver.assert(&cond)?,
         }
     }
 
