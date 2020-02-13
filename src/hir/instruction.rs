@@ -7,6 +7,7 @@ use std::fmt;
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Instruction {
     operation: Operation,
+    effects: Vec<Effect>,
     index: usize,
     address: Option<u64>,
 }
@@ -16,6 +17,7 @@ impl Instruction {
     pub fn new(index: usize, operation: Operation) -> Self {
         Self {
             operation,
+            effects: vec![],
             index,
             address: None,
         }
@@ -91,6 +93,21 @@ impl Instruction {
         &mut self.operation
     }
 
+    /// Add an `Effect` to this `Instruction`
+    pub fn add_effect(&mut self, effect: Effect) {
+        self.effects.push(effect);
+    }
+
+    /// Get the effects of this `Instruction`
+    pub fn effects(&self) -> &[Effect] {
+        &self.effects
+    }
+
+    /// Get a mutable reference to the effects of this `Instruction`
+    pub fn effects_mut(&mut self) -> &mut [Effect] {
+        &mut self.effects
+    }
+
     /// Get the index for this `Instruction`.
     ///
     /// An `Instruction` index is assigned by its parent `Block` and uniquely identifies the
@@ -114,6 +131,7 @@ impl Instruction {
     pub fn clone_new_index(&self, index: usize) -> Instruction {
         Instruction {
             operation: self.operation.clone(),
+            effects: self.effects.clone(),
             index,
             address: self.address,
         }
@@ -121,22 +139,38 @@ impl Instruction {
 
     /// Get the variables which will be written by this `Instruction`.
     pub fn variables_written(&self) -> Vec<&Variable> {
-        self.operation.variables_written()
+        self.effects
+            .iter()
+            .flat_map(|effect| effect.variables_written())
+            .chain(self.operation.variables_written())
+            .collect()
     }
 
     /// Get a mutable reference to the variables which will be written by this `Instruction`.
-    pub fn variable_written_mut(&mut self) -> Vec<&mut Variable> {
-        self.operation.variables_written_mut()
+    pub fn variables_written_mut(&mut self) -> Vec<&mut Variable> {
+        self.effects
+            .iter_mut()
+            .flat_map(|effect| effect.variables_written_mut())
+            .chain(self.operation.variables_written_mut())
+            .collect()
     }
 
     /// Get the variables read by this `Instruction`.
     pub fn variables_read(&self) -> Vec<&Variable> {
-        self.operation.variables_read()
+        self.effects
+            .iter()
+            .flat_map(|effect| effect.variables_read())
+            .chain(self.operation.variables_read())
+            .collect()
     }
 
     /// Get a mutable reference to the variables read by this `Instruction`.
     pub fn variables_read_mut(&mut self) -> Vec<&mut Variable> {
-        self.operation.variables_read_mut()
+        self.effects
+            .iter_mut()
+            .flat_map(|effect| effect.variables_read_mut())
+            .chain(self.operation.variables_read_mut())
+            .collect()
     }
 }
 
@@ -146,6 +180,10 @@ impl fmt::Display for Instruction {
             Some(address) => format!("{:X} {:02X} {}", address, self.index, self.operation),
             None => format!("{:02X} {}", self.index, self.operation),
         };
-        write!(f, "{}", prefix)
+        write!(f, "{}", prefix)?;
+        for effect in &self.effects {
+            write!(f, "\n\t{}", effect)?;
+        }
+        Ok(())
     }
 }

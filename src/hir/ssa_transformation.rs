@@ -190,7 +190,7 @@ impl SSARename for hir::Instruction {
         }
 
         // introduce new SSA names for written variables
-        for variable in self.variable_written_mut() {
+        for variable in self.variables_written_mut() {
             variable.set_version(versioning.new_version(variable));
         }
 
