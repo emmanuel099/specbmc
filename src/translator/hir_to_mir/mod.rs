@@ -119,10 +119,7 @@ fn translate_block(
                 memory,
                 address,
             } => {
-                let bit_width = match variable.sort() {
-                    expr::Sort::BitVector(width) => *width,
-                    _ => bail!("Expected bit vector sort for load variable"),
-                };
+                let bit_width = variable.sort().unwrap_bit_vector();
                 let node = block.add_let(
                     variable.clone(),
                     expr::Memory::load(bit_width, memory.clone().into(), address.clone())?,
@@ -130,6 +127,22 @@ fn translate_block(
                 node.set_address(instruction.address());
             }
             hir::Operation::Branch { .. } | hir::Operation::Barrier => continue,
+        }
+
+        for effect in instruction.effects() {
+            match effect {
+                hir::Effect::CacheFetch {
+                    new_cache,
+                    cache,
+                    address,
+                    bit_width,
+                } => {
+                    block.add_let(
+                        new_cache.clone(),
+                        expr::Cache::fetch(*bit_width, cache.clone().into(), address.clone())?,
+                    )?;
+                }
+            }
         }
     }
 
