@@ -145,11 +145,10 @@ impl Instruction {
 
 impl fmt::Display for Instruction {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let prefix = match self.address {
-            Some(address) => format!("{:X} {}", address, self.operation),
-            None => format!("{}", self.operation),
-        };
-        write!(f, "{}", prefix)?;
+        if let Some(address) = self.address {
+            write!(f, "{:X} ", address)?;
+        }
+        write!(f, "{}", self.operation)?;
         for effect in &self.effects {
             write!(f, "\n\t{}", effect)?;
         }

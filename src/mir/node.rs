@@ -5,7 +5,6 @@ use std::fmt;
 pub struct Node {
     operation: Operation,
     address: Option<u64>,
-    // TODO add some pointers to Falcon IL
 }
 
 impl Node {
@@ -39,6 +38,9 @@ impl Node {
 
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(address) = self.address {
+            write!(f, "{:X} ", address)?;
+        }
         write!(f, "{}", self.operation)
     }
 }
