@@ -306,7 +306,7 @@ mod tests {
         let block = {
             let mut block = hir::Block::new(0);
             block.assign(variable("x"), expr_const(1));
-            block.load(variable("y"), memory(), variable("z").into());
+            block.load(variable("y"), variable("z").into());
             block.assign(variable("x"), variable("y").into());
             block
         };
@@ -326,7 +326,7 @@ mod tests {
             block0.assign(variable("x"), expr_const(1));
 
             let block1 = cfg.new_block().unwrap();
-            block1.load(variable("y"), memory(), variable("z").into());
+            block1.load(variable("y"), variable("z").into());
 
             let block2 = cfg.new_block().unwrap();
             block2.assign(variable("x"), variable("y").into());
@@ -359,7 +359,7 @@ mod tests {
             block1.assign(variable("x"), variable("tmp").into());
 
             let block2 = cfg.new_block().unwrap();
-            block2.load(variable("y"), memory(), variable("x").into());
+            block2.load(variable("y"), variable("x").into());
 
             cfg
         };
@@ -430,7 +430,7 @@ mod tests {
     #[test]
     fn test_renaming_of_load_instruction() {
         // Given: x := load(mem, x)
-        let mut instruction = hir::Instruction::load(variable("x"), memory(), variable("x").into());
+        let mut instruction = hir::Instruction::load(variable("x"), variable("x").into());
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
@@ -440,20 +440,19 @@ mod tests {
 
         // Expected: x_2 := load(mem_1, x_1)
         assert_eq!(
-            instruction,
-            hir::Instruction::load(
-                variable_ssa("x", 2),
-                memory_ssa(1),
-                variable_ssa("x", 1).into()
-            )
+            instruction.operation(),
+            &hir::Operation::Load {
+                variable: variable_ssa("x", 2),
+                memory: memory_ssa(1),
+                address: variable_ssa("x", 1).into(),
+            }
         );
     }
 
-    /*#[test]
+    #[test]
     fn test_renaming_of_store_instruction() {
-        // Given: [x] := x
-        let mut instruction =
-            hir::Instruction::store(variable("x").into(), variable("x").into());
+        // Given: mem := store(mem, x, x)
+        let mut instruction = hir::Instruction::store(variable("x").into(), variable("x").into());
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
@@ -461,15 +460,17 @@ mod tests {
         versioning.new_version(&memory()).unwrap();
         instruction.rename_variables(&mut versioning).unwrap();
 
-        // Expected: [x_1] := x_1
+        // Expected: mem_2 := store(mem_1, x_1, x_1)
         assert_eq!(
-            instruction,
-            hir::Instruction::store(
-                variable_ssa("x", 1).into(),
-                variable_ssa("x", 1).into()
-            )
+            instruction.operation(),
+            &hir::Operation::Store {
+                new_memory: memory_ssa(2),
+                memory: memory_ssa(1),
+                address: variable_ssa("x", 1).into(),
+                expr: variable_ssa("x", 1).into(),
+            }
         );
-    }*/
+    }
 
     #[test]
     fn test_renaming_of_branch_instruction() {
@@ -501,7 +502,7 @@ mod tests {
         block.add_phi_node(hir::PhiNode::new(memory()));
         block.add_phi_node(hir::PhiNode::new(variable("y")));
         block.assign(variable("x"), variable("y").into());
-        block.load(variable("y"), memory(), variable("x").into());
+        block.load(variable("y"), variable("x").into());
         block.assign(variable("x"), variable("y").into());
         block.assign(variable("z"), variable("x").into());
 
@@ -530,11 +531,11 @@ mod tests {
         );
         assert_eq!(
             block.instruction(1).unwrap().operation(),
-            &hir::Operation::load(
-                variable_ssa("y", 2),
-                memory_ssa(1),
-                variable_ssa("x", 1).into()
-            )
+            &hir::Operation::Load {
+                variable: variable_ssa("y", 2),
+                memory: memory_ssa(1),
+                address: variable_ssa("x", 1).into(),
+            }
         );
         assert_eq!(
             block.instruction(2).unwrap().operation(),

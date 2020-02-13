@@ -27,12 +27,8 @@ impl Block {
     ///
     /// Instruction indices are updated accordingly.
     pub fn append(&mut self, other: &Block) {
-        other.instructions().into_iter().for_each(|instruction| {
-            self.instructions.push(instruction.clone());
-        });
-        other.phi_nodes().into_iter().for_each(|phi_node| {
-            self.phi_nodes.push(phi_node.clone());
-        });
+        self.instructions.extend_from_slice(other.instructions());
+        self.phi_nodes.extend_from_slice(other.phi_nodes());
     }
 
     /// Get the address of the first instruction in this block
@@ -116,26 +112,14 @@ impl Block {
     }
 
     /// Adds a store operation to the end of this block.
-    pub fn store(
-        &mut self,
-        memory: Variable,
-        address: Expression,
-        expr: Expression,
-    ) -> &mut Instruction {
-        self.instructions
-            .push(Instruction::store(memory, address, expr));
+    pub fn store(&mut self, address: Expression, expr: Expression) -> &mut Instruction {
+        self.instructions.push(Instruction::store(address, expr));
         self.instructions.last_mut().unwrap()
     }
 
     /// Adds a load operation to the end of this block.
-    pub fn load(
-        &mut self,
-        variable: Variable,
-        memory: Variable,
-        address: Expression,
-    ) -> &mut Instruction {
-        self.instructions
-            .push(Instruction::load(variable, memory, address));
+    pub fn load(&mut self, variable: Variable, address: Expression) -> &mut Instruction {
+        self.instructions.push(Instruction::load(variable, address));
         self.instructions.last_mut().unwrap()
     }
 

@@ -27,13 +27,13 @@ impl Instruction {
     }
 
     /// Create a new `Store` instruction.
-    pub fn store(memory: Variable, address: Expression, expr: Expression) -> Instruction {
-        Instruction::new(Operation::store(memory, address, expr))
+    pub fn store(address: Expression, expr: Expression) -> Instruction {
+        Instruction::new(Operation::store(address, expr))
     }
 
     /// Create a new `Load` instruction.
-    pub fn load(variable: Variable, memory: Variable, address: Expression) -> Instruction {
-        Instruction::new(Operation::load(variable, memory, address))
+    pub fn load(variable: Variable, address: Expression) -> Instruction {
+        Instruction::new(Operation::load(variable, address))
     }
 
     /// Create a new `Branch` instruction.

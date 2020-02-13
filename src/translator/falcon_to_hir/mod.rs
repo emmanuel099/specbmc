@@ -53,17 +53,15 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
                 inst.set_address(instruction.address());
             }
             il::Operation::Store { index, src } => {
-                let memory = expr::Memory::variable();
                 let address = translate_expr(index)?;
                 let expr = translate_expr(src)?;
-                let inst = block.store(memory, address, expr);
+                let inst = block.store(address, expr);
                 inst.set_address(instruction.address());
             }
             il::Operation::Load { dst, index } => {
                 let variable = translate_scalar(dst)?;
-                let memory = expr::Memory::variable();
                 let address = translate_expr(index)?;
-                let inst = block.load(variable, memory, address);
+                let inst = block.load(variable, address);
                 inst.set_address(instruction.address());
             }
             il::Operation::Branch { target } => {

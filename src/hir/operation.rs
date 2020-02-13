@@ -1,4 +1,4 @@
-use crate::expr::{Expression, Variable};
+use crate::expr::{Expression, Memory, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -34,20 +34,20 @@ impl Operation {
     }
 
     /// Create a new `Operation::Store`.
-    pub fn store(memory: Variable, address: Expression, expr: Expression) -> Operation {
+    pub fn store(address: Expression, expr: Expression) -> Operation {
         Operation::Store {
-            new_memory: memory.clone(),
-            memory,
+            new_memory: Memory::variable(),
+            memory: Memory::variable(),
             address,
             expr,
         }
     }
 
     /// Create a new `Operation::Load`.
-    pub fn load(variable: Variable, memory: Variable, address: Expression) -> Operation {
+    pub fn load(variable: Variable, address: Expression) -> Operation {
         Operation::Load {
             variable,
-            memory,
+            memory: Memory::variable(),
             address,
         }
     }
