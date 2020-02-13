@@ -1,18 +1,18 @@
 use crate::error::Result;
 use crate::expr;
 use crate::hir;
-use crate::lir;
+use crate::mir;
 
-pub fn translate_program(program: &hir::Program) -> Result<lir::Program> {
+pub fn translate_program(program: &hir::Program) -> Result<mir::Program> {
     let block_graph = translate_control_flow_graph(program.control_flow_graph())?;
 
-    Ok(lir::Program::new(block_graph))
+    Ok(mir::Program::new(block_graph))
 }
 
-fn translate_control_flow_graph(cfg: &hir::ControlFlowGraph) -> Result<lir::BlockGraph> {
+fn translate_control_flow_graph(cfg: &hir::ControlFlowGraph) -> Result<mir::BlockGraph> {
     let entry = cfg.entry().ok_or("CFG entry must be set")?;
 
-    let mut block_graph = lir::BlockGraph::new();
+    let mut block_graph = mir::BlockGraph::new();
 
     let topological_ordering = cfg.graph().compute_topological_ordering(entry)?;
     for block_index in topological_ordering {
@@ -29,7 +29,7 @@ fn translate_control_flow_graph(cfg: &hir::ControlFlowGraph) -> Result<lir::Bloc
     Ok(block_graph)
 }
 
-fn transition_condition(predecessor: &lir::Block, edge: &hir::Edge) -> Result<expr::Expression> {
+fn transition_condition(predecessor: &mir::Block, edge: &hir::Edge) -> Result<expr::Expression> {
     match edge.condition() {
         Some(condition) => expr::Boolean::and(
             predecessor.execution_condition_variable().clone().into(),
@@ -45,7 +45,7 @@ fn transition_condition(predecessor: &lir::Block, edge: &hir::Edge) -> Result<ex
 ///    exec(b) = true                                               if pred(b) is empty
 ///              Disjunction of p in pred(b). (exec(p) /\ t(p, b))  otherwise
 fn compute_execution_condition(
-    block_graph: &lir::BlockGraph,
+    block_graph: &mir::BlockGraph,
     cfg: &hir::ControlFlowGraph,
     block_index: usize,
 ) -> Result<expr::Expression> {
@@ -66,11 +66,11 @@ fn compute_execution_condition(
 }
 
 fn translate_block(
-    block_graph: &lir::BlockGraph,
+    block_graph: &mir::BlockGraph,
     cfg: &hir::ControlFlowGraph,
     block_index: usize,
-) -> Result<lir::Block> {
-    let mut block = lir::Block::new(block_index);
+) -> Result<mir::Block> {
+    let mut block = mir::Block::new(block_index);
     block.set_execution_condition(compute_execution_condition(&block_graph, cfg, block_index)?);
 
     let src_block = cfg.block(block_index)?;

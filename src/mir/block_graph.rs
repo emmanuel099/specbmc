@@ -1,5 +1,5 @@
 use crate::error::*;
-use crate::lir::{Block, Edge};
+use crate::mir::{Block, Edge};
 use falcon::graph::Graph;
 use std::fmt;
 

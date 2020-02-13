@@ -1,4 +1,4 @@
-use crate::lir::Operation;
+use crate::mir::Operation;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]

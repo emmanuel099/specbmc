@@ -1,4 +1,4 @@
-//! SpecBMC LIR
+//! SpecBMC MIR
 
 mod block;
 mod block_graph;

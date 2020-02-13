@@ -1,4 +1,4 @@
-use crate::lir::BlockGraph;
+use crate::mir::BlockGraph;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]

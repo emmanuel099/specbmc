@@ -1,6 +1,6 @@
 use crate::error::Result;
 use crate::expr::{Boolean, Expression, Sort, Variable};
-use crate::lir::{Node, Operation};
+use crate::mir::{Node, Operation};
 use falcon::graph;
 use std::fmt;
 

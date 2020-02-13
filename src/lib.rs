@@ -7,7 +7,7 @@ extern crate rsmt2;
 
 pub mod expr;
 pub mod hir;
-pub mod lir;
+pub mod mir;
 pub mod translator;
 
 pub mod error {
