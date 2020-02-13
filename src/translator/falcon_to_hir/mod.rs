@@ -49,26 +49,33 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
                 let variable = translate_scalar(dst)?;
                 let expr = translate_expr(src)?;
                 let expr = maybe_cast(expr, variable.sort())?;
-                block.assign(variable, expr);
+                let inst = block.assign(variable, expr);
+                inst.set_address(instruction.address());
             }
             il::Operation::Store { index, src } => {
                 let memory = expr::Memory::variable();
                 let address = translate_expr(index)?;
                 let expr = translate_expr(src)?;
-                block.store(memory, address, expr);
+                let inst = block.store(memory, address, expr);
+                inst.set_address(instruction.address());
             }
             il::Operation::Load { dst, index } => {
                 let variable = translate_scalar(dst)?;
                 let memory = expr::Memory::variable();
                 let address = translate_expr(index)?;
-                block.load(variable, memory, address);
+                let inst = block.load(variable, memory, address);
+                inst.set_address(instruction.address());
             }
             il::Operation::Branch { target } => {
                 let target = translate_expr(target)?;
-                block.branch(target);
+                let inst = block.branch(target);
+                inst.set_address(instruction.address());
             }
             il::Operation::Intrinsic { intrinsic } => match intrinsic.mnemonic() {
-                "mfence" | "lfence" | "spbarr" => block.barrier(),
+                "mfence" | "lfence" | "spbarr" => {
+                    let inst = block.barrier();
+                    inst.set_address(instruction.address());
+                }
                 _ => continue,
             },
             il::Operation::Nop => continue,

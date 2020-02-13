@@ -23,10 +23,6 @@ impl Block {
         }
     }
 
-    fn push(&mut self, instruction: Instruction) {
-        self.instructions.push(instruction);
-    }
-
     /// Appends the contents of another `Block` to this `Block`.
     ///
     /// Instruction indices are updated accordingly.
@@ -108,33 +104,51 @@ impl Block {
     }
 
     /// Adds the phi node to this `Block`.
-    pub fn add_phi_node(&mut self, phi_node: PhiNode) {
+    pub fn add_phi_node(&mut self, phi_node: PhiNode) -> &mut PhiNode {
         self.phi_nodes.push(phi_node);
+        self.phi_nodes.last_mut().unwrap()
     }
 
     /// Adds an assign operation to the end of this block.
-    pub fn assign(&mut self, variable: Variable, expr: Expression) {
-        self.push(Instruction::assign(variable, expr));
+    pub fn assign(&mut self, variable: Variable, expr: Expression) -> &mut Instruction {
+        self.instructions.push(Instruction::assign(variable, expr));
+        self.instructions.last_mut().unwrap()
     }
 
     /// Adds a store operation to the end of this block.
-    pub fn store(&mut self, memory: Variable, address: Expression, expr: Expression) {
-        self.push(Instruction::store(memory, address, expr))
+    pub fn store(
+        &mut self,
+        memory: Variable,
+        address: Expression,
+        expr: Expression,
+    ) -> &mut Instruction {
+        self.instructions
+            .push(Instruction::store(memory, address, expr));
+        self.instructions.last_mut().unwrap()
     }
 
     /// Adds a load operation to the end of this block.
-    pub fn load(&mut self, variable: Variable, memory: Variable, address: Expression) {
-        self.push(Instruction::load(variable, memory, address));
+    pub fn load(
+        &mut self,
+        variable: Variable,
+        memory: Variable,
+        address: Expression,
+    ) -> &mut Instruction {
+        self.instructions
+            .push(Instruction::load(variable, memory, address));
+        self.instructions.last_mut().unwrap()
     }
 
     /// Adds a conditional branch operation to the end of this block.
-    pub fn branch(&mut self, target: Expression) {
-        self.push(Instruction::branch(target));
+    pub fn branch(&mut self, target: Expression) -> &mut Instruction {
+        self.instructions.push(Instruction::branch(target));
+        self.instructions.last_mut().unwrap()
     }
 
     /// Adds a barrier operation to the end of this block.
-    pub fn barrier(&mut self) {
-        self.push(Instruction::barrier());
+    pub fn barrier(&mut self) -> &mut Instruction {
+        self.instructions.push(Instruction::barrier());
+        self.instructions.last_mut().unwrap()
     }
 }
 
