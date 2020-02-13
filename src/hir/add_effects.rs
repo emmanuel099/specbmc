@@ -17,8 +17,15 @@ pub fn add_effects(program: &mut Program) -> Result<()> {
 
 fn instruction_effects(instruction: &Instruction) -> Vec<Effect> {
     match instruction.operation() {
-        Operation::Store { address, .. } | Operation::Load { address, .. } => {
-            vec![Effect::cache_fetch(address.clone())]
+        Operation::Store { address, expr, .. } => {
+            let bit_width = expr.sort().unwrap_bit_vector();
+            vec![Effect::cache_fetch(address.clone(), bit_width)]
+        }
+        Operation::Load {
+            variable, address, ..
+        } => {
+            let bit_width = variable.sort().unwrap_bit_vector();
+            vec![Effect::cache_fetch(address.clone(), bit_width)]
         }
         _ => vec![],
     }

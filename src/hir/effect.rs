@@ -8,16 +8,18 @@ pub enum Effect {
         new_cache: Variable,
         cache: Variable,
         address: Expression,
+        bit_width: usize,
     },
 }
 
 impl Effect {
     /// Create a new `Effect::CacheFetch`.
-    pub fn cache_fetch(address: Expression) -> Self {
+    pub fn cache_fetch(address: Expression, bit_width: usize) -> Self {
         Self::CacheFetch {
             new_cache: Cache::variable(),
             cache: Cache::variable(),
             address,
+            bit_width,
         }
     }
 
@@ -70,7 +72,12 @@ impl fmt::Display for Effect {
                 new_cache,
                 cache,
                 address,
-            } => write!(f, "{} = cache_fetch({}, {})", new_cache, cache, address),
+                bit_width,
+            } => write!(
+                f,
+                "{} = cache_fetch({}, {}, {})",
+                new_cache, cache, address, bit_width
+            ),
         }
     }
 }
