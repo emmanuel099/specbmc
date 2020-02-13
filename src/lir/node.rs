@@ -80,7 +80,7 @@ impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Comment(text) => write!(f, "// {}", text),
-            Self::Let { var, expr } => write!(f, "let {} = {}", var, expr),
+            Self::Let { var, expr } => write!(f, "{} = {}", var, expr),
             Self::Assert { cond } => write!(f, "assert {}", cond),
             Self::Assume { cond } => write!(f, "assume {}", cond),
         }
