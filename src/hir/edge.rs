@@ -1,4 +1,4 @@
-use crate::lir::Expression;
+use crate::expr::Expression;
 use falcon::graph;
 use std::fmt;
 

@@ -1,6 +1,23 @@
 use crate::error::Result;
-use crate::lir::{Array, BitVector, Boolean, Cache, Memory, Set, Sort, Variable};
 use std::fmt;
+
+mod array;
+mod bitvector;
+mod boolean;
+mod cache;
+mod memory;
+mod set;
+mod sort;
+mod variable;
+
+pub use self::array::Array;
+pub use self::bitvector::BitVector;
+pub use self::boolean::Boolean;
+pub use self::cache::Cache;
+pub use self::memory::Memory;
+pub use self::set::Set;
+pub use self::sort::Sort;
+pub use self::variable::Variable;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Operator {

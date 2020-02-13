@@ -1,4 +1,5 @@
 use crate::error::Result;
+use crate::expr;
 use crate::hir;
 use crate::lir;
 
@@ -28,9 +29,9 @@ fn translate_control_flow_graph(cfg: &hir::ControlFlowGraph) -> Result<lir::Bloc
     Ok(block_graph)
 }
 
-fn transition_condition(predecessor: &lir::Block, edge: &hir::Edge) -> Result<lir::Expression> {
+fn transition_condition(predecessor: &lir::Block, edge: &hir::Edge) -> Result<expr::Expression> {
     match edge.condition() {
-        Some(condition) => lir::Boolean::and(
+        Some(condition) => expr::Boolean::and(
             predecessor.execution_condition_variable().clone().into(),
             condition.clone(),
         ),
@@ -47,12 +48,12 @@ fn compute_execution_condition(
     block_graph: &lir::BlockGraph,
     cfg: &hir::ControlFlowGraph,
     block_index: usize,
-) -> Result<lir::Expression> {
+) -> Result<expr::Expression> {
     let mut transitions = vec![];
 
     let predecessors = cfg.predecessor_indices(block_index)?;
     if predecessors.is_empty() {
-        return Ok(lir::Boolean::constant(true));
+        return Ok(expr::Boolean::constant(true));
     }
 
     for pred_index in predecessors {
@@ -61,7 +62,7 @@ fn compute_execution_condition(
         transitions.push(transition_condition(predecessor, edge)?);
     }
 
-    lir::Boolean::disjunction(&transitions)
+    expr::Boolean::disjunction(&transitions)
 }
 
 fn translate_block(
@@ -75,7 +76,7 @@ fn translate_block(
     let src_block = cfg.block(block_index)?;
 
     for phi_node in src_block.phi_nodes() {
-        let mut phi_expr: Option<lir::Expression> = None;
+        let mut phi_expr: Option<expr::Expression> = None;
 
         for pred_index in cfg.predecessor_indices(block_index)? {
             let predecessor = block_graph.block(pred_index)?;
@@ -84,7 +85,7 @@ fn translate_block(
             let phi_var = phi_node.incoming_variable(pred_index).unwrap().clone();
 
             if let Some(expr) = phi_expr {
-                phi_expr = Some(lir::Expression::ite(phi_cond, phi_var.into(), expr)?);
+                phi_expr = Some(expr::Expression::ite(phi_cond, phi_var.into(), expr)?);
             } else {
                 phi_expr = Some(phi_var.into());
             }
@@ -109,7 +110,7 @@ fn translate_block(
             } => {
                 let node = block.add_let(
                     new_memory.clone(),
-                    lir::Memory::store(memory.clone().into(), address.clone(), expr.clone())?,
+                    expr::Memory::store(memory.clone().into(), address.clone(), expr.clone())?,
                 )?;
                 node.set_address(instruction.address());
             }
@@ -119,12 +120,12 @@ fn translate_block(
                 address,
             } => {
                 let bit_width = match variable.sort() {
-                    lir::Sort::BitVector(width) => *width,
+                    expr::Sort::BitVector(width) => *width,
                     _ => bail!("Expected bit vector sort for load variable"),
                 };
                 let node = block.add_let(
                     variable.clone(),
-                    lir::Memory::load(bit_width, memory.clone().into(), address.clone())?,
+                    expr::Memory::load(bit_width, memory.clone().into(), address.clone())?,
                 )?;
                 node.set_address(instruction.address());
             }

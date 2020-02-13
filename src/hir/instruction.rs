@@ -1,7 +1,7 @@
 //! An `Instruction` holds an `Operation`.
 
+use crate::expr::{Expression, Variable};
 use crate::hir::*;
-use crate::lir::{Expression, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]

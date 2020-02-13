@@ -5,6 +5,7 @@ extern crate num_bigint;
 extern crate num_traits;
 extern crate rsmt2;
 
+pub mod expr;
 pub mod hir;
 pub mod lir;
 pub mod translator;

@@ -1,5 +1,5 @@
 use crate::error::{ErrorKind, Result};
-use crate::lir::{Expression, Operator, Sort, Variable};
+use crate::expr::{Expression, Operator, Sort, Variable};
 use num_bigint::BigUint;
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::fmt;

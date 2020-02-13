@@ -1,6 +1,6 @@
 //! `PhiNode` represents a phi node in the SSA form
 
-use crate::lir::Variable;
+use crate::expr::Variable;
 use std::collections::BTreeMap;
 use std::fmt;
 

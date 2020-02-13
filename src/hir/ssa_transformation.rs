@@ -1,8 +1,8 @@
 //! Static Single Assignment (SSA) Transformation
 
 use crate::error::*;
+use crate::expr;
 use crate::hir;
-use crate::lir;
 use falcon::graph::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -68,7 +68,7 @@ fn insert_phi_nodes(program: &mut hir::Program) -> Result<()> {
 }
 
 /// Get the set of variables which are mutated in the given block.
-fn variables_mutated_in_block(block: &hir::Block) -> HashSet<&lir::Variable> {
+fn variables_mutated_in_block(block: &hir::Block) -> HashSet<&expr::Variable> {
     block
         .instructions()
         .iter()
@@ -79,7 +79,7 @@ fn variables_mutated_in_block(block: &hir::Block) -> HashSet<&lir::Variable> {
 /// Get a mapping from variables to a set of blocks (indices) in which they are mutated.
 fn variables_mutated_in_blocks(
     cfg: &hir::ControlFlowGraph,
-) -> HashMap<lir::Variable, HashSet<usize>> {
+) -> HashMap<expr::Variable, HashSet<usize>> {
     let mut mutated_in = HashMap::new();
 
     for block in cfg.blocks() {
@@ -96,7 +96,7 @@ fn variables_mutated_in_blocks(
 
 // Computes the set of variables that are live on entry of at least one block.
 // Such variables are denoted as "non locals" in the algorithm for Semi-Pruned SSA.
-fn compute_non_local_variables(cfg: &hir::ControlFlowGraph) -> HashSet<lir::Variable> {
+fn compute_non_local_variables(cfg: &hir::ControlFlowGraph) -> HashSet<expr::Variable> {
     let mut non_locals = HashSet::new();
 
     for block in cfg.blocks() {
@@ -153,14 +153,14 @@ impl VariableVersioning {
         self.scoped_versions.pop();
     }
 
-    fn get_version(&mut self, variable: &lir::Variable) -> Option<usize> {
+    fn get_version(&mut self, variable: &expr::Variable) -> Option<usize> {
         self.scoped_versions
             .last()
             .and_then(|versions| versions.get(variable.name()))
             .copied()
     }
 
-    fn new_version(&mut self, variable: &lir::Variable) -> Option<usize> {
+    fn new_version(&mut self, variable: &expr::Variable) -> Option<usize> {
         let count = self.counter.entry(variable.name().to_string()).or_insert(1);
         let version = *count;
         *count += 1;
@@ -176,7 +176,7 @@ trait SSARename {
     fn rename_variables(&mut self, versioning: &mut VariableVersioning) -> Result<()>;
 }
 
-impl SSARename for lir::Expression {
+impl SSARename for expr::Expression {
     fn rename_variables(&mut self, versioning: &mut VariableVersioning) -> Result<()> {
         for variable in self.variables_mut() {
             variable.set_version(versioning.get_version(variable));
@@ -285,25 +285,25 @@ impl SSARename for hir::Program {
 mod tests {
     use super::*;
 
-    fn memory() -> lir::Variable {
-        lir::Memory::variable()
+    fn memory() -> expr::Variable {
+        expr::Memory::variable()
     }
 
-    fn memory_ssa(version: usize) -> lir::Variable {
+    fn memory_ssa(version: usize) -> expr::Variable {
         let mut variable = memory();
         variable.set_version(Some(version));
         variable
     }
 
-    fn expr_const(value: u64) -> lir::Expression {
-        lir::BitVector::constant(value, 64)
+    fn expr_const(value: u64) -> expr::Expression {
+        expr::BitVector::constant(value, 64)
     }
 
-    fn variable(name: &str) -> lir::Variable {
-        lir::BitVector::variable(name, 64)
+    fn variable(name: &str) -> expr::Variable {
+        expr::BitVector::variable(name, 64)
     }
 
-    fn variable_ssa(name: &str, version: usize) -> lir::Variable {
+    fn variable_ssa(name: &str, version: usize) -> expr::Variable {
         let mut variable = variable(name);
         variable.set_version(Some(version));
         variable
@@ -381,9 +381,9 @@ mod tests {
     #[test]
     fn test_renaming_of_expression() {
         // Given: x + y * x
-        let mut expression = lir::BitVector::add(
+        let mut expression = expr::BitVector::add(
             variable("x").into(),
-            lir::BitVector::mul(variable("y").into(), variable("x").into()).unwrap(),
+            expr::BitVector::mul(variable("y").into(), variable("x").into()).unwrap(),
         )
         .unwrap();
 
@@ -396,9 +396,9 @@ mod tests {
         // Expected: x_1 + y_1 * x_1
         assert_eq!(
             expression,
-            lir::BitVector::add(
+            expr::BitVector::add(
                 variable_ssa("x", 1).into(),
-                lir::BitVector::mul(variable_ssa("y", 1).into(), variable_ssa("x", 1).into())
+                expr::BitVector::mul(variable_ssa("y", 1).into(), variable_ssa("x", 1).into())
                     .unwrap(),
             )
             .unwrap()
@@ -905,7 +905,7 @@ mod tests {
                 let block = cfg.new_block().unwrap();
                 block.assign(
                     variable("x"),
-                    lir::BitVector::add(variable("x").into(), variable("x").into()).unwrap(),
+                    expr::BitVector::add(variable("x").into(), variable("x").into()).unwrap(),
                 );
             }
             // block4
@@ -988,7 +988,7 @@ mod tests {
                 let block = cfg.new_block().unwrap();
                 block.assign(
                     variable_ssa("x", 5),
-                    lir::BitVector::add(variable_ssa("x", 4).into(), variable_ssa("x", 4).into())
+                    expr::BitVector::add(variable_ssa("x", 4).into(), variable_ssa("x", 4).into())
                         .unwrap(),
                 );
                 block.add_phi_node({

@@ -1,6 +1,6 @@
 use crate::error::Result;
+use crate::expr::{Expression, Variable};
 use crate::hir::{Instruction, PhiNode};
-use crate::lir::{Expression, Variable};
 use falcon::graph;
 use std::fmt;
 

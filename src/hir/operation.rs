@@ -1,4 +1,4 @@
-use crate::lir::{Expression, Variable};
+use crate::expr::{Expression, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]

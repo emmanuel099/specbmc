@@ -1,8 +1,8 @@
 //! A `ControlFlowGraph` is a directed `Graph` of `Block` and `Edge`.
 
 use crate::error::Result;
+use crate::expr::Expression;
 use crate::hir::*;
-use crate::lir::Expression;
 use falcon::graph;
 use std::cmp;
 use std::collections::BTreeMap;

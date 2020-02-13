@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::lir::{Expression, Operator, Sort, Variable};
+use crate::expr::{Expression, Operator, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
