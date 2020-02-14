@@ -177,6 +177,10 @@ impl ControlFlowGraph {
 
     /// Splits the block with the given index at the specified instruction.
     /// Outgoing edges will be rewired to the new block.
+    ///
+    /// "Instruction index = 0" will give an empty top block.
+    /// "Instruction index = instruction count" will give an empty tail block.
+    ///
     /// Doesn't add a new edge between the cut-up blocks!
     pub fn split_block_at(
         &mut self,
@@ -185,7 +189,11 @@ impl ControlFlowGraph {
     ) -> Result<usize> {
         let tail_instructions = {
             let top_block = self.block_mut(block_index)?;
-            top_block.split_off_instructions_at(instruction_index)?
+            if top_block.instructions().len() == instruction_index {
+                Vec::default()
+            } else {
+                top_block.split_off_instructions_at(instruction_index)?
+            }
         };
 
         let tail_block_index = {
@@ -521,6 +529,50 @@ mod tests {
         assert_eq!(tail_instructions.len(), 2);
         assert_eq!(tail_instructions[0].address(), Some(1));
         assert_eq!(tail_instructions[1].address(), Some(2));
+    }
+
+    #[test]
+    fn test_split_block_at_zero_should_give_empty_head_block() {
+        // Given: Block with 2 instructions.
+        let mut cfg = ControlFlowGraph::new();
+
+        let block_index = {
+            let block = cfg.new_block().unwrap();
+            block.barrier(); // inst 0
+            block.barrier(); // inst 1
+            block.index()
+        };
+
+        // When: Splitting block at instruction 0
+        let tail_index = cfg.split_block_at(block_index, 0).unwrap();
+
+        // Then:
+        let head_instructions = cfg.block(block_index).unwrap().instructions();
+        assert_eq!(head_instructions.len(), 0);
+        let tail_instructions = cfg.block(tail_index).unwrap().instructions();
+        assert_eq!(tail_instructions.len(), 2);
+    }
+
+    #[test]
+    fn test_split_block_at_two_with_two_instructions_should_give_empty_tail_block() {
+        // Given: Block with 2 instructions.
+        let mut cfg = ControlFlowGraph::new();
+
+        let block_index = {
+            let block = cfg.new_block().unwrap();
+            block.barrier(); // inst 0
+            block.barrier(); // inst 1
+            block.index()
+        };
+
+        // When: Splitting block at instruction 2
+        let tail_index = cfg.split_block_at(block_index, 2).unwrap();
+
+        // Then:
+        let head_instructions = cfg.block(block_index).unwrap().instructions();
+        assert_eq!(head_instructions.len(), 2);
+        let tail_instructions = cfg.block(tail_index).unwrap().instructions();
+        assert_eq!(tail_instructions.len(), 0);
     }
 
     #[test]
