@@ -10,6 +10,7 @@ pub enum Sort {
     Set { range: Box<Sort> },
     Memory,
     Cache,
+    Predictor,
 }
 
 impl Sort {
@@ -44,6 +45,10 @@ impl Sort {
 
     pub fn cache() -> Self {
         Self::Cache
+    }
+
+    pub fn predictor() -> Self {
+        Self::Predictor
     }
 
     pub fn is_boolean(&self) -> bool {
@@ -91,6 +96,13 @@ impl Sort {
     pub fn is_cache(&self) -> bool {
         match self {
             Sort::Cache => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_predictor(&self) -> bool {
+        match self {
+            Sort::Predictor => true,
             _ => false,
         }
     }
@@ -151,6 +163,14 @@ impl Sort {
         }
     }
 
+    pub fn expect_predictor(&self) -> Result<()> {
+        if self.is_predictor() {
+            Ok(())
+        } else {
+            Err(format!("Expected Predictor but was {}", self).into())
+        }
+    }
+
     pub fn expect_sort(&self, sort: &Sort) -> Result<()> {
         if self == sort {
             Ok(())
@@ -191,6 +211,7 @@ impl fmt::Display for Sort {
             Sort::Set { range } => write!(f, "Set<{}>", range),
             Sort::Memory => write!(f, "Memory"),
             Sort::Cache => write!(f, "Cache"),
+            Sort::Predictor => write!(f, "Predictor"),
         }
     }
 }

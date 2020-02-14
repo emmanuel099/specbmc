@@ -7,6 +7,7 @@ mod boolean;
 mod cache;
 mod integer;
 mod memory;
+mod predictor;
 mod set;
 mod sort;
 mod variable;
@@ -17,6 +18,7 @@ pub use self::boolean::Boolean;
 pub use self::cache::Cache;
 pub use self::integer::Integer;
 pub use self::memory::Memory;
+pub use self::predictor::Predictor;
 pub use self::set::Set;
 pub use self::sort::Sort;
 pub use self::variable::Variable;
@@ -33,6 +35,7 @@ pub enum Operator {
     Set(Set),
     Memory(Memory),
     Cache(Cache),
+    Predictor(Predictor),
 }
 
 impl fmt::Display for Operator {
@@ -48,6 +51,7 @@ impl fmt::Display for Operator {
             Self::Set(op) => op.fmt(f),
             Self::Memory(op) => op.fmt(f),
             Self::Cache(op) => op.fmt(f),
+            Self::Predictor(op) => op.fmt(f),
         }
     }
 }

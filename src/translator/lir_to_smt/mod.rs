@@ -17,6 +17,7 @@ pub fn encode_program(program: &lir::Program, debug_file_path: Option<&Path>) ->
     }
 
     let word_size = 64;
+    define_predictor(&mut solver, word_size)?;
     let access_widths = vec![8, 16, 32, 64, 128];
     define_memory(&mut solver, word_size, &access_widths)?;
     define_cache(&mut solver, word_size, &access_widths)?;
@@ -83,6 +84,7 @@ impl Expr2Smt<()> for expr::Operator {
             Self::Set(op) => op.expr_to_smt2(w, i),
             Self::Memory(op) => op.expr_to_smt2(w, i),
             Self::Cache(op) => op.expr_to_smt2(w, i),
+            Self::Predictor(op) => op.expr_to_smt2(w, i),
         }
     }
 }
@@ -230,6 +232,19 @@ impl Expr2Smt<()> for expr::Cache {
     }
 }
 
+impl Expr2Smt<()> for expr::Predictor {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+    where
+        Writer: ::std::io::Write,
+    {
+        match self {
+            Self::MisPredict => write!(w, "mis-predict")?,
+            Self::SpeculationWindow => write!(w, "speculation-window")?,
+        };
+        Ok(())
+    }
+}
+
 impl Sym2Smt<()> for expr::Variable {
     fn sym_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
     where
@@ -263,6 +278,7 @@ impl Sort2Smt for expr::Sort {
             }
             Self::Memory => write!(w, "Memory")?,
             Self::Cache => write!(w, "Cache")?,
+            Self::Predictor => write!(w, "Predictor")?,
         };
         Ok(())
     }
@@ -364,6 +380,24 @@ fn define_cache<T>(
             &insert_expr,
         )?;
     }
+
+    Ok(())
+}
+
+fn define_predictor<T>(solver: &mut Solver<T>, word_size: usize) -> Result<()> {
+    solver.declare_sort(&expr::Sort::predictor(), 0)?;
+
+    solver.declare_fun(
+        "mis-predict",
+        &[expr::Sort::predictor(), expr::Sort::bit_vector(word_size)],
+        &expr::Sort::boolean(),
+    )?;
+
+    solver.declare_fun(
+        "speculation-window",
+        &[expr::Sort::predictor(), expr::Sort::bit_vector(word_size)],
+        &expr::Sort::integer(),
+    )?;
 
     Ok(())
 }
