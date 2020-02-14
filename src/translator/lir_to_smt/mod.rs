@@ -77,6 +77,7 @@ impl Expr2Smt<()> for expr::Operator {
                 Ok(())
             }
             expr::Operator::Boolean(op) => op.expr_to_smt2(w, i),
+            expr::Operator::Integer(op) => op.expr_to_smt2(w, i),
             expr::Operator::BitVector(op) => op.expr_to_smt2(w, i),
             expr::Operator::Array(op) => op.expr_to_smt2(w, i),
             expr::Operator::Set(op) => op.expr_to_smt2(w, i),
@@ -101,6 +102,28 @@ impl Expr2Smt<()> for expr::Boolean {
             expr::Boolean::Xor => "xor",
         };
         write!(w, "{}", s)?;
+        Ok(())
+    }
+}
+
+impl Expr2Smt<()> for expr::Integer {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+    where
+        Writer: ::std::io::Write,
+    {
+        match self {
+            Self::Constant(value) => write!(w, "{}", value),
+            Self::Lt => write!(w, "<"),
+            Self::Gt => write!(w, ">"),
+            Self::Lte => write!(w, "<="),
+            Self::Gte => write!(w, ">="),
+            Self::Mod => write!(w, "mod"),
+            Self::Div => write!(w, "div"),
+            Self::Abs => write!(w, "abs"),
+            Self::Mul => write!(w, "*"),
+            Self::Add => write!(w, "+"),
+            Self::Sub | Self::Neg => write!(w, "-"),
+        }?;
         Ok(())
     }
 }
@@ -226,6 +249,7 @@ impl Sort2Smt for expr::Sort {
     {
         match self {
             expr::Sort::Boolean => write!(w, "Bool")?,
+            expr::Sort::Integer => write!(w, "Integer")?,
             expr::Sort::BitVector(width) => write!(w, "(_ BitVec {})", width)?,
             expr::Sort::Array { range, domain } => {
                 write!(w, "(Array ")?;

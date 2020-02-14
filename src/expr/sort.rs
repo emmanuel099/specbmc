@@ -4,6 +4,7 @@ use std::fmt;
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Sort {
     Boolean,
+    Integer,
     BitVector(usize),
     Array { range: Box<Sort>, domain: Box<Sort> },
     Set { range: Box<Sort> },
@@ -14,6 +15,10 @@ pub enum Sort {
 impl Sort {
     pub fn boolean() -> Self {
         Self::Boolean
+    }
+
+    pub fn integer() -> Self {
+        Self::Integer
     }
 
     pub fn bit_vector(width: usize) -> Self {
@@ -44,6 +49,13 @@ impl Sort {
     pub fn is_boolean(&self) -> bool {
         match self {
             Sort::Boolean => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_integer(&self) -> bool {
+        match self {
+            Sort::Integer => true,
             _ => false,
         }
     }
@@ -88,6 +100,14 @@ impl Sort {
             Ok(())
         } else {
             Err(format!("Expected Boolean but was {}", self).into())
+        }
+    }
+
+    pub fn expect_integer(&self) -> Result<()> {
+        if self.is_integer() {
+            Ok(())
+        } else {
+            Err(format!("Expected Integer but was {}", self).into())
         }
     }
 
@@ -165,6 +185,7 @@ impl fmt::Display for Sort {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Sort::Boolean => write!(f, "Boolean"),
+            Sort::Integer => write!(f, "Integer"),
             Sort::BitVector(width) => write!(f, "BitVec<{}>", width),
             Sort::Array { range, domain } => write!(f, "Array<{}, {}>", range, domain),
             Sort::Set { range } => write!(f, "Set<{}>", range),

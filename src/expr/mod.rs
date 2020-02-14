@@ -5,6 +5,7 @@ mod array;
 mod bitvector;
 mod boolean;
 mod cache;
+mod integer;
 mod memory;
 mod set;
 mod sort;
@@ -14,6 +15,7 @@ pub use self::array::Array;
 pub use self::bitvector::BitVector;
 pub use self::boolean::Boolean;
 pub use self::cache::Cache;
+pub use self::integer::Integer;
 pub use self::memory::Memory;
 pub use self::set::Set;
 pub use self::sort::Sort;
@@ -25,6 +27,7 @@ pub enum Operator {
     Ite,
     Equal,
     Boolean(Boolean),
+    Integer(Integer),
     BitVector(BitVector),
     Array(Array),
     Set(Set),
@@ -39,6 +42,7 @@ impl fmt::Display for Operator {
             Self::Ite => write!(f, "ite"),
             Self::Equal => write!(f, "="),
             Self::Boolean(op) => op.fmt(f),
+            Self::Integer(op) => op.fmt(f),
             Self::BitVector(op) => op.fmt(f),
             Self::Array(op) => op.fmt(f),
             Self::Set(op) => op.fmt(f),
