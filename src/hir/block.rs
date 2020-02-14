@@ -23,6 +23,13 @@ impl Block {
         }
     }
 
+    /// Clone this block and set a new index.
+    pub fn clone_new_index(&self, index: usize) -> Block {
+        let mut clone = self.clone();
+        clone.index = index;
+        clone
+    }
+
     /// Appends the contents of another `Block` to this `Block`.
     ///
     /// Instruction indices are updated accordingly.
