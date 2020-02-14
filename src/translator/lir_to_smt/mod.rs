@@ -67,22 +67,22 @@ impl Expr2Smt<()> for expr::Operator {
         Writer: ::std::io::Write,
     {
         match self {
-            expr::Operator::Variable(v) => v.sym_to_smt2(w, i),
-            expr::Operator::Ite => {
+            Self::Variable(v) => v.sym_to_smt2(w, i),
+            Self::Ite => {
                 write!(w, "ite")?;
                 Ok(())
             }
-            expr::Operator::Equal => {
+            Self::Equal => {
                 write!(w, "=")?;
                 Ok(())
             }
-            expr::Operator::Boolean(op) => op.expr_to_smt2(w, i),
-            expr::Operator::Integer(op) => op.expr_to_smt2(w, i),
-            expr::Operator::BitVector(op) => op.expr_to_smt2(w, i),
-            expr::Operator::Array(op) => op.expr_to_smt2(w, i),
-            expr::Operator::Set(op) => op.expr_to_smt2(w, i),
-            expr::Operator::Memory(op) => op.expr_to_smt2(w, i),
-            expr::Operator::Cache(op) => op.expr_to_smt2(w, i),
+            Self::Boolean(op) => op.expr_to_smt2(w, i),
+            Self::Integer(op) => op.expr_to_smt2(w, i),
+            Self::BitVector(op) => op.expr_to_smt2(w, i),
+            Self::Array(op) => op.expr_to_smt2(w, i),
+            Self::Set(op) => op.expr_to_smt2(w, i),
+            Self::Memory(op) => op.expr_to_smt2(w, i),
+            Self::Cache(op) => op.expr_to_smt2(w, i),
         }
     }
 }
@@ -92,16 +92,15 @@ impl Expr2Smt<()> for expr::Boolean {
     where
         Writer: ::std::io::Write,
     {
-        let s = match self {
-            expr::Boolean::True => "true",
-            expr::Boolean::False => "false",
-            expr::Boolean::Not => "not",
-            expr::Boolean::Imply => "=>",
-            expr::Boolean::And => "and",
-            expr::Boolean::Or => "or",
-            expr::Boolean::Xor => "xor",
+        match self {
+            Self::True => write!(w, "true")?,
+            Self::False => write!(w, "false")?,
+            Self::Not => write!(w, "not")?,
+            Self::Imply => write!(w, "=>")?,
+            Self::And => write!(w, "and")?,
+            Self::Or => write!(w, "or")?,
+            Self::Xor => write!(w, "xor")?,
         };
-        write!(w, "{}", s)?;
         Ok(())
     }
 }
@@ -112,18 +111,18 @@ impl Expr2Smt<()> for expr::Integer {
         Writer: ::std::io::Write,
     {
         match self {
-            Self::Constant(value) => write!(w, "{}", value),
-            Self::Lt => write!(w, "<"),
-            Self::Gt => write!(w, ">"),
-            Self::Lte => write!(w, "<="),
-            Self::Gte => write!(w, ">="),
-            Self::Mod => write!(w, "mod"),
-            Self::Div => write!(w, "div"),
-            Self::Abs => write!(w, "abs"),
-            Self::Mul => write!(w, "*"),
-            Self::Add => write!(w, "+"),
-            Self::Sub | Self::Neg => write!(w, "-"),
-        }?;
+            Self::Constant(value) => write!(w, "{}", value)?,
+            Self::Lt => write!(w, "<")?,
+            Self::Gt => write!(w, ">")?,
+            Self::Lte => write!(w, "<=")?,
+            Self::Gte => write!(w, ">=")?,
+            Self::Mod => write!(w, "mod")?,
+            Self::Div => write!(w, "div")?,
+            Self::Abs => write!(w, "abs")?,
+            Self::Mul => write!(w, "*")?,
+            Self::Add => write!(w, "+")?,
+            Self::Sub | Self::Neg => write!(w, "-")?,
+        };
         Ok(())
     }
 }
@@ -133,49 +132,48 @@ impl Expr2Smt<()> for expr::BitVector {
     where
         Writer: ::std::io::Write,
     {
-        let s = match self {
-            expr::BitVector::Constant(bv) => format!("(_ bv{} {})", bv.value(), bv.bits()),
-            expr::BitVector::ToBoolean => "bv2bool".to_owned(), // FIXME
-            expr::BitVector::FromBoolean(i) => format!("(bool2bv {})", i), // FIXME
-            expr::BitVector::Concat => "concat".to_owned(),
-            expr::BitVector::Extract(i, j) => format!("(_ extract {} {})", i, j),
-            expr::BitVector::Truncate(i) => format!("(_ extract {} 0)", i - 1),
-            expr::BitVector::Not => "bvnot".to_owned(),
-            expr::BitVector::And => "bvand".to_owned(),
-            expr::BitVector::Or => "bvor".to_owned(),
-            expr::BitVector::Neg => "bvneg".to_owned(),
-            expr::BitVector::Add => "bvadd".to_owned(),
-            expr::BitVector::Mul => "bvmul".to_owned(),
-            expr::BitVector::UDiv => "bvudiv".to_owned(),
-            expr::BitVector::URem => "bvurem".to_owned(),
-            expr::BitVector::Shl => "bvshl".to_owned(),
-            expr::BitVector::LShr => "bvlshr".to_owned(),
-            expr::BitVector::ULt => "bvult".to_owned(),
-            expr::BitVector::Nand => "bvnand".to_owned(),
-            expr::BitVector::Nor => "bvnor".to_owned(),
-            expr::BitVector::Xor => "bvxor".to_owned(),
-            expr::BitVector::Xnor => "bvxnor".to_owned(),
-            expr::BitVector::Comp => "bvcomp".to_owned(),
-            expr::BitVector::Sub => "bvsub".to_owned(),
-            expr::BitVector::SDiv => "bvsdiv".to_owned(),
-            expr::BitVector::SRem => "bvsrem".to_owned(),
-            expr::BitVector::SMod => "bvsmod".to_owned(),
-            expr::BitVector::UMod => "bvumod".to_owned(),
-            expr::BitVector::AShr => "bvashr".to_owned(),
-            expr::BitVector::Repeat(i) => format!("(_ repeat {})", i),
-            expr::BitVector::ZeroExtend(i) => format!("(_ zero_extend {})", i),
-            expr::BitVector::SignExtend(i) => format!("(_ sign_extend {})", i),
-            expr::BitVector::RotateLeft(i) => format!("(_ rotate_left {})", i),
-            expr::BitVector::RotateRight(i) => format!("(_ rotate_right {})", i),
-            expr::BitVector::ULe => "bvule".to_owned(),
-            expr::BitVector::UGt => "bvugt".to_owned(),
-            expr::BitVector::UGe => "bvuge".to_owned(),
-            expr::BitVector::SLt => "bvslt".to_owned(),
-            expr::BitVector::SLe => "bvsle".to_owned(),
-            expr::BitVector::SGt => "bvsgt".to_owned(),
-            expr::BitVector::SGe => "bvsge".to_owned(),
+        match self {
+            Self::Constant(bv) => write!(w, "(_ bv{} {})", bv.value(), bv.bits())?,
+            Self::ToBoolean => write!(w, "bv2bool")?, // FIXME
+            Self::FromBoolean(i) => write!(w, "(bool2bv {})", i)?, // FIXME
+            Self::Concat => write!(w, "concat")?,
+            Self::Extract(i, j) => write!(w, "(_ extract {} {})", i, j)?,
+            Self::Truncate(i) => write!(w, "(_ extract {} 0)", i - 1)?,
+            Self::Not => write!(w, "bvnot")?,
+            Self::And => write!(w, "bvand")?,
+            Self::Or => write!(w, "bvor")?,
+            Self::Neg => write!(w, "bvneg")?,
+            Self::Add => write!(w, "bvadd")?,
+            Self::Mul => write!(w, "bvmul")?,
+            Self::UDiv => write!(w, "bvudiv")?,
+            Self::URem => write!(w, "bvurem")?,
+            Self::Shl => write!(w, "bvshl")?,
+            Self::LShr => write!(w, "bvlshr")?,
+            Self::ULt => write!(w, "bvult")?,
+            Self::Nand => write!(w, "bvnand")?,
+            Self::Nor => write!(w, "bvnor")?,
+            Self::Xor => write!(w, "bvxor")?,
+            Self::Xnor => write!(w, "bvxnor")?,
+            Self::Comp => write!(w, "bvcomp")?,
+            Self::Sub => write!(w, "bvsub")?,
+            Self::SDiv => write!(w, "bvsdiv")?,
+            Self::SRem => write!(w, "bvsrem")?,
+            Self::SMod => write!(w, "bvsmod")?,
+            Self::UMod => write!(w, "bvumod")?,
+            Self::AShr => write!(w, "bvashr")?,
+            Self::Repeat(i) => write!(w, "(_ repeat {})", i)?,
+            Self::ZeroExtend(i) => write!(w, "(_ zero_extend {})", i)?,
+            Self::SignExtend(i) => write!(w, "(_ sign_extend {})", i)?,
+            Self::RotateLeft(i) => write!(w, "(_ rotate_left {})", i)?,
+            Self::RotateRight(i) => write!(w, "(_ rotate_right {})", i)?,
+            Self::ULe => write!(w, "bvule")?,
+            Self::UGt => write!(w, "bvugt")?,
+            Self::UGe => write!(w, "bvuge")?,
+            Self::SLt => write!(w, "bvslt")?,
+            Self::SLe => write!(w, "bvsle")?,
+            Self::SGt => write!(w, "bvsgt")?,
+            Self::SGe => write!(w, "bvsge")?,
         };
-        write!(w, "{}", s)?;
         Ok(())
     }
 }
@@ -186,9 +184,9 @@ impl Expr2Smt<()> for expr::Array {
         Writer: ::std::io::Write,
     {
         match self {
-            expr::Array::Select => write!(w, "select"),
-            expr::Array::Store => write!(w, "store"),
-        }?;
+            Self::Select => write!(w, "select")?,
+            Self::Store => write!(w, "store")?,
+        };
         Ok(())
     }
 }
@@ -199,10 +197,10 @@ impl Expr2Smt<()> for expr::Set {
         Writer: ::std::io::Write,
     {
         match self {
-            expr::Set::Insert => write!(w, "(store set value true)"), // FIXME
-            expr::Set::Remove => write!(w, "(store set value false)"), // FIXME
-            expr::Set::Contains => write!(w, "(select set value)"),   // FIXME
-        }?;
+            Self::Insert => write!(w, "(store set value true)")?, // FIXME
+            Self::Remove => write!(w, "(store set value false)")?, // FIXME
+            Self::Contains => write!(w, "(select set value)")?,   // FIXME
+        };
         Ok(())
     }
 }
@@ -213,9 +211,9 @@ impl Expr2Smt<()> for expr::Memory {
         Writer: ::std::io::Write,
     {
         match self {
-            expr::Memory::Store(width) => write!(w, "store{}", width),
-            expr::Memory::Load(width) => write!(w, "load{}", width),
-        }?;
+            Self::Store(width) => write!(w, "store{}", width)?,
+            Self::Load(width) => write!(w, "load{}", width)?,
+        };
         Ok(())
     }
 }
@@ -226,8 +224,8 @@ impl Expr2Smt<()> for expr::Cache {
         Writer: ::std::io::Write,
     {
         match self {
-            expr::Cache::Fetch(width) => write!(w, "fetch{}", width),
-        }?;
+            Self::Fetch(width) => write!(w, "fetch{}", width)?,
+        };
         Ok(())
     }
 }
@@ -248,23 +246,23 @@ impl Sort2Smt for expr::Sort {
         Writer: ::std::io::Write,
     {
         match self {
-            expr::Sort::Boolean => write!(w, "Bool")?,
-            expr::Sort::Integer => write!(w, "Integer")?,
-            expr::Sort::BitVector(width) => write!(w, "(_ BitVec {})", width)?,
-            expr::Sort::Array { range, domain } => {
+            Self::Boolean => write!(w, "Bool")?,
+            Self::Integer => write!(w, "Integer")?,
+            Self::BitVector(width) => write!(w, "(_ BitVec {})", width)?,
+            Self::Array { range, domain } => {
                 write!(w, "(Array ")?;
                 range.sort_to_smt2(w)?;
                 write!(w, " ")?;
                 domain.sort_to_smt2(w)?;
                 write!(w, ")")?
             }
-            expr::Sort::Set { range } => {
+            Self::Set { range } => {
                 write!(w, "(Array ")?;
                 range.sort_to_smt2(w)?;
                 write!(w, " Bool)")?
             }
-            expr::Sort::Memory => write!(w, "Memory")?,
-            expr::Sort::Cache => write!(w, "Cache")?,
+            Self::Memory => write!(w, "Memory")?,
+            Self::Cache => write!(w, "Cache")?,
         };
         Ok(())
     }
