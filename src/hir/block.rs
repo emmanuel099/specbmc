@@ -53,6 +53,11 @@ impl Block {
         &mut self.instructions
     }
 
+    /// Overwrites the instructions of this `Block`
+    pub fn set_instructions(&mut self, instructions: &Vec<Instruction>) {
+        self.instructions.clone_from(instructions);
+    }
+
     /// Returns try if this `Block` is empty, meaning it has no `Instruction`
     pub fn is_empty(&self) -> bool {
         self.instructions.is_empty()
@@ -76,6 +81,15 @@ impl Block {
         }
         self.instructions.remove(index);
         Ok(())
+    }
+
+    /// Splits off the instructions at the given index.
+    /// Only instructions with smaller index will remain in this `Block`.
+    pub fn split_off_instructions_at(&mut self, index: usize) -> Result<Vec<Instruction>> {
+        if index >= self.instructions.len() {
+            return Err(format!("No instruction with index {} found", index).into());
+        }
+        Ok(self.instructions.split_off(index))
     }
 
     /// Returns phi nodes of this `Block`

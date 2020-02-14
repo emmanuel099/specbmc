@@ -98,6 +98,13 @@ impl ControlFlowGraph {
         Ok(self.graph.edge(head, tail)?)
     }
 
+    /// Removes an `Edge` by its head and tail `Block` indices.
+    pub fn remove_edge(&mut self, head: usize, tail: usize) -> Result<Edge> {
+        let edge = self.edge(head, tail)?.clone();
+        self.graph.remove_edge(head, tail)?;
+        Ok(edge)
+    }
+
     /// Get a mutable reference to an `Edge` by its head and tail `Block` indices.
     pub fn edge_mut(&mut self, head: usize, tail: usize) -> Result<&mut Edge> {
         Ok(self.graph.edge_mut(head, tail)?)
@@ -166,6 +173,44 @@ impl ControlFlowGraph {
     pub fn add_block(&mut self, block: Block) -> Result<()> {
         self.next_index = cmp::max(block.index() + 1, self.next_index);
         Ok(self.graph.insert_vertex(block)?)
+    }
+
+    /// Splits the block with the given index at the specified instruction.
+    /// Outgoing edges will be rewired to the new block.
+    /// Doesn't add a new edge between the cut-up blocks!
+    pub fn split_block_at(
+        &mut self,
+        block_index: usize,
+        instruction_index: usize,
+    ) -> Result<usize> {
+        let tail_instructions = {
+            let top_block = self.block_mut(block_index)?;
+            top_block.split_off_instructions_at(instruction_index)?
+        };
+
+        let tail_block_index = {
+            let tail_block = self.new_block()?;
+            tail_block.set_instructions(&tail_instructions);
+            tail_block.index()
+        };
+
+        for successor in self.successor_indices(block_index)? {
+            let edge = self.remove_edge(block_index, successor)?;
+            match edge.condition() {
+                Some(condition) => {
+                    self.conditional_edge(tail_block_index, successor, condition.clone())?
+                }
+                None => self.unconditional_edge(tail_block_index, successor)?,
+            };
+        }
+
+        if let Some(exit) = self.exit() {
+            if exit == block_index {
+                self.set_exit(tail_block_index)?;
+            }
+        }
+
+        Ok(tail_block_index)
     }
 
     /// Creates an unconditional edge from one block to another block
@@ -392,5 +437,110 @@ impl fmt::Display for ControlFlowGraph {
             writeln!(f, "edge {}", edge)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::expr::Boolean;
+
+    #[test]
+    fn test_split_block_at_should_correctly_rewire_outgoing_edges_to_new_tail_block() {
+        // Given: Block with two incoming and two outgoing edges.
+        let mut cfg = ControlFlowGraph::new();
+
+        let pred1 = cfg.new_block().unwrap().index();
+        let pred2 = cfg.new_block().unwrap().index();
+
+        let block_index = {
+            let block = cfg.new_block().unwrap();
+            block.barrier(); // inst 0
+            block.barrier(); // inst 1
+            block.index()
+        };
+
+        let succ1 = cfg.new_block().unwrap().index();
+        let succ2 = cfg.new_block().unwrap().index();
+
+        cfg.unconditional_edge(pred1, block_index).unwrap();
+        cfg.unconditional_edge(pred2, block_index).unwrap();
+
+        cfg.unconditional_edge(block_index, succ1).unwrap();
+        cfg.conditional_edge(block_index, succ2, Boolean::constant(true))
+            .unwrap();
+
+        // When: Splitting block at instruction 1
+        let tail_index = cfg.split_block_at(block_index, 1).unwrap();
+
+        // Then: Incoming edges should still end in head block, but outgoing edges should originate from new tail block.
+        assert_eq!(cfg.edges().len(), 4);
+        assert!(cfg.edge(pred1, block_index).is_ok(), "Expect Pred1 -> Head");
+        assert!(cfg.edge(pred2, block_index).is_ok(), "Expect Pred2 -> Head");
+        assert!(
+            cfg.edge(block_index, succ1).is_err(),
+            "Not expect Head -> Succ1"
+        );
+        assert!(
+            cfg.edge(block_index, succ2).is_err(),
+            "Not expect Head -> Succ2"
+        );
+        assert!(cfg.edge(tail_index, succ1).is_ok(), "Expect Tail -> Succ1");
+        assert!(cfg.edge(tail_index, succ2).is_ok(), "Expect Tail -> Succ2");
+
+        // conditional edge should be handled properly
+        assert_eq!(
+            cfg.edge(tail_index, succ2).unwrap().condition(),
+            Some(&Boolean::constant(true)),
+        );
+    }
+
+    #[test]
+    fn test_split_block_at_should_correctly_move_instructions_to_new_tail_block() {
+        // Given: Block with 3 instructions.
+        let mut cfg = ControlFlowGraph::new();
+
+        let block_index = {
+            let block = cfg.new_block().unwrap();
+            block.barrier().set_address(Some(0)); // inst 0
+            block.barrier().set_address(Some(1)); // inst 1
+            block.barrier().set_address(Some(2)); // inst 2
+            block.index()
+        };
+
+        // When: Splitting block at instruction 1
+        let tail_index = cfg.split_block_at(block_index, 1).unwrap();
+
+        // Then:
+        // 1. Instruction 0 should remain in the existing block.
+        let head_instructions = cfg.block(block_index).unwrap().instructions();
+        assert_eq!(head_instructions.len(), 1);
+        assert_eq!(head_instructions[0].address(), Some(0));
+        // 2. Instruction 1 and 2 should end up in the new tail block.
+        let tail_instructions = cfg.block(tail_index).unwrap().instructions();
+        assert_eq!(tail_instructions.len(), 2);
+        assert_eq!(tail_instructions[0].address(), Some(1));
+        assert_eq!(tail_instructions[1].address(), Some(2));
+    }
+
+    #[test]
+    fn test_split_block_at_should_update_exit_block_to_new_tail_block_if_exit_block_is_split() {
+        // Given: Block which is exit block
+        let mut cfg = ControlFlowGraph::new();
+
+        let block_index = {
+            let block = cfg.new_block().unwrap();
+            block.barrier(); // inst 0
+            block.barrier(); // inst 1
+            block.index()
+        };
+
+        cfg.set_exit(block_index).unwrap();
+
+        // When: Splitting block at instruction 1
+        let tail_index = cfg.split_block_at(block_index, 1).unwrap();
+
+        // Then: Should change exit to new tail block
+        assert_eq!(cfg.exit(), Some(tail_index));
     }
 }
