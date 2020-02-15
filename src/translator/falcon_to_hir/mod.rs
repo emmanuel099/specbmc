@@ -37,6 +37,10 @@ fn translate_control_flow_graph(src_cfg: &il::ControlFlowGraph) -> Result<hir::C
         cfg.set_entry(new_entry)?;
     }
 
+    if let Some(exit) = src_cfg.exit()  {
+        cfg.set_exit(exit)?;
+    }
+
     Ok(cfg)
 }
 
