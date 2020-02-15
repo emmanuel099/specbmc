@@ -10,8 +10,6 @@ pub fn translate_function(function: &il::Function) -> Result<hir::Program> {
 }
 
 fn translate_control_flow_graph(src_cfg: &il::ControlFlowGraph) -> Result<hir::ControlFlowGraph> {
-    let entry = src_cfg.entry().ok_or("CFG entry must be set")?;
-
     let mut cfg = hir::ControlFlowGraph::new();
 
     for block in src_cfg.blocks() {
@@ -28,18 +26,24 @@ fn translate_control_flow_graph(src_cfg: &il::ControlFlowGraph) -> Result<hir::C
         }
     }
 
-    if src_cfg.predecessor_indices(entry)?.is_empty() {
-        cfg.set_entry(entry)?;
-    } else {
-        // add a dedicated entry block, because the original entry block contains input edges
-        let new_entry = cfg.new_block()?.index();
-        cfg.unconditional_edge(new_entry, entry)?;
-        cfg.set_entry(new_entry)?;
-    }
+    // add a dedicated entry block
+    let src_entry = src_cfg.entry().ok_or("CFG entry must be set")?;
+    let entry = cfg.new_block()?.index();
+    cfg.unconditional_edge(entry, src_entry)?;
+    cfg.set_entry(entry)?;
 
-    if let Some(exit) = src_cfg.exit()  {
-        cfg.set_exit(exit)?;
+    // add a dedicated exit block and connect all blocks without successor to it
+    let unconnected_blocks: Vec<usize> = cfg
+        .graph()
+        .vertices_without_successors()
+        .iter()
+        .map(|block| block.index())
+        .collect();
+    let exit = cfg.new_block()?.index();
+    for block_index in unconnected_blocks {
+        cfg.unconditional_edge(block_index, exit)?;
     }
+    cfg.set_exit(exit)?;
 
     Ok(cfg)
 }
