@@ -63,9 +63,7 @@ fn build_transient_cfg(cfg: &ControlFlowGraph) -> Result<ControlFlowGraph> {
 
     // Add resolve block as exit
     let resolve_block_index = transient_cfg.new_block()?.index();
-    if let Some(exit) = transient_cfg.exit() {
-        transient_cfg.unconditional_edge(exit, resolve_block_index)?;
-    }
+    transient_cfg.unconditional_edge(cfg.exit().unwrap(), resolve_block_index)?; // end of program -> resolve
     transient_cfg.set_exit(resolve_block_index)?;
 
     for block in cfg.blocks() {
