@@ -1,6 +1,7 @@
 //! SpecBMC HIR
 
 mod add_effects;
+mod add_transient_execution;
 mod block;
 mod control_flow_graph;
 mod edge;
@@ -12,6 +13,7 @@ mod program;
 mod ssa_transformation;
 
 pub use self::add_effects::add_effects;
+pub use self::add_transient_execution::add_transient_execution;
 pub use self::block::Block;
 pub use self::control_flow_graph::ControlFlowGraph;
 pub use self::edge::Edge;
