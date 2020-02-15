@@ -434,6 +434,13 @@ impl ControlFlowGraph {
 
         Ok((entry_index.unwrap(), exit_index.unwrap()))
     }
+
+    /// Simplifies the control flow graph by removing unreachable blocks as well as merging blocks.
+    pub fn simplify(&mut self) -> Result<()> {
+        self.graph.remove_unreachable_vertices();
+        self.merge()?;
+        Ok(())
+    }
 }
 
 impl fmt::Display for ControlFlowGraph {
