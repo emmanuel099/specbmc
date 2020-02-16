@@ -390,9 +390,16 @@ impl ControlFlowGraph {
         Ok(block_map)
     }
 
+    /// Removes all unreachable blocks from the control flow graph.
+    pub fn remove_unreachable_blocks(&mut self) -> Result<()> {
+        let entry = self.entry.ok_or("CFG entry must be set")?;
+        self.graph.remove_unreachable_vertices(entry);
+        Ok(())
+    }
+
     /// Simplifies the control flow graph by removing unreachable blocks as well as merging blocks.
     pub fn simplify(&mut self) -> Result<()> {
-        self.graph.remove_unreachable_vertices();
+        self.remove_unreachable_blocks()?;
         self.merge()?;
         Ok(())
     }
