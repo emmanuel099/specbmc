@@ -379,30 +379,10 @@ impl ControlFlowGraph {
     }
 
     /// Inserts a control flow graph into this control flow graph, and returns
-    /// the entry and exit indices for inserted graph.
-    ///
-    /// Requires the graph being inserted to have entry set.
+    /// the mapping from the old to the new block indices for the inserted graph.
     ///
     /// This function causes the `ControlFlowGraph` to become disconnected.
-    ///
-    /// This function is useful for inserting multiple `ControlFlowGraph`s into
-    /// one before adding all `Edge`s in a subsequent pass.
-    ///
-    /// # Warnings
-    /// This invalidates the entry and exit of the control flow graph.
-    pub fn insert(&mut self, other: &ControlFlowGraph) -> Result<(usize, usize)> {
-        if other.entry().is_none() || other.exit().is_none() {
-            bail!("entry/exit not set on control flow graph");
-        }
-
-        // our entry and exit our no longer valid
-        self.entry = None;
-        self.exit = None;
-
-        // Options to store the other graph entry/exit indices
-        let mut entry_index = None;
-        let mut exit_index = None;
-
+    pub fn insert(&mut self, other: &ControlFlowGraph) -> Result<BTreeMap<usize, usize>> {
         // keep track of mapping between old indices and new indices
         let mut block_map: BTreeMap<usize, usize> = BTreeMap::new();
 
@@ -410,29 +390,19 @@ impl ControlFlowGraph {
         for block in other.graph().vertices() {
             let new_block = block.clone_new_index(self.next_index);
             block_map.insert(block.index(), self.next_index);
-            if block.index() == other.entry().unwrap() {
-                entry_index = Some(self.next_index);
-            }
-            if block.index() == other.exit().unwrap() {
-                exit_index = Some(self.next_index);
-            }
             self.next_index += 1;
             self.graph.insert_vertex(new_block)?;
         }
 
         // insert edges
         for edge in other.graph().edges() {
-            let new_head: usize = block_map[&edge.head()];
-            let new_tail: usize = block_map[&edge.tail()];
+            let new_head = block_map[&edge.head()];
+            let new_tail = block_map[&edge.tail()];
             let new_edge = Edge::new(new_head, new_tail, edge.condition().cloned());
             self.graph.insert_edge(new_edge)?;
         }
 
-        if entry_index.is_none() || exit_index.is_none() {
-            bail!("failed to get entry/exit indices");
-        }
-
-        Ok((entry_index.unwrap(), exit_index.unwrap()))
+        Ok(block_map)
     }
 
     /// Simplifies the control flow graph by removing unreachable blocks as well as merging blocks.
