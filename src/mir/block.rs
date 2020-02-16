@@ -12,9 +12,6 @@ pub struct Block {
     nodes: Vec<Node>,
     /// The execution condition of this block.
     execution_condition: Expression,
-    /// The variable which refers to the execution condition of this block.
-    /// Use the variable instead of the expression to reduce the length of the formulas.
-    execution_condition_variable: Variable,
 }
 
 impl Block {
@@ -23,10 +20,6 @@ impl Block {
             index,
             nodes: Vec::new(),
             execution_condition: Boolean::constant(false),
-            execution_condition_variable: Variable::new(
-                format!("_exec_{}", index),
-                Sort::boolean(),
-            ),
         }
     }
 
@@ -50,8 +43,14 @@ impl Block {
         self.execution_condition = expr;
     }
 
-    pub fn execution_condition_variable(&self) -> &Variable {
-        &self.execution_condition_variable
+    /// The variable which refers to the execution condition of this block.
+    /// Use the variable instead of the expression to reduce the length of the formulas.
+    pub fn execution_condition_variable(&self) -> Variable {
+        Self::execution_condition_variable_for_index(self.index)
+    }
+
+    pub fn execution_condition_variable_for_index(index: usize) -> Variable {
+        Variable::new(format!("_exec_{}", index), Sort::boolean())
     }
 
     pub fn add_node(&mut self, node: Node) {
@@ -89,7 +88,9 @@ impl fmt::Display for Block {
         writeln!(
             f,
             "Block 0x{:X} [{} = {}]",
-            self.index, self.execution_condition_variable, self.execution_condition
+            self.index,
+            self.execution_condition_variable(),
+            self.execution_condition
         )?;
         for node in self.nodes() {
             writeln!(f, "{}", node)?;

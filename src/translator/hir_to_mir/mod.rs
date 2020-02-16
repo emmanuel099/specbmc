@@ -15,10 +15,8 @@ fn translate_control_flow_graph(cfg: &hir::ControlFlowGraph) -> Result<mir::Bloc
 
     let mut block_graph = mir::BlockGraph::new();
 
-    let topological_ordering = cfg.graph().compute_topological_ordering(entry)?;
-    for block_index in topological_ordering {
-        let block = translate_block(&block_graph, cfg, block_index)?;
-        block_graph.add_block(block)?;
+    for block in cfg.blocks() {
+        block_graph.add_block(translate_block(cfg, block)?)?;
     }
 
     for edge in cfg.edges() {
@@ -31,13 +29,11 @@ fn translate_control_flow_graph(cfg: &hir::ControlFlowGraph) -> Result<mir::Bloc
     Ok(block_graph)
 }
 
-fn transition_condition(predecessor: &mir::Block, edge: &hir::Edge) -> Result<expr::Expression> {
+fn transition_condition(edge: &hir::Edge) -> Result<expr::Expression> {
+    let pred_exec_cond = mir::Block::execution_condition_variable_for_index(edge.head());
     match edge.condition() {
-        Some(condition) => expr::Boolean::and(
-            predecessor.execution_condition_variable().clone().into(),
-            condition.clone(),
-        ),
-        None => Ok(predecessor.execution_condition_variable().clone().into()), // unconditional transition
+        Some(condition) => expr::Boolean::and(pred_exec_cond.into(), condition.clone()),
+        None => Ok(pred_exec_cond.into()), // unconditional transition
     }
 }
 
@@ -47,7 +43,6 @@ fn transition_condition(predecessor: &mir::Block, edge: &hir::Edge) -> Result<ex
 ///    exec(b) = true                                               if pred(b) is empty
 ///              Disjunction of p in pred(b). (exec(p) /\ t(p, b))  otherwise
 fn compute_execution_condition(
-    block_graph: &mir::BlockGraph,
     cfg: &hir::ControlFlowGraph,
     block_index: usize,
 ) -> Result<expr::Expression> {
@@ -59,31 +54,24 @@ fn compute_execution_condition(
     }
 
     for pred_index in predecessors {
-        let predecessor = block_graph.block(pred_index)?;
         let edge = cfg.edge(pred_index, block_index)?;
-        transitions.push(transition_condition(predecessor, edge)?);
+        transitions.push(transition_condition(edge)?);
     }
 
     expr::Boolean::disjunction(&transitions)
 }
 
-fn translate_block(
-    block_graph: &mir::BlockGraph,
-    cfg: &hir::ControlFlowGraph,
-    block_index: usize,
-) -> Result<mir::Block> {
-    let mut block = mir::Block::new(block_index);
-    block.set_execution_condition(compute_execution_condition(&block_graph, cfg, block_index)?);
+fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Result<mir::Block> {
+    let mut block = mir::Block::new(src_block.index());
 
-    let src_block = cfg.block(block_index)?;
+    block.set_execution_condition(compute_execution_condition(cfg, block.index())?);
 
     for phi_node in src_block.phi_nodes() {
         let mut phi_expr: Option<expr::Expression> = None;
 
-        for pred_index in cfg.predecessor_indices(block_index)? {
-            let predecessor = block_graph.block(pred_index)?;
-            let edge = cfg.edge(pred_index, block_index)?;
-            let phi_cond = transition_condition(predecessor, edge)?;
+        for pred_index in cfg.predecessor_indices(block.index())? {
+            let edge = cfg.edge(pred_index, block.index())?;
+            let phi_cond = transition_condition(edge)?;
             let phi_var = phi_node.incoming_variable(pred_index).unwrap().clone();
 
             if let Some(expr) = phi_expr {
