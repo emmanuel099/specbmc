@@ -7,6 +7,7 @@ use std::fmt;
 pub struct BlockGraph {
     graph: Graph<Block, Edge>,
     entry: Option<usize>,
+    exit: Option<usize>,
 }
 
 impl BlockGraph {
@@ -14,6 +15,7 @@ impl BlockGraph {
         Self {
             graph: Graph::new(),
             entry: None,
+            exit: None,
         }
     }
 
@@ -34,6 +36,20 @@ impl BlockGraph {
     /// Get the entry `Block` index for this `BlockGraph`.
     pub fn entry(&self) -> Option<usize> {
         self.entry
+    }
+
+    /// Sets the exit point for this `BlockGraph` to the given `Block` index.
+    pub fn set_exit(&mut self, exit: usize) -> Result<()> {
+        if self.graph.has_vertex(exit) {
+            self.exit = Some(exit);
+            return Ok(());
+        }
+        Err("Index does not exist for set_exit".into())
+    }
+
+    /// Get the exit `Block` index for this `BlockGraph`.
+    pub fn exit(&self) -> Option<usize> {
+        self.exit
     }
 
     /// Get a `Block` by index.
@@ -62,6 +78,15 @@ impl BlockGraph {
             None
         } else {
             Some(self.block(self.entry.unwrap()))
+        }
+    }
+
+    /// Returns the exit block for this `BlockGraph`.
+    pub fn exit_block(&self) -> Option<Result<&Block>> {
+        if self.exit.is_none() {
+            None
+        } else {
+            Some(self.block(self.exit.unwrap()))
         }
     }
 
