@@ -17,7 +17,16 @@ pub fn add_transient_execution(src_program: &Program) -> Result<Program> {
         let transient_entry = block_map[transient_entry_points.get(&inst_addr).unwrap()];
         let transient_resolve = block_map[&transient_cfg.exit().unwrap()];
         cfg.unconditional_edge(start, transient_entry).unwrap();
-        cfg.unconditional_edge(transient_resolve, rollback).unwrap();
+
+        // The rollback edge is conditional, because transient_resolve contains multiple outgoing rollback edges.
+        // Therefore, rollback for the current instruction should only be done if the transient execution was
+        // started by the current instruction (-> mis-predict(inst_addr) == true).
+        let mis_predicted = Predictor::mis_predict(
+            Predictor::variable().into(),
+            BitVector::constant(inst_addr, 64), // FIXME bit-width
+        )?;
+        cfg.conditional_edge(transient_resolve, rollback, mis_predicted)
+            .unwrap();
     }
 
     cfg.remove_unreachable_blocks()?;
