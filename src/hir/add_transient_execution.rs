@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{BitVector, Boolean, Predictor};
+use crate::expr::{BitVector, Boolean, Integer, Predictor, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Instruction, Operation, Program};
 use std::collections::BTreeMap;
 
@@ -64,6 +64,10 @@ fn build_default_cfg(
     Ok((default_cfg, transient_start_rollback_points))
 }
 
+fn spec_win() -> Variable {
+    Variable::new("_spec_win", Sort::Integer)
+}
+
 /// The `Store` instruction can speculatively be by-passed.
 /// Therefore, split the given block into 2 blocks [head] and [tail],
 /// add an additional [transient] block and add the following three edges between them:
@@ -79,7 +83,18 @@ fn default_store(
 ) -> Result<()> {
     let tail_index = cfg.split_block_at(head_index, inst_index)?;
 
-    let transient_start_index = cfg.new_block()?.index();
+    let transient_start_index = {
+        let transient_start = cfg.new_block()?;
+
+        // initial speculation window size
+        let spec_window = Predictor::speculation_window(
+            Predictor::variable().into(),
+            BitVector::constant(inst.address().unwrap_or_default(), 64), // FIXME bit-width
+        )?;
+        transient_start.assign(spec_win(), spec_window);
+
+        transient_start.index()
+    };
 
     let mis_predicted = Predictor::mis_predict(
         Predictor::variable().into(),
@@ -132,6 +147,8 @@ fn build_transient_cfg(cfg: &ControlFlowGraph) -> Result<(ControlFlowGraph, BTre
         }
     }
 
+    add_transient_resolve_edges(&mut transient_cfg)?;
+
     Ok((transient_cfg, transient_entry_points))
 }
 
@@ -182,6 +199,47 @@ fn transient_barrier(
 
     let resolve_index = cfg.exit().unwrap();
     cfg.unconditional_edge(block_index, resolve_index)?;
+
+    Ok(())
+}
+
+/// Add additional resolve edges to the transient control flow graph.
+/// This makes sure that the transient execution can stop/resolve at any point in time.
+///
+/// Instead of adding resolve edges for each single instruction,
+/// we limit them to "effect-ful" instructions only.
+fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
+    let resolve_block_index = cfg.exit().unwrap();
+
+    // effect-ful instructions for each block
+    let effectful_instructions: Vec<(usize, Vec<usize>)> = cfg
+        .blocks()
+        .iter()
+        .map(|block| {
+            (
+                block.index(),
+                block
+                    .instructions()
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, inst)| inst.has_effects())
+                    .map(|(inst_index, _)| inst_index)
+                    .collect(),
+            )
+        })
+        .collect();
+
+    for (block_index, instruction_indices) in effectful_instructions {
+        for inst_index in instruction_indices.iter().rev() {
+            let tail_index = cfg.split_block_at(block_index, *inst_index)?;
+
+            let continue_execution = Integer::gt(spec_win().into(), Integer::constant(0))?;
+            cfg.conditional_edge(block_index, tail_index, continue_execution)?;
+
+            let resolve = Integer::lte(spec_win().into(), Integer::constant(0))?;
+            cfg.conditional_edge(block_index, resolve_block_index, resolve)?;
+        }
+    }
 
     Ok(())
 }

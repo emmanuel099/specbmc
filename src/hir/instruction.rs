@@ -101,6 +101,11 @@ impl Instruction {
         &mut self.effects
     }
 
+    /// Returns whether this `Instruction` has effects or not.
+    pub fn has_effects(&self) -> bool {
+        !self.effects.is_empty()
+    }
+
     /// Get the optional address for this `Instruction`
     pub fn address(&self) -> Option<u64> {
         self.address
