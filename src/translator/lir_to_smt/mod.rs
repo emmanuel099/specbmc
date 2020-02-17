@@ -17,11 +17,13 @@ pub fn encode_program(program: &lir::Program, debug_file_path: Option<&Path>) ->
     }
 
     let word_size = 64;
-    define_predictor(&mut solver, word_size)?;
     let access_widths = vec![8, 16, 32, 64, 128];
+
+    define_predictor(&mut solver, word_size)?;
     define_memory(&mut solver, word_size, &access_widths)?;
     define_cache(&mut solver, word_size, &access_widths)?;
     define_btb(&mut solver, word_size)?;
+    define_pht(&mut solver, word_size)?;
 
     for node in program.nodes() {
         match node {
@@ -87,6 +89,7 @@ impl Expr2Smt<()> for expr::Operator {
             Self::Predictor(op) => op.expr_to_smt2(w, i),
             Self::Cache(op) => op.expr_to_smt2(w, i),
             Self::BranchTargetBuffer(op) => op.expr_to_smt2(w, i),
+            Self::PatternHistoryTable(op) => op.expr_to_smt2(w, i),
         }
     }
 }
@@ -260,6 +263,19 @@ impl Expr2Smt<()> for expr::BranchTargetBuffer {
     }
 }
 
+impl Expr2Smt<()> for expr::PatternHistoryTable {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+    where
+        Writer: ::std::io::Write,
+    {
+        match self {
+            Self::Taken => write!(w, "pht-taken")?,
+            Self::NotTaken => write!(w, "pht-not-taken")?,
+        };
+        Ok(())
+    }
+}
+
 impl Sym2Smt<()> for expr::Variable {
     fn sym_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
     where
@@ -295,6 +311,7 @@ impl Sort2Smt for expr::Sort {
             Self::Predictor => write!(w, "Predictor")?,
             Self::Cache => write!(w, "Cache")?,
             Self::BranchTargetBuffer => write!(w, "BranchTargetBuffer")?,
+            Self::PatternHistoryTable => write!(w, "PatternHistoryTable")?,
         };
         Ok(())
     }
@@ -400,7 +417,7 @@ fn define_cache<T>(
     // cache type
     solver.define_null_sort(&expr::Sort::cache(), &cache_set_sort)?;
 
-    // cache fetch functions
+    // cache functions
     for width in access_widths {
         let mut insert_expr: expr::Expression =
             expr::Variable::new("cache", cache_set_sort.clone()).into();
@@ -431,7 +448,7 @@ fn define_btb<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
     // btb type
     solver.define_null_sort(&expr::Sort::branch_target_buffer(), &btb_array_sort)?;
 
-    // btb track
+    // btb functions
     solver.define_fun(
         "btb-track",
         &[
@@ -445,6 +462,41 @@ fn define_btb<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
             expr::Variable::new("location", addr_sort.clone()).into(),
             expr::Variable::new("target", addr_sort.clone()).into(),
         )?,
+    )?;
+
+    Ok(())
+}
+
+fn define_pht<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
+    // pht type
+    solver.declare_datatypes(&[("PhtEntry", 0, [""], ["Taken", "NotTaken"])])?;
+
+    solver.define_null_sort(
+        &expr::Sort::pattern_history_table(),
+        &format!("(Array (_ BitVec {}) PhtEntry)", address_bits),
+    )?;
+
+    // pht functions
+    let addr_sort = expr::Sort::bit_vector(address_bits);
+
+    solver.define_fun(
+        "pht-taken",
+        &[
+            ("pht", expr::Sort::pattern_history_table()),
+            ("location", addr_sort.clone()),
+        ],
+        &expr::Sort::pattern_history_table(),
+        "(store pht location Taken)",
+    )?;
+
+    solver.define_fun(
+        "pht-not-taken",
+        &[
+            ("pht", expr::Sort::pattern_history_table()),
+            ("location", addr_sort.clone()),
+        ],
+        &expr::Sort::pattern_history_table(),
+        "(store pht location NotTaken)",
     )?;
 
     Ok(())

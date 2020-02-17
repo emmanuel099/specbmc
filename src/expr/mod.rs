@@ -8,6 +8,7 @@ mod branch_target_buffer;
 mod cache;
 mod integer;
 mod memory;
+mod pattern_history_table;
 mod predictor;
 mod set;
 mod sort;
@@ -20,6 +21,7 @@ pub use self::branch_target_buffer::BranchTargetBuffer;
 pub use self::cache::Cache;
 pub use self::integer::Integer;
 pub use self::memory::Memory;
+pub use self::pattern_history_table::PatternHistoryTable;
 pub use self::predictor::Predictor;
 pub use self::set::Set;
 pub use self::sort::Sort;
@@ -39,6 +41,7 @@ pub enum Operator {
     Predictor(Predictor),
     Cache(Cache),
     BranchTargetBuffer(BranchTargetBuffer),
+    PatternHistoryTable(PatternHistoryTable),
 }
 
 impl fmt::Display for Operator {
@@ -56,6 +59,7 @@ impl fmt::Display for Operator {
             Self::Predictor(op) => op.fmt(f),
             Self::Cache(op) => op.fmt(f),
             Self::BranchTargetBuffer(op) => op.fmt(f),
+            Self::PatternHistoryTable(op) => op.fmt(f),
         }
     }
 }

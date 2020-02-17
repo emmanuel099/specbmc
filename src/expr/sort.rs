@@ -9,9 +9,10 @@ pub enum Sort {
     Array { range: Box<Sort>, domain: Box<Sort> },
     Set { range: Box<Sort> },
     Memory,
-    Cache,
     Predictor,
+    Cache,
     BranchTargetBuffer,
+    PatternHistoryTable,
 }
 
 impl Sort {
@@ -54,6 +55,10 @@ impl Sort {
 
     pub fn branch_target_buffer() -> Self {
         Self::BranchTargetBuffer
+    }
+
+    pub fn pattern_history_table() -> Self {
+        Self::PatternHistoryTable
     }
 
     pub fn is_boolean(&self) -> bool {
@@ -115,6 +120,13 @@ impl Sort {
     pub fn is_branch_target_buffer(&self) -> bool {
         match self {
             Sort::BranchTargetBuffer => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_pattern_history_table(&self) -> bool {
+        match self {
+            Sort::PatternHistoryTable => true,
             _ => false,
         }
     }
@@ -191,6 +203,14 @@ impl Sort {
         }
     }
 
+    pub fn expect_pattern_history_table(&self) -> Result<()> {
+        if self.is_pattern_history_table() {
+            Ok(())
+        } else {
+            Err(format!("Expected PatternHistoryTable but was {}", self).into())
+        }
+    }
+
     pub fn expect_sort(&self, sort: &Sort) -> Result<()> {
         if self == sort {
             Ok(())
@@ -223,7 +243,7 @@ impl Sort {
     /// Returns whether this `Sort` survives a transient-execution rollback or not.
     pub fn is_rollback_persistent(&self) -> bool {
         match self {
-            Sort::Cache => true,
+            Sort::Cache | Sort::BranchTargetBuffer | Sort::PatternHistoryTable => true,
             _ => false,
         }
     }
@@ -238,9 +258,10 @@ impl fmt::Display for Sort {
             Sort::Array { range, domain } => write!(f, "Array<{}, {}>", range, domain),
             Sort::Set { range } => write!(f, "Set<{}>", range),
             Sort::Memory => write!(f, "Memory"),
-            Sort::Cache => write!(f, "Cache"),
             Sort::Predictor => write!(f, "Predictor"),
+            Sort::Cache => write!(f, "Cache"),
             Sort::BranchTargetBuffer => write!(f, "BranchTargetBuffer"),
+            Sort::PatternHistoryTable => write!(f, "PatternHistoryTable"),
         }
     }
 }
