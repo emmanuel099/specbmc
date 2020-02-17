@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Integer, Predictor, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Instruction, Operation, Program};
 use std::collections::BTreeMap;
+use std::convert::TryInto;
 
 pub fn add_transient_execution(src_program: &Program) -> Result<Program> {
     let (mut cfg, transient_start_rollback_points) =
@@ -148,6 +149,7 @@ fn build_transient_cfg(cfg: &ControlFlowGraph) -> Result<(ControlFlowGraph, BTre
     }
 
     add_transient_resolve_edges(&mut transient_cfg)?;
+    append_spec_win_decrease_to_all_blocks(&mut transient_cfg)?;
 
     Ok((transient_cfg, transient_entry_points))
 }
@@ -239,6 +241,28 @@ fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
             let resolve = Integer::lte(spec_win().into(), Integer::constant(0))?;
             cfg.conditional_edge(block_index, resolve_block_index, resolve)?;
         }
+    }
+
+    Ok(())
+}
+
+/// Appends "_spec_win := _spec_win - |instructions in BB|" to the end of each basic block.
+fn append_spec_win_decrease_to_all_blocks(cfg: &mut ControlFlowGraph) -> Result<()> {
+    let resolve_block_index = cfg.exit().unwrap();
+
+    for block in cfg.blocks_mut() {
+        if block.index() == resolve_block_index {
+            continue;
+        }
+
+        let count = block.instruction_count_by_address();
+        block.assign(
+            spec_win(),
+            Integer::sub(
+                spec_win().into(),
+                Integer::constant(count.try_into().unwrap()),
+            )?,
+        );
     }
 
     Ok(())

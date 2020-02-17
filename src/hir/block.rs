@@ -99,6 +99,23 @@ impl Block {
         Ok(self.instructions.split_off(index))
     }
 
+    /// Returns the number of instructions in this `Block`.
+    pub fn instruction_count(&self) -> usize {
+        self.instructions.len()
+    }
+
+    /// Returns the number of instructions with distinct addresses in this `Block`.
+    /// Meaning that two consecutive instructions with same address are actually counted as one instruction.
+    pub fn instruction_count_by_address(&self) -> usize {
+        let mut addresses: Vec<u64> = self
+            .instructions
+            .iter()
+            .map(|inst| inst.address().unwrap_or_default())
+            .collect();
+        addresses.dedup();
+        addresses.len()
+    }
+
     /// Returns phi nodes of this `Block`
     pub fn phi_nodes(&self) -> &Vec<PhiNode> {
         &self.phi_nodes
