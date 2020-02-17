@@ -199,6 +199,14 @@ impl Sort {
             _ => panic!("Expected Set"),
         }
     }
+
+    /// Returns whether this `Sort` survives a transient-execution rollback or not.
+    pub fn is_rollback_persistent(&self) -> bool {
+        match self {
+            Sort::Cache => true,
+            _ => false,
+        }
+    }
 }
 
 impl fmt::Display for Sort {

@@ -30,6 +30,10 @@ impl PhiNode {
         self.incoming.get_mut(&block_index)
     }
 
+    pub fn has_incoming(&self, block_index: usize) -> bool {
+        self.incoming.contains_key(&block_index)
+    }
+
     pub fn out(&self) -> &Variable {
         &self.out
     }

@@ -70,6 +70,13 @@ fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Resul
         let mut phi_expr: Option<expr::Expression> = None;
 
         for pred_index in cfg.predecessor_indices(block.index())? {
+            if !phi_node.has_incoming(pred_index) {
+                // The SSA transformation doesn't add phi inputs for variables which
+                // don't survive the rollback (e.g. memory). Therefore, it's possible
+                // that an incoming edge has no corresponding phi-node input.
+                continue;
+            }
+
             let edge = cfg.edge(pred_index, block.index())?;
             let phi_cond = transition_condition(edge)?;
             let phi_var = phi_node.incoming_variable(pred_index).unwrap().clone();
@@ -81,9 +88,7 @@ fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Resul
             }
         }
 
-        if let Some(expr) = phi_expr {
-            block.add_let(phi_node.out().clone(), expr)?;
-        }
+        block.add_let(phi_node.out().clone(), phi_expr.unwrap())?;
     }
 
     for instruction in src_block.instructions() {
