@@ -11,6 +11,7 @@ pub enum Sort {
     Memory,
     Cache,
     Predictor,
+    BranchTargetBuffer,
 }
 
 impl Sort {
@@ -49,6 +50,10 @@ impl Sort {
 
     pub fn predictor() -> Self {
         Self::Predictor
+    }
+
+    pub fn branch_target_buffer() -> Self {
+        Self::BranchTargetBuffer
     }
 
     pub fn is_boolean(&self) -> bool {
@@ -103,6 +108,13 @@ impl Sort {
     pub fn is_predictor(&self) -> bool {
         match self {
             Sort::Predictor => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_branch_target_buffer(&self) -> bool {
+        match self {
+            Sort::BranchTargetBuffer => true,
             _ => false,
         }
     }
@@ -171,6 +183,14 @@ impl Sort {
         }
     }
 
+    pub fn expect_branch_target_buffer(&self) -> Result<()> {
+        if self.is_branch_target_buffer() {
+            Ok(())
+        } else {
+            Err(format!("Expected BranchTargetBuffer but was {}", self).into())
+        }
+    }
+
     pub fn expect_sort(&self, sort: &Sort) -> Result<()> {
         if self == sort {
             Ok(())
@@ -220,6 +240,7 @@ impl fmt::Display for Sort {
             Sort::Memory => write!(f, "Memory"),
             Sort::Cache => write!(f, "Cache"),
             Sort::Predictor => write!(f, "Predictor"),
+            Sort::BranchTargetBuffer => write!(f, "BranchTargetBuffer"),
         }
     }
 }

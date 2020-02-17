@@ -4,6 +4,7 @@ use std::fmt;
 mod array;
 mod bitvector;
 mod boolean;
+mod branch_target_buffer;
 mod cache;
 mod integer;
 mod memory;
@@ -15,6 +16,7 @@ mod variable;
 pub use self::array::Array;
 pub use self::bitvector::BitVector;
 pub use self::boolean::Boolean;
+pub use self::branch_target_buffer::BranchTargetBuffer;
 pub use self::cache::Cache;
 pub use self::integer::Integer;
 pub use self::memory::Memory;
@@ -36,6 +38,7 @@ pub enum Operator {
     Memory(Memory),
     Cache(Cache),
     Predictor(Predictor),
+    BranchTargetBuffer(BranchTargetBuffer),
 }
 
 impl fmt::Display for Operator {
@@ -52,6 +55,7 @@ impl fmt::Display for Operator {
             Self::Memory(op) => op.fmt(f),
             Self::Cache(op) => op.fmt(f),
             Self::Predictor(op) => op.fmt(f),
+            Self::BranchTargetBuffer(op) => op.fmt(f),
         }
     }
 }

@@ -21,6 +21,7 @@ pub fn encode_program(program: &lir::Program, debug_file_path: Option<&Path>) ->
     let access_widths = vec![8, 16, 32, 64, 128];
     define_memory(&mut solver, word_size, &access_widths)?;
     define_cache(&mut solver, word_size, &access_widths)?;
+    define_btb(&mut solver, word_size)?;
 
     for node in program.nodes() {
         match node {
@@ -85,6 +86,7 @@ impl Expr2Smt<()> for expr::Operator {
             Self::Memory(op) => op.expr_to_smt2(w, i),
             Self::Cache(op) => op.expr_to_smt2(w, i),
             Self::Predictor(op) => op.expr_to_smt2(w, i),
+            Self::BranchTargetBuffer(op) => op.expr_to_smt2(w, i),
         }
     }
 }
@@ -246,6 +248,18 @@ impl Expr2Smt<()> for expr::Predictor {
     }
 }
 
+impl Expr2Smt<()> for expr::BranchTargetBuffer {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+    where
+        Writer: ::std::io::Write,
+    {
+        match self {
+            Self::Track => write!(w, "btb-track")?,
+        };
+        Ok(())
+    }
+}
+
 impl Sym2Smt<()> for expr::Variable {
     fn sym_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
     where
@@ -280,6 +294,7 @@ impl Sort2Smt for expr::Sort {
             Self::Memory => write!(w, "Memory")?,
             Self::Cache => write!(w, "Cache")?,
             Self::Predictor => write!(w, "Predictor")?,
+            Self::BranchTargetBuffer => write!(w, "BranchTargetBuffer")?,
         };
         Ok(())
     }
@@ -381,6 +396,32 @@ fn define_cache<T>(
             &insert_expr,
         )?;
     }
+
+    Ok(())
+}
+
+fn define_btb<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
+    let addr_sort = expr::Sort::bit_vector(address_bits);
+    let btb_array_sort = expr::Sort::array(&addr_sort, &addr_sort);
+
+    // btb type
+    solver.define_null_sort(&expr::Sort::branch_target_buffer(), &btb_array_sort)?;
+
+    // btb track
+    solver.define_fun(
+        "btb-track",
+        &[
+            ("btb", expr::Sort::branch_target_buffer()),
+            ("location", addr_sort.clone()),
+            ("target", addr_sort.clone()),
+        ],
+        &expr::Sort::branch_target_buffer(),
+        &expr::Array::store(
+            expr::Variable::new("btb", btb_array_sort.clone()).into(),
+            expr::Variable::new("location", addr_sort.clone()).into(),
+            expr::Variable::new("target", addr_sort.clone()).into(),
+        )?,
+    )?;
 
     Ok(())
 }
