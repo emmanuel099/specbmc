@@ -86,6 +86,7 @@ fn default_store(
 
     let transient_start_index = {
         let transient_start = cfg.new_block()?;
+        transient_start.set_transient(true);
 
         // initial speculation window size
         let spec_window = Predictor::speculation_window(
@@ -150,6 +151,11 @@ fn build_transient_cfg(cfg: &ControlFlowGraph) -> Result<(ControlFlowGraph, BTre
 
     add_transient_resolve_edges(&mut transient_cfg)?;
     append_spec_win_decrease_to_all_blocks(&mut transient_cfg)?;
+
+    // Mark all blocks as transient
+    for block in transient_cfg.blocks_mut() {
+        block.set_transient(true);
+    }
 
     Ok((transient_cfg, transient_entry_points))
 }

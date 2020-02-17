@@ -12,6 +12,8 @@ pub struct Block {
     instructions: Vec<Instruction>,
     /// The phi nodes for this block.
     phi_nodes: Vec<PhiNode>,
+    /// Is this block part of transient execution?
+    transient: bool,
 }
 
 impl Block {
@@ -20,6 +22,7 @@ impl Block {
             index,
             instructions: Vec::new(),
             phi_nodes: Vec::new(),
+            transient: false,
         }
     }
 
@@ -48,6 +51,16 @@ impl Block {
     /// Returns the index of this `Block`
     pub fn index(&self) -> usize {
         self.index
+    }
+
+    /// Sets whether this `Block` is part of transient execution or not.
+    pub fn set_transient(&mut self, transient: bool) {
+        self.transient = transient;
+    }
+
+    /// Returns whether this `Block` is part of transient execution or not.
+    pub fn is_transient(&self) -> bool {
+        self.transient
     }
 
     /// Returns instructions for this `Block`
@@ -182,11 +195,27 @@ impl graph::Vertex for Block {
     fn dot_label(&self) -> String {
         format!("{}", self)
     }
+
+    fn dot_fill_color(&self) -> String {
+        if self.transient {
+            "#e1e1e1".to_string()
+        } else {
+            "#ffddcc".to_string()
+        }
+    }
+
+    fn dot_font_color(&self) -> String {
+        "#000000".to_string()
+    }
 }
 
 impl fmt::Display for Block {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "[ Block: 0x{:X} ]", self.index)?;
+        write!(f, "[ Block: 0x{:X}", self.index)?;
+        if self.transient {
+            write!(f, ", Transient")?;
+        }
+        writeln!(f, " ]")?;
         for phi_node in self.phi_nodes() {
             writeln!(f, "{}", phi_node)?;
         }
