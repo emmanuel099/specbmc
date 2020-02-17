@@ -4,6 +4,7 @@ use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Predictor {
+    TransientStart,
     MisPredict,
     SpeculationWindow,
 }
@@ -17,6 +18,7 @@ impl Into<Operator> for Predictor {
 impl fmt::Display for Predictor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            Self::TransientStart => write!(f, "transient-start"),
             Self::MisPredict => write!(f, "mis-predict"),
             Self::SpeculationWindow => write!(f, "speculation-window"),
         }
@@ -26,6 +28,16 @@ impl fmt::Display for Predictor {
 impl Predictor {
     pub fn variable() -> Variable {
         Variable::new("_predictor", Sort::predictor())
+    }
+
+    pub fn transient_start(predictor: Expression) -> Result<Expression> {
+        predictor.sort().expect_predictor()?;
+
+        Ok(Expression::new(
+            Predictor::TransientStart.into(),
+            vec![predictor],
+            Sort::bit_vector(64), // FIXME bit-width
+        ))
     }
 
     pub fn mis_predict(predictor: Expression, program_location: Expression) -> Result<Expression> {

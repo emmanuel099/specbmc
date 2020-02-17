@@ -238,6 +238,7 @@ impl Expr2Smt<()> for expr::Predictor {
         Writer: ::std::io::Write,
     {
         match self {
+            Self::TransientStart => write!(w, "transient-start")?,
             Self::MisPredict => write!(w, "mis-predict")?,
             Self::SpeculationWindow => write!(w, "speculation-window")?,
         };
@@ -386,6 +387,12 @@ fn define_cache<T>(
 
 fn define_predictor<T>(solver: &mut Solver<T>, word_size: usize) -> Result<()> {
     solver.declare_sort(&expr::Sort::predictor(), 0)?;
+
+    solver.declare_fun(
+        "transient-start",
+        &[expr::Sort::predictor()],
+        &expr::Sort::bit_vector(word_size),
+    )?;
 
     solver.declare_fun(
         "mis-predict",

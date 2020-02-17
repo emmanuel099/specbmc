@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{BitVector, Boolean, Integer, Predictor, Sort, Variable};
+use crate::expr::{BitVector, Boolean, Expression, Integer, Predictor, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Instruction, Operation, Program};
 use std::collections::BTreeMap;
 use std::convert::TryInto;
@@ -21,12 +21,12 @@ pub fn add_transient_execution(src_program: &Program) -> Result<Program> {
 
         // The rollback edge is conditional, because transient_resolve contains multiple outgoing rollback edges.
         // Therefore, rollback for the current instruction should only be done if the transient execution was
-        // started by the current instruction (-> mis-predict(inst_addr) == true).
-        let mis_predicted = Predictor::mis_predict(
-            Predictor::variable().into(),
+        // started by the current instruction.
+        let transient_exec = Expression::equal(
+            Predictor::transient_start(Predictor::variable().into())?,
             BitVector::constant(inst_addr, 64), // FIXME bit-width
         )?;
-        cfg.conditional_edge(transient_resolve, rollback, mis_predicted)
+        cfg.conditional_edge(transient_resolve, rollback, transient_exec)
             .unwrap();
     }
 
@@ -98,15 +98,15 @@ fn default_store(
         transient_start.index()
     };
 
-    let mis_predicted = Predictor::mis_predict(
-        Predictor::variable().into(),
+    let transient_exec = Expression::equal(
+        Predictor::transient_start(Predictor::variable().into())?,
         BitVector::constant(inst.address().unwrap_or_default(), 64), // FIXME bit-width
     )?;
 
-    let correctly_predicted = Boolean::not(mis_predicted.clone())?;
+    let normal_exec = Boolean::not(transient_exec.clone())?;
 
-    cfg.conditional_edge(head_index, tail_index, correctly_predicted)?;
-    cfg.conditional_edge(head_index, transient_start_index, mis_predicted)?;
+    cfg.conditional_edge(head_index, tail_index, normal_exec)?;
+    cfg.conditional_edge(head_index, transient_start_index, transient_exec)?;
 
     // Tail is the rollback point, meaning that on rollback the store will be executed.
     transient_start_rollback_points
