@@ -1,4 +1,4 @@
-use crate::expr::{Cache, Expression, Variable};
+use crate::expr::{BranchTargetBuffer, Cache, Expression, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -9,6 +9,14 @@ pub enum Effect {
         cache: Variable,
         address: Expression,
         bit_width: usize,
+    },
+    /// Branch target is tracked in the Branch Target Buffer
+    BranchTarget {
+        new_btb: Variable,
+        btb: Variable,
+        condition: Option<Expression>,
+        location: Expression,
+        target: Expression,
     },
 }
 
@@ -23,10 +31,29 @@ impl Effect {
         }
     }
 
-    pub fn is_cache_fetch(&self) -> bool {
-        match self {
-            Self::CacheFetch { .. } => true,
-            _ => false,
+    /// Create a new unconditional `Effect::BranchTarget`.
+    pub fn unconditional_branch_target(location: Expression, target: Expression) -> Self {
+        Self::BranchTarget {
+            new_btb: BranchTargetBuffer::variable(),
+            btb: BranchTargetBuffer::variable(),
+            condition: None,
+            location,
+            target,
+        }
+    }
+
+    /// Create a new conditional `Effect::BranchTarget`.
+    pub fn conditional_branch_target(
+        condition: Expression,
+        location: Expression,
+        target: Expression,
+    ) -> Self {
+        Self::BranchTarget {
+            new_btb: BranchTargetBuffer::variable(),
+            btb: BranchTargetBuffer::variable(),
+            condition: Some(condition),
+            location,
+            target,
         }
     }
 
@@ -36,6 +63,24 @@ impl Effect {
             Self::CacheFetch { cache, address, .. } => vec![cache]
                 .into_iter()
                 .chain(address.variables().into_iter())
+                .collect(),
+            Self::BranchTarget {
+                btb,
+                condition,
+                location,
+                target,
+                ..
+            } => vec![btb]
+                .into_iter()
+                .chain(
+                    match condition {
+                        Some(condition) => condition.variables(),
+                        None => Vec::default(),
+                    }
+                    .into_iter(),
+                )
+                .chain(location.variables().into_iter())
+                .chain(target.variables().into_iter())
                 .collect(),
         }
     }
@@ -47,6 +92,24 @@ impl Effect {
                 .into_iter()
                 .chain(address.variables_mut().into_iter())
                 .collect(),
+            Self::BranchTarget {
+                btb,
+                condition,
+                location,
+                target,
+                ..
+            } => vec![btb]
+                .into_iter()
+                .chain(
+                    match condition {
+                        Some(condition) => condition.variables_mut(),
+                        None => Vec::default(),
+                    }
+                    .into_iter(),
+                )
+                .chain(location.variables_mut().into_iter())
+                .chain(target.variables_mut().into_iter())
+                .collect(),
         }
     }
 
@@ -54,6 +117,7 @@ impl Effect {
     pub fn variables_written(&self) -> Vec<&Variable> {
         match self {
             Self::CacheFetch { new_cache, .. } => vec![new_cache],
+            Self::BranchTarget { new_btb, .. } => vec![new_btb],
         }
     }
 
@@ -61,6 +125,7 @@ impl Effect {
     pub fn variables_written_mut(&mut self) -> Vec<&mut Variable> {
         match self {
             Self::CacheFetch { new_cache, .. } => vec![new_cache],
+            Self::BranchTarget { new_btb, .. } => vec![new_btb],
         }
     }
 }
@@ -78,6 +143,23 @@ impl fmt::Display for Effect {
                 "{} = cache_fetch({}, {}, {})",
                 new_cache, cache, address, bit_width
             ),
+            Self::BranchTarget {
+                new_btb,
+                btb,
+                condition,
+                location,
+                target,
+            } => {
+                write!(
+                    f,
+                    "{} = branch_target({}, {}, {})",
+                    new_btb, btb, location, target
+                )?;
+                if let Some(cond) = condition {
+                    write!(f, " if {}", cond)?;
+                }
+                Ok(())
+            }
         }
     }
 }

@@ -121,7 +121,7 @@ fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Resul
                 )?;
                 node.set_address(instruction.address());
             }
-            hir::Operation::Branch { .. } | hir::Operation::Barrier => continue,
+            _ => (),
         }
 
         for effect in instruction.effects() {
@@ -135,6 +135,28 @@ fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Resul
                     block.add_let(
                         new_cache.clone(),
                         expr::Cache::fetch(*bit_width, cache.clone().into(), address.clone())?,
+                    )?;
+                }
+                hir::Effect::BranchTarget {
+                    new_btb,
+                    btb,
+                    condition,
+                    location,
+                    target,
+                } => {
+                    let track = expr::BranchTargetBuffer::track(
+                        btb.clone().into(),
+                        location.clone(),
+                        target.clone(),
+                    )?;
+                    block.add_let(
+                        new_btb.clone(),
+                        match condition {
+                            Some(condition) => {
+                                expr::Expression::ite(condition.clone(), track, btb.clone().into())?
+                            }
+                            None => track,
+                        },
                     )?;
                 }
             }

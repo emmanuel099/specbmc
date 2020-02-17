@@ -1,4 +1,5 @@
 use crate::error::*;
+use crate::expr::BitVector;
 use crate::hir::{Effect, Instruction, Operation, Program};
 
 pub fn add_effects(program: &mut Program) -> Result<()> {
@@ -26,6 +27,13 @@ fn instruction_effects(instruction: &Instruction) -> Vec<Effect> {
         } => {
             let bit_width = variable.sort().unwrap_bit_vector();
             vec![Effect::cache_fetch(address.clone(), bit_width)]
+        }
+        Operation::Branch { target } => {
+            let location = BitVector::constant(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
+            vec![Effect::unconditional_branch_target(
+                location,
+                target.clone(),
+            )]
         }
         _ => vec![],
     }
