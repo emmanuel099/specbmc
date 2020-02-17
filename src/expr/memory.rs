@@ -33,7 +33,7 @@ impl Memory {
         addr.sort().expect_bit_vector()?;
 
         Ok(Expression::new(
-            Memory::Load(bit_width).into(),
+            Self::Load(bit_width).into(),
             vec![memory, addr],
             Sort::BitVector(bit_width),
         ))
@@ -48,7 +48,7 @@ impl Memory {
 
         let result_sort = memory.sort().clone();
         Ok(Expression::new(
-            Memory::Store(bit_width).into(),
+            Self::Store(bit_width).into(),
             vec![memory, addr, value],
             result_sort,
         ))

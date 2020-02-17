@@ -84,8 +84,8 @@ impl Expr2Smt<()> for expr::Operator {
             Self::Array(op) => op.expr_to_smt2(w, i),
             Self::Set(op) => op.expr_to_smt2(w, i),
             Self::Memory(op) => op.expr_to_smt2(w, i),
-            Self::Cache(op) => op.expr_to_smt2(w, i),
             Self::Predictor(op) => op.expr_to_smt2(w, i),
+            Self::Cache(op) => op.expr_to_smt2(w, i),
             Self::BranchTargetBuffer(op) => op.expr_to_smt2(w, i),
         }
     }
@@ -222,18 +222,6 @@ impl Expr2Smt<()> for expr::Memory {
     }
 }
 
-impl Expr2Smt<()> for expr::Cache {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
-    where
-        Writer: ::std::io::Write,
-    {
-        match self {
-            Self::Fetch(width) => write!(w, "fetch{}", width)?,
-        };
-        Ok(())
-    }
-}
-
 impl Expr2Smt<()> for expr::Predictor {
     fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
     where
@@ -243,6 +231,18 @@ impl Expr2Smt<()> for expr::Predictor {
             Self::TransientStart => write!(w, "transient-start")?,
             Self::MisPredict => write!(w, "mis-predict")?,
             Self::SpeculationWindow => write!(w, "speculation-window")?,
+        };
+        Ok(())
+    }
+}
+
+impl Expr2Smt<()> for expr::Cache {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+    where
+        Writer: ::std::io::Write,
+    {
+        match self {
+            Self::Fetch(width) => write!(w, "cache-fetch{}", width)?,
         };
         Ok(())
     }
@@ -292,8 +292,8 @@ impl Sort2Smt for expr::Sort {
                 write!(w, " Bool)")?
             }
             Self::Memory => write!(w, "Memory")?,
-            Self::Cache => write!(w, "Cache")?,
             Self::Predictor => write!(w, "Predictor")?,
+            Self::Cache => write!(w, "Cache")?,
             Self::BranchTargetBuffer => write!(w, "BranchTargetBuffer")?,
         };
         Ok(())
@@ -365,6 +365,30 @@ fn define_memory<T>(
     Ok(())
 }
 
+fn define_predictor<T>(solver: &mut Solver<T>, word_size: usize) -> Result<()> {
+    solver.declare_sort(&expr::Sort::predictor(), 0)?;
+
+    solver.declare_fun(
+        "transient-start",
+        &[expr::Sort::predictor()],
+        &expr::Sort::bit_vector(word_size),
+    )?;
+
+    solver.declare_fun(
+        "mis-predict",
+        &[expr::Sort::predictor(), expr::Sort::bit_vector(word_size)],
+        &expr::Sort::boolean(),
+    )?;
+
+    solver.declare_fun(
+        "speculation-window",
+        &[expr::Sort::predictor(), expr::Sort::bit_vector(word_size)],
+        &expr::Sort::integer(),
+    )?;
+
+    Ok(())
+}
+
 fn define_cache<T>(
     solver: &mut Solver<T>,
     address_bits: usize,
@@ -390,7 +414,7 @@ fn define_cache<T>(
             )?;
         }
         solver.define_fun(
-            &format!("fetch{}", width),
+            &format!("cache-fetch{}", width),
             &[("cache", expr::Sort::cache()), ("addr", addr_sort.clone())],
             &expr::Sort::cache(),
             &insert_expr,
@@ -421,30 +445,6 @@ fn define_btb<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
             expr::Variable::new("location", addr_sort.clone()).into(),
             expr::Variable::new("target", addr_sort.clone()).into(),
         )?,
-    )?;
-
-    Ok(())
-}
-
-fn define_predictor<T>(solver: &mut Solver<T>, word_size: usize) -> Result<()> {
-    solver.declare_sort(&expr::Sort::predictor(), 0)?;
-
-    solver.declare_fun(
-        "transient-start",
-        &[expr::Sort::predictor()],
-        &expr::Sort::bit_vector(word_size),
-    )?;
-
-    solver.declare_fun(
-        "mis-predict",
-        &[expr::Sort::predictor(), expr::Sort::bit_vector(word_size)],
-        &expr::Sort::boolean(),
-    )?;
-
-    solver.declare_fun(
-        "speculation-window",
-        &[expr::Sort::predictor(), expr::Sort::bit_vector(word_size)],
-        &expr::Sort::integer(),
     )?;
 
     Ok(())

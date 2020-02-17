@@ -36,8 +36,8 @@ pub enum Operator {
     Array(Array),
     Set(Set),
     Memory(Memory),
-    Cache(Cache),
     Predictor(Predictor),
+    Cache(Cache),
     BranchTargetBuffer(BranchTargetBuffer),
 }
 
@@ -53,8 +53,8 @@ impl fmt::Display for Operator {
             Self::Array(op) => op.fmt(f),
             Self::Set(op) => op.fmt(f),
             Self::Memory(op) => op.fmt(f),
-            Self::Cache(op) => op.fmt(f),
             Self::Predictor(op) => op.fmt(f),
+            Self::Cache(op) => op.fmt(f),
             Self::BranchTargetBuffer(op) => op.fmt(f),
         }
     }

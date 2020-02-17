@@ -31,7 +31,7 @@ impl Array {
 
         let result_sort = domain.clone();
         Ok(Expression::new(
-            Array::Select.into(),
+            Self::Select.into(),
             vec![arr, index],
             result_sort,
         ))
@@ -45,7 +45,7 @@ impl Array {
 
         let result_sort = arr.sort().clone();
         Ok(Expression::new(
-            Array::Store.into(),
+            Self::Store.into(),
             vec![arr, index, value],
             result_sort,
         ))

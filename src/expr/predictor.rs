@@ -34,7 +34,7 @@ impl Predictor {
         predictor.sort().expect_predictor()?;
 
         Ok(Expression::new(
-            Predictor::TransientStart.into(),
+            Self::TransientStart.into(),
             vec![predictor],
             Sort::bit_vector(64), // FIXME bit-width
         ))
@@ -45,7 +45,7 @@ impl Predictor {
         program_location.sort().expect_bit_vector()?;
 
         Ok(Expression::new(
-            Predictor::MisPredict.into(),
+            Self::MisPredict.into(),
             vec![predictor, program_location],
             Sort::boolean(),
         ))
@@ -59,7 +59,7 @@ impl Predictor {
         program_location.sort().expect_bit_vector()?;
 
         Ok(Expression::new(
-            Predictor::SpeculationWindow.into(),
+            Self::SpeculationWindow.into(),
             vec![predictor, program_location],
             Sort::integer(),
         ))

@@ -16,7 +16,7 @@ impl Into<Operator> for Cache {
 impl fmt::Display for Cache {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Fetch(bit_width) => write!(f, "(fetch {})", bit_width),
+            Self::Fetch(bit_width) => write!(f, "(cache-fetch {})", bit_width),
         }
     }
 }
@@ -30,11 +30,10 @@ impl Cache {
         cache.sort().expect_cache()?;
         addr.sort().expect_bit_vector()?;
 
-        let result_sort = cache.sort().clone();
         Ok(Expression::new(
-            Cache::Fetch(bit_width).into(),
+            Self::Fetch(bit_width).into(),
             vec![cache, addr],
-            result_sort,
+            Sort::cache(),
         ))
     }
 }
