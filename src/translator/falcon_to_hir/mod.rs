@@ -85,6 +85,7 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
             }
             il::Operation::Intrinsic { intrinsic } => match intrinsic.mnemonic() {
                 "mfence" | "lfence" | "spbarr" => {
+                    // FIXME add syscall, cpuid, ...
                     let inst = block.barrier();
                     inst.set_address(instruction.address());
                 }
