@@ -4,78 +4,175 @@ use crate::hir::{ControlFlowGraph, Instruction, Operation, Program};
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 
-pub fn add_transient_execution(src_program: &Program) -> Result<Program> {
-    let (mut cfg, transient_start_rollback_points) =
-        build_default_cfg(src_program.control_flow_graph())?;
-
-    let (transient_cfg, transient_entry_points) =
-        build_transient_cfg(src_program.control_flow_graph())?;
-
-    let block_map = cfg.insert(&transient_cfg)?;
-
-    // Wire the default and transient CFG together.
-    for (inst_addr, (start, rollback)) in transient_start_rollback_points {
-        let transient_entry = block_map[transient_entry_points.get(&inst_addr).unwrap()];
-        let transient_resolve = block_map[&transient_cfg.exit().unwrap()];
-        cfg.unconditional_edge(start, transient_entry).unwrap();
-
-        // The rollback edge is conditional, because transient_resolve contains multiple outgoing rollback edges.
-        // Therefore, rollback for the current instruction should only be done if the transient execution was
-        // started by the current instruction.
-        let transient_exec = Expression::equal(
-            Predictor::transient_start(Predictor::variable().into())?,
-            BitVector::constant(inst_addr, 64), // FIXME bit-width
-        )?;
-        cfg.conditional_edge(transient_resolve, rollback, transient_exec)
-            .unwrap();
-    }
-
-    cfg.remove_unreachable_blocks()?;
-
-    Ok(Program::new(cfg))
+pub struct TransientExecution {
+    spectre_pht: bool,
+    spectre_stl: bool,
 }
 
-fn build_default_cfg(
-    cfg: &ControlFlowGraph,
-) -> Result<(ControlFlowGraph, BTreeMap<u64, (usize, usize)>)> {
-    let mut default_cfg = cfg.clone();
-
-    // For each instruction which can start a transient execution,
-    // we keep track of the start and rollback blocks.
-    // Start and rollback will later be connected to the transient CFG.
-    let mut transient_start_rollback_points = BTreeMap::new();
-
-    for block in cfg.blocks() {
-        for (inst_index, inst) in block.instructions().iter().enumerate().rev() {
-            match inst.operation() {
-                Operation::Store { .. } => {
-                    // The `Store` instruction can speculatively be by-passed.
-                    add_transient_execution_start(
-                        &mut default_cfg,
-                        &mut transient_start_rollback_points,
-                        block.index(),
-                        inst_index,
-                        inst,
-                    )?;
-                }
-                Operation::ConditionalBranch { .. } => {
-                    // The `ConditionalBranch` instruction can be mis-predicted.
-                    add_transient_execution_start(
-                        &mut default_cfg,
-                        &mut transient_start_rollback_points,
-                        block.index(),
-                        inst_index,
-                        inst,
-                    )?;
-                }
-                _ => continue,
-            }
+impl TransientExecution {
+    pub fn new() -> Self {
+        Self {
+            spectre_pht: false,
+            spectre_stl: false,
         }
     }
 
-    Ok((default_cfg, transient_start_rollback_points))
+    /// Enable or disable Spectre-PHT encoding.
+    ///
+    /// If enabled, speculative branch mis-prediction will be encoded.
+    pub fn spectre_pht(&mut self, enabled: bool) -> &mut Self {
+        self.spectre_pht = enabled;
+        self
+    }
+
+    /// Enable or disable Spectre-STL encoding.
+    ///
+    /// If enabled, speculative store-bypass will be encoded.
+    pub fn spectre_stl(&mut self, enabled: bool) -> &mut Self {
+        self.spectre_stl = enabled;
+        self
+    }
+
+    pub fn encode(&self, src_program: &Program) -> Result<Program> {
+        let (mut cfg, transient_start_rollback_points) =
+            self.build_default_cfg(src_program.control_flow_graph())?;
+
+        let (transient_cfg, transient_entry_points) =
+            self.build_transient_cfg(src_program.control_flow_graph())?;
+
+        let block_map = cfg.insert(&transient_cfg)?;
+
+        // Wire the default and transient CFG together.
+        for (inst_addr, (start, rollback)) in transient_start_rollback_points {
+            let transient_entry = block_map[transient_entry_points.get(&inst_addr).unwrap()];
+            let transient_resolve = block_map[&transient_cfg.exit().unwrap()];
+            cfg.unconditional_edge(start, transient_entry).unwrap();
+
+            // The rollback edge is conditional, because transient_resolve contains multiple outgoing rollback edges.
+            // Therefore, rollback for the current instruction should only be done if the transient execution was
+            // started by the current instruction.
+            let transient_exec = Expression::equal(
+                Predictor::transient_start(Predictor::variable().into())?,
+                BitVector::constant(inst_addr, 64), // FIXME bit-width
+            )?;
+            cfg.conditional_edge(transient_resolve, rollback, transient_exec)
+                .unwrap();
+        }
+
+        cfg.remove_unreachable_blocks()?;
+
+        Ok(Program::new(cfg))
+    }
+
+    fn build_default_cfg(
+        &self,
+        cfg: &ControlFlowGraph,
+    ) -> Result<(ControlFlowGraph, BTreeMap<u64, (usize, usize)>)> {
+        let mut default_cfg = cfg.clone();
+
+        // For each instruction which can start a transient execution,
+        // we keep track of the start and rollback blocks.
+        // Start and rollback will later be connected to the transient CFG.
+        let mut transient_start_rollback_points = BTreeMap::new();
+
+        for block in cfg.blocks() {
+            for (inst_index, inst) in block.instructions().iter().enumerate().rev() {
+                match inst.operation() {
+                    Operation::Store { .. } => {
+                        if self.spectre_stl {
+                            // The `Store` instruction can speculatively be by-passed.
+                            add_transient_execution_start(
+                                &mut default_cfg,
+                                &mut transient_start_rollback_points,
+                                block.index(),
+                                inst_index,
+                                inst,
+                            )?;
+                        }
+                    }
+                    Operation::ConditionalBranch { .. } => {
+                        if self.spectre_pht {
+                            // The `ConditionalBranch` instruction can be mis-predicted.
+                            add_transient_execution_start(
+                                &mut default_cfg,
+                                &mut transient_start_rollback_points,
+                                block.index(),
+                                inst_index,
+                                inst,
+                            )?;
+                        }
+                    }
+                    _ => continue,
+                }
+            }
+        }
+
+        Ok((default_cfg, transient_start_rollback_points))
+    }
+
+    fn build_transient_cfg(
+        &self,
+        cfg: &ControlFlowGraph,
+    ) -> Result<(ControlFlowGraph, BTreeMap<u64, usize>)> {
+        let mut transient_cfg = cfg.clone();
+
+        // For each instruction which can start a transient execution,
+        // we keep track of the entry point for transient execution.
+        // Later the start block of a transient execution (default CFG)
+        // will be connected to this transient entry point.
+        let mut transient_entry_points = BTreeMap::new();
+
+        // Add resolve block as exit
+        let resolve_block_index = transient_cfg.new_block()?.index();
+        transient_cfg.unconditional_edge(cfg.exit().unwrap(), resolve_block_index)?; // end of program -> resolve
+        transient_cfg.set_exit(resolve_block_index)?;
+
+        for block in cfg.blocks() {
+            for (inst_index, inst) in block.instructions().iter().enumerate().rev() {
+                match inst.operation() {
+                    Operation::Store { .. } => {
+                        if self.spectre_stl {
+                            transient_store(
+                                &mut transient_cfg,
+                                &mut transient_entry_points,
+                                block.index(),
+                                inst_index,
+                                inst,
+                            )?;
+                        }
+                    }
+                    Operation::ConditionalBranch { .. } => {
+                        if self.spectre_pht {
+                            transient_conditional_branch(
+                                &mut transient_cfg,
+                                &mut transient_entry_points,
+                                block.index(),
+                                inst_index,
+                                inst,
+                            )?;
+                        }
+                    }
+                    Operation::Barrier => {
+                        transient_barrier(&mut transient_cfg, block.index(), inst_index)?;
+                    }
+                    _ => continue,
+                }
+            }
+        }
+
+        add_transient_resolve_edges(&mut transient_cfg)?;
+        append_spec_win_decrease_to_all_blocks(&mut transient_cfg)?;
+
+        // Mark all blocks as transient
+        for block in transient_cfg.blocks_mut() {
+            block.set_transient(true);
+        }
+
+        Ok((transient_cfg, transient_entry_points))
+    }
 }
 
+/// Speculation-Window Variable
 fn spec_win() -> Variable {
     Variable::new("_spec_win", Sort::Integer)
 }
@@ -125,60 +222,6 @@ fn add_transient_execution_start(
     );
 
     Ok(())
-}
-
-fn build_transient_cfg(cfg: &ControlFlowGraph) -> Result<(ControlFlowGraph, BTreeMap<u64, usize>)> {
-    let mut transient_cfg = cfg.clone();
-
-    // For each instruction which can start a transient execution,
-    // we keep track of the entry point for transient execution.
-    // Later the start block of a transient execution (default CFG)
-    // will be connected to this transient entry point.
-    let mut transient_entry_points = BTreeMap::new();
-
-    // Add resolve block as exit
-    let resolve_block_index = transient_cfg.new_block()?.index();
-    transient_cfg.unconditional_edge(cfg.exit().unwrap(), resolve_block_index)?; // end of program -> resolve
-    transient_cfg.set_exit(resolve_block_index)?;
-
-    for block in cfg.blocks() {
-        for (inst_index, inst) in block.instructions().iter().enumerate().rev() {
-            match inst.operation() {
-                Operation::Store { .. } => {
-                    transient_store(
-                        &mut transient_cfg,
-                        &mut transient_entry_points,
-                        block.index(),
-                        inst_index,
-                        inst,
-                    )?;
-                }
-                Operation::ConditionalBranch { .. } => {
-                    transient_conditional_branch(
-                        &mut transient_cfg,
-                        &mut transient_entry_points,
-                        block.index(),
-                        inst_index,
-                        inst,
-                    )?;
-                }
-                Operation::Barrier => {
-                    transient_barrier(&mut transient_cfg, block.index(), inst_index)?;
-                }
-                _ => continue,
-            }
-        }
-    }
-
-    add_transient_resolve_edges(&mut transient_cfg)?;
-    append_spec_win_decrease_to_all_blocks(&mut transient_cfg)?;
-
-    // Mark all blocks as transient
-    for block in transient_cfg.blocks_mut() {
-        block.set_transient(true);
-    }
-
-    Ok((transient_cfg, transient_entry_points))
 }
 
 /// The `Store` instruction can speculatively be by-passed during transient execution.
