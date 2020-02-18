@@ -49,7 +49,18 @@ fn build_default_cfg(
         for (inst_index, inst) in block.instructions().iter().enumerate().rev() {
             match inst.operation() {
                 Operation::Store { .. } => {
-                    default_store(
+                    // The `Store` instruction can speculatively be by-passed.
+                    add_transient_execution_start(
+                        &mut default_cfg,
+                        &mut transient_start_rollback_points,
+                        block.index(),
+                        inst_index,
+                        inst,
+                    )?;
+                }
+                Operation::ConditionalBranch { .. } => {
+                    // The `ConditionalBranch` instruction can be mis-predicted.
+                    add_transient_execution_start(
                         &mut default_cfg,
                         &mut transient_start_rollback_points,
                         block.index(),
@@ -69,13 +80,12 @@ fn spec_win() -> Variable {
     Variable::new("_spec_win", Sort::Integer)
 }
 
-/// The `Store` instruction can speculatively be by-passed.
-/// Therefore, split the given block into 2 blocks [head] and [tail],
+/// For transient execution start/rollback split the given block into 2 blocks [head] and [tail],
 /// add an additional [transient] block and add the following three edges between them:
-///   - Conditional edge with "mis-predicted" from head to transient -> store by-pass
-///   - Conditional edge with "correctly predicted" from head to tail -> store execute
-///   - Unconditional edge from transient to tail -> rollback + store execute
-fn default_store(
+///   - Conditional edge with "mis-predicted" from head to transient -> start transient execution
+///   - Conditional edge with "correctly predicted" from head to tail -> normal execution
+///   - Unconditional edge from transient to tail -> rollback + re-execution
+fn add_transient_execution_start(
     cfg: &mut ControlFlowGraph,
     transient_start_rollback_points: &mut BTreeMap<u64, (usize, usize)>,
     head_index: usize,
@@ -108,9 +118,11 @@ fn default_store(
     cfg.conditional_edge(head_index, tail_index, normal_exec)?;
     cfg.conditional_edge(head_index, transient_start_index, transient_exec)?;
 
-    // Tail is the rollback point, meaning that on rollback the store will be executed.
-    transient_start_rollback_points
-        .insert(inst.address().unwrap(), (transient_start_index, tail_index));
+    // Tail is the rollback point, meaning that on rollback the instruction will be re-executed.
+    transient_start_rollback_points.insert(
+        inst.address().unwrap_or_default(),
+        (transient_start_index, tail_index),
+    );
 
     Ok(())
 }
@@ -134,6 +146,15 @@ fn build_transient_cfg(cfg: &ControlFlowGraph) -> Result<(ControlFlowGraph, BTre
             match inst.operation() {
                 Operation::Store { .. } => {
                     transient_store(
+                        &mut transient_cfg,
+                        &mut transient_entry_points,
+                        block.index(),
+                        inst_index,
+                        inst,
+                    )?;
+                }
+                Operation::ConditionalBranch { .. } => {
+                    transient_conditional_branch(
                         &mut transient_cfg,
                         &mut transient_entry_points,
                         block.index(),
@@ -189,6 +210,47 @@ fn transient_store(
 
     // Transient execution will begin in tail (same as on mis-predict during transient execution).
     transient_entry_points.insert(inst.address().unwrap(), tail_index);
+
+    Ok(())
+}
+
+/// The `ConditionalBranch` instruction can be mis-predicted during transient execution.
+/// Therefore, split the given block into 2 blocks [head] and [branch],
+/// and additionally add a new block [mis_predict].
+/// Then add the following edges between them:
+///   - Conditional edge with "mis-predicted" from head to mis_predict -> mis-predicted execution
+///   - Conditional edge with "correctly predicted" from head to branch -> correct execution
+///   - Conditional edges from mis_predict to each successor of the branch instruction
+///     but with negated conditions
+fn transient_conditional_branch(
+    cfg: &mut ControlFlowGraph,
+    transient_entry_points: &mut BTreeMap<u64, usize>,
+    head_index: usize,
+    inst_index: usize,
+    inst: &Instruction,
+) -> Result<()> {
+    let branch_index = cfg.split_block_at(head_index, inst_index)?;
+    let mis_predict_index = cfg.new_block()?.index();
+
+    let mis_predicted = Predictor::mis_predict(
+        Predictor::variable().into(),
+        BitVector::constant(inst.address().unwrap_or_default(), 64), // FIXME bit-width
+    )?;
+
+    let correctly_predicted = Boolean::not(mis_predicted.clone())?;
+
+    cfg.conditional_edge(head_index, mis_predict_index, mis_predicted)?;
+    cfg.conditional_edge(head_index, branch_index, correctly_predicted)?;
+
+    // Add negated conditional edges from mis_predict to all branch successors
+    for successor in cfg.successor_indices(branch_index)? {
+        let edge = cfg.edge(branch_index, successor)?;
+        let negated_condition = Boolean::not(edge.condition().unwrap().clone())?;
+        cfg.conditional_edge(mis_predict_index, successor, negated_condition)?;
+    }
+
+    // Transient execution will begin in mis_predict.
+    transient_entry_points.insert(inst.address().unwrap(), mis_predict_index);
 
     Ok(())
 }
