@@ -20,7 +20,7 @@ impl TransientExecution {
     /// Enable or disable Spectre-PHT encoding.
     ///
     /// If enabled, speculative branch mis-prediction will be encoded.
-    pub fn spectre_pht(&mut self, enabled: bool) -> &mut Self {
+    pub fn with_spectre_pht(&mut self, enabled: bool) -> &mut Self {
         self.spectre_pht = enabled;
         self
     }
@@ -28,7 +28,7 @@ impl TransientExecution {
     /// Enable or disable Spectre-STL encoding.
     ///
     /// If enabled, speculative store-bypass will be encoded.
-    pub fn spectre_stl(&mut self, enabled: bool) -> &mut Self {
+    pub fn with_spectre_stl(&mut self, enabled: bool) -> &mut Self {
         self.spectre_stl = enabled;
         self
     }
