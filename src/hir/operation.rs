@@ -23,6 +23,11 @@ pub enum Operation {
     },
     /// Branch to the value given by target.
     Branch { target: Expression },
+    /// Branch to the value given by target if the condition holds.
+    ConditionalBranch {
+        condition: Expression,
+        target: Expression,
+    },
     /// Speculation Barrier
     Barrier,
 }
@@ -55,6 +60,11 @@ impl Operation {
     /// Create a new `Operation::Branch`.
     pub fn branch(target: Expression) -> Operation {
         Operation::Branch { target }
+    }
+
+    /// Create a new `Operation::ConditionalBranch`.
+    pub fn conditional_branch(condition: Expression, target: Expression) -> Operation {
+        Operation::ConditionalBranch { condition, target }
     }
 
     /// Create a new `Operation::Barrier`
@@ -90,6 +100,13 @@ impl Operation {
         }
     }
 
+    pub fn is_conditional_branch(&self) -> bool {
+        match self {
+            Operation::ConditionalBranch { .. } => true,
+            _ => false,
+        }
+    }
+
     pub fn is_barrier(&self) -> bool {
         match self {
             Operation::Barrier => true,
@@ -118,6 +135,11 @@ impl Operation {
                 .chain(address.variables().into_iter())
                 .collect(),
             Operation::Branch { target } => target.variables(),
+            Operation::ConditionalBranch { condition, target } => condition
+                .variables()
+                .into_iter()
+                .chain(target.variables().into_iter())
+                .collect(),
             Operation::Barrier => Vec::new(),
         }
     }
@@ -143,6 +165,11 @@ impl Operation {
                 .chain(address.variables_mut().into_iter())
                 .collect(),
             Operation::Branch { target } => target.variables_mut(),
+            Operation::ConditionalBranch { condition, target } => condition
+                .variables_mut()
+                .into_iter()
+                .chain(target.variables_mut().into_iter())
+                .collect(),
             Operation::Barrier => Vec::new(),
         }
     }
@@ -152,7 +179,9 @@ impl Operation {
         match self {
             Operation::Assign { variable, .. } | Operation::Load { variable, .. } => vec![variable],
             Operation::Store { new_memory, .. } => vec![new_memory],
-            Operation::Branch { .. } | Operation::Barrier => Vec::new(),
+            Operation::Branch { .. } | Operation::ConditionalBranch { .. } | Operation::Barrier => {
+                Vec::new()
+            }
         }
     }
 
@@ -161,7 +190,9 @@ impl Operation {
         match self {
             Operation::Assign { variable, .. } | Operation::Load { variable, .. } => vec![variable],
             Operation::Store { new_memory, .. } => vec![new_memory],
-            Operation::Branch { .. } | Operation::Barrier => Vec::new(),
+            Operation::Branch { .. } | Operation::ConditionalBranch { .. } | Operation::Barrier => {
+                Vec::new()
+            }
         }
     }
 }
@@ -186,6 +217,9 @@ impl fmt::Display for Operation {
                 address,
             } => write!(f, "{} = load({}, {})", variable, memory, address),
             Operation::Branch { target } => write!(f, "branch {}", target),
+            Operation::ConditionalBranch { condition, target } => {
+                write!(f, "branch {} if {}", target, condition)
+            }
             Operation::Barrier => write!(f, "barrier"),
         }
     }

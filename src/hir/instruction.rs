@@ -41,6 +41,11 @@ impl Instruction {
         Instruction::new(Operation::branch(target))
     }
 
+    /// Create a new `ConditionalBranch` instruction.
+    pub fn conditional_branch(condition: Expression, target: Expression) -> Instruction {
+        Instruction::new(Operation::conditional_branch(condition, target))
+    }
+
     /// Create a new `Barrier` instruction.
     pub fn barrier() -> Instruction {
         Instruction::new(Operation::barrier())
@@ -64,6 +69,11 @@ impl Instruction {
     /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Branch`
     pub fn is_branch(&self) -> bool {
         self.operation.is_branch()
+    }
+
+    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::ConditionalBranch`
+    pub fn is_conditional_branch(&self) -> bool {
+        self.operation.is_conditional_branch()
     }
 
     /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Barrier`

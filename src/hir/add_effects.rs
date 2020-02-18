@@ -35,6 +35,14 @@ fn instruction_effects(instruction: &Instruction) -> Vec<Effect> {
                 target.clone(),
             )]
         }
+        Operation::ConditionalBranch { condition, target } => {
+            let location = BitVector::constant(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
+            vec![Effect::conditional_branch_target(
+                condition.clone(),
+                location,
+                target.clone(),
+            )]
+        }
         _ => vec![],
     }
 }

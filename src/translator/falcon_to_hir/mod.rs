@@ -77,6 +77,12 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
                 let inst = block.branch(target);
                 inst.set_address(instruction.address());
             }
+            il::Operation::ConditionalBranch { condition, target } => {
+                let condition = translate_expr(condition)?;
+                let target = translate_expr(target)?;
+                let inst = block.conditional_branch(condition, target);
+                inst.set_address(instruction.address());
+            }
             il::Operation::Intrinsic { intrinsic } => match intrinsic.mnemonic() {
                 "mfence" | "lfence" | "spbarr" => {
                     let inst = block.barrier();

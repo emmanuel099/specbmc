@@ -174,9 +174,20 @@ impl Block {
         self.instructions.last_mut().unwrap()
     }
 
-    /// Adds a conditional branch operation to the end of this block.
+    /// Adds a unconditional branch operation to the end of this block.
     pub fn branch(&mut self, target: Expression) -> &mut Instruction {
         self.instructions.push(Instruction::branch(target));
+        self.instructions.last_mut().unwrap()
+    }
+
+    /// Adds a conditional branch operation to the end of this block.
+    pub fn conditional_branch(
+        &mut self,
+        condition: Expression,
+        target: Expression,
+    ) -> &mut Instruction {
+        self.instructions
+            .push(Instruction::conditional_branch(condition, target));
         self.instructions.last_mut().unwrap()
     }
 
