@@ -151,12 +151,39 @@ impl ControlFlowGraph {
         }
     }
 
-    /// Returns the entry block for this ControlFlowGraph
-    pub fn entry_block(&self) -> Option<Result<&Block>> {
+    /// Returns the entry block of this ControlFlowGraph
+    pub fn entry_block(&self) -> Option<&Block> {
         if self.entry.is_none() {
             None
         } else {
-            Some(self.block(self.entry.unwrap()))
+            self.block(self.entry.unwrap()).ok()
+        }
+    }
+
+    /// Returns a mutable reference to the entry block of this ControlFlowGraph
+    pub fn entry_block_mut(&mut self) -> Option<&mut Block> {
+        if self.entry.is_none() {
+            None
+        } else {
+            self.block_mut(self.entry.unwrap()).ok()
+        }
+    }
+
+    /// Returns the exit block of this ControlFlowGraph
+    pub fn exit_block(&self) -> Option<&Block> {
+        if self.exit.is_none() {
+            None
+        } else {
+            self.block(self.exit.unwrap()).ok()
+        }
+    }
+
+    /// Returns a mutable reference to the exit block of this ControlFlowGraph
+    pub fn exit_block_mut(&mut self) -> Option<&mut Block> {
+        if self.exit.is_none() {
+            None
+        } else {
+            self.block_mut(self.exit.unwrap()).ok()
         }
     }
 
