@@ -30,6 +30,8 @@ pub enum Operation {
     },
     /// Speculation Barrier
     Barrier,
+    /// Adversary observes the listed variables.
+    Observe { variables: Vec<Variable> },
 }
 
 impl Operation {
@@ -70,6 +72,11 @@ impl Operation {
     /// Create a new `Operation::Barrier`
     pub fn barrier() -> Operation {
         Operation::Barrier
+    }
+
+    /// Create a new `Operation::Observe`
+    pub fn observe(variables: Vec<Variable>) -> Operation {
+        Operation::Observe { variables }
     }
 
     pub fn is_assign(&self) -> bool {
@@ -114,6 +121,13 @@ impl Operation {
         }
     }
 
+    pub fn is_observe(&self) -> bool {
+        match self {
+            Operation::Observe { .. } => true,
+            _ => false,
+        }
+    }
+
     /// Get each `Variable` read by this `Operation`.
     pub fn variables_read(&self) -> Vec<&Variable> {
         match self {
@@ -141,6 +155,7 @@ impl Operation {
                 .chain(target.variables().into_iter())
                 .collect(),
             Operation::Barrier => Vec::new(),
+            Operation::Observe { variables } => variables.iter().collect(),
         }
     }
 
@@ -171,6 +186,7 @@ impl Operation {
                 .chain(target.variables_mut().into_iter())
                 .collect(),
             Operation::Barrier => Vec::new(),
+            Operation::Observe { variables } => variables.iter_mut().collect(),
         }
     }
 
@@ -179,9 +195,10 @@ impl Operation {
         match self {
             Operation::Assign { variable, .. } | Operation::Load { variable, .. } => vec![variable],
             Operation::Store { new_memory, .. } => vec![new_memory],
-            Operation::Branch { .. } | Operation::ConditionalBranch { .. } | Operation::Barrier => {
-                Vec::new()
-            }
+            Operation::Branch { .. }
+            | Operation::ConditionalBranch { .. }
+            | Operation::Barrier
+            | Operation::Observe { .. } => Vec::new(),
         }
     }
 
@@ -190,9 +207,10 @@ impl Operation {
         match self {
             Operation::Assign { variable, .. } | Operation::Load { variable, .. } => vec![variable],
             Operation::Store { new_memory, .. } => vec![new_memory],
-            Operation::Branch { .. } | Operation::ConditionalBranch { .. } | Operation::Barrier => {
-                Vec::new()
-            }
+            Operation::Branch { .. }
+            | Operation::ConditionalBranch { .. }
+            | Operation::Barrier
+            | Operation::Observe { .. } => Vec::new(),
         }
     }
 }
@@ -221,6 +239,13 @@ impl fmt::Display for Operation {
                 write!(f, "branch {} if {}", target, condition)
             }
             Operation::Barrier => write!(f, "barrier"),
+            Operation::Observe { variables } => {
+                write!(f, "obs(")?;
+                for var in variables {
+                    write!(f, "{}, ", var)?;
+                }
+                write!(f, ")")
+            }
         }
     }
 }

@@ -51,6 +51,11 @@ impl Instruction {
         Instruction::new(Operation::barrier())
     }
 
+    /// Create a new `Observe` instruction.
+    pub fn observe(variables: Vec<Variable>) -> Instruction {
+        Instruction::new(Operation::observe(variables))
+    }
+
     /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Assign`
     pub fn is_assign(&self) -> bool {
         self.operation.is_assign()
@@ -79,6 +84,11 @@ impl Instruction {
     /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Barrier`
     pub fn is_barrier(&self) -> bool {
         self.operation.is_barrier()
+    }
+
+    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Observe`
+    pub fn is_observe(&self) -> bool {
+        self.operation.is_observe()
     }
 
     /// Get the `Operation` for this `Instruction`

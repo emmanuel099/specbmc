@@ -196,6 +196,12 @@ impl Block {
         self.instructions.push(Instruction::barrier());
         self.instructions.last_mut().unwrap()
     }
+
+    /// Adds an observe operation to the end of this block.
+    pub fn observe(&mut self, variables: Vec<Variable>) -> &mut Instruction {
+        self.instructions.push(Instruction::observe(variables));
+        self.instructions.last_mut().unwrap()
+    }
 }
 
 impl graph::Vertex for Block {
