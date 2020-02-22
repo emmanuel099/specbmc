@@ -88,6 +88,10 @@ impl Expression {
         &self.operands
     }
 
+    pub fn operands_mut(&mut self) -> &mut Vec<Expression> {
+        &mut self.operands
+    }
+
     pub fn sort(&self) -> &Sort {
         &self.sort
     }
