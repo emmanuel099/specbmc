@@ -25,14 +25,25 @@ pub fn encode_program(program: &lir::Program, debug_file_path: Option<&Path>) ->
     define_btb(&mut solver, word_size)?;
     define_pht(&mut solver, word_size)?;
 
+    let mut assertions: Vec<expr::Expression> = Vec::new();
+
     for node in program.nodes() {
         match node {
             lir::Node::Comment(text) => solver.comment(&text)?,
             lir::Node::Let { var, expr } => define_variable(&mut solver, var, expr)?,
-            lir::Node::Assert { .. } => bail!("not implemented"), // TODO
+            lir::Node::Assert { cond } => {
+                let name = format!("_assertion{}", assertions.len());
+                let assertion = expr::Variable::new(name, expr::Sort::boolean());
+                define_variable(&mut solver, &assertion, &cond)?;
+                assertions.push(assertion.into())
+            }
             lir::Node::Assume { cond } => solver.assert(&cond)?,
         }
     }
+
+    solver.assert(&expr::Boolean::not(expr::Boolean::conjunction(
+        &assertions,
+    )?)?)?;
 
     Ok(())
 }
