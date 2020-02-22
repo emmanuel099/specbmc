@@ -20,3 +20,4 @@ num-traits = "0.2.1"
 falcon = { git = "https://github.com/emmanuel099/falcon" }
 falcon_muasm = { git = "https://github.com/emmanuel099/falcon-muasm" }
 rsmt2 = "0.10.0"
+bit-vec = "0.6.1"

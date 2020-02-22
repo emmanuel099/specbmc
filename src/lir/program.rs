@@ -43,7 +43,7 @@ impl Program {
         &self.nodes
     }
 
-    pub fn nodes_mut(&mut self) -> &mut [Node] {
+    pub fn nodes_mut(&mut self) -> &mut Vec<Node> {
         &mut self.nodes
     }
 }

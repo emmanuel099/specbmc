@@ -1,0 +1,98 @@
+use crate::error::Result;
+use crate::expr;
+use crate::lir;
+use bit_vec::BitVec;
+use std::collections::HashMap;
+
+pub fn eliminate_dead_code(program: &mut lir::Program) -> Result<()> {
+    let marks = mark(program.nodes());
+    sweep(program.nodes_mut(), &marks);
+
+    Ok(())
+}
+
+trait DceCritical {
+    /// Determines if the Instruction is critical, meaning that it should not be removed by DCE.
+    fn is_critical(&self) -> bool;
+}
+
+impl DceCritical for lir::Node {
+    fn is_critical(&self) -> bool {
+        !self.is_let()
+    }
+}
+
+/// Get a map from variables to node indices where the variables are defined.
+fn variable_definitions(nodes: &[lir::Node]) -> HashMap<&expr::Variable, usize> {
+    let mut defs = HashMap::new();
+
+    nodes
+        .iter()
+        .enumerate()
+        .for_each(|(index, node)| match node {
+            lir::Node::Let { var, .. } => {
+                defs.insert(var, index);
+            }
+            _ => (),
+        });
+
+    defs
+}
+
+/// Marks nodes which should not be eliminated.
+///
+/// The BitVec contains a single bit for each node.
+/// If the bit for a node is not set, the node can safely be removed.
+fn mark(nodes: &[lir::Node]) -> BitVec {
+    let defs = variable_definitions(nodes);
+
+    let mut marks = BitVec::from_elem(nodes.len(), false);
+    let mut work_queue: Vec<usize> = Vec::new();
+
+    // Mark critical nodes first
+    nodes
+        .iter()
+        .enumerate()
+        .filter(|(_, node)| node.is_critical())
+        .for_each(|(index, _)| {
+            marks.set(index, true);
+            work_queue.push(index);
+        });
+
+    // Iteratively mark the dependencies
+    while !work_queue.is_empty() {
+        let index = work_queue.pop().unwrap();
+
+        let mark_def = |var| match defs.get(var) {
+            Some(def_index) => {
+                if !marks.get(*def_index).unwrap() {
+                    marks.set(*def_index, true);
+                    work_queue.push(*def_index);
+                }
+            }
+            None => (),
+        };
+
+        match &nodes[index] {
+            lir::Node::Let { expr, .. } => expr.variables().iter().for_each(mark_def),
+            lir::Node::Assert { cond } | lir::Node::Assume { cond } => {
+                cond.variables().iter().for_each(mark_def)
+            }
+            _ => (),
+        }
+    }
+
+    marks
+}
+
+/// Removes all unmarked nodes.
+fn sweep(nodes: &mut Vec<lir::Node>, marks: &BitVec) {
+    marks
+        .iter()
+        .enumerate()
+        .filter(|(_, marked)| !*marked)
+        .rev()
+        .for_each(|(index, _)| {
+            nodes.remove(index);
+        });
+}
