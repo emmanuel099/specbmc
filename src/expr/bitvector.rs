@@ -1,7 +1,7 @@
 use crate::error::{ErrorKind, Result};
 use crate::expr::{Expression, Operator, Sort, Variable};
 use num_bigint::BigUint;
-use num_traits::{FromPrimitive, ToPrimitive};
+use num_traits::{FromPrimitive, One, ToPrimitive, Zero};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -77,12 +77,12 @@ impl Value {
 
     /// Returns true if the value in this Value is 0, false otherwise.
     pub fn is_zero(&self) -> bool {
-        self.value_u64().map(|v| v == 0).unwrap_or(false)
+        self.value.is_zero()
     }
 
     /// Returns true if the value in this constant is 1, false otherwise.
     pub fn is_one(&self) -> bool {
-        self.value_u64().map(|v| v == 1).unwrap_or(false)
+        self.value.is_one()
     }
 
     pub fn trun(&self, bits: usize) -> Result<Value> {
