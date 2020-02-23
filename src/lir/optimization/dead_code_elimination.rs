@@ -9,23 +9,34 @@
 use crate::error::Result;
 use crate::expr;
 use crate::lir;
-use crate::lir::optimization::OptimizationResult;
+use crate::lir::optimization::{Optimization, OptimizationResult};
 use bit_vec::BitVec;
 use std::collections::HashMap;
 
-/// Remove all dead nodes from the given program.
-///
-/// `Assert` and `Assume` nodes are considered as critical,
-/// meaning that they (including their dependencies) will remain.
-pub fn eliminate_dead_code(program: &mut lir::Program) -> Result<OptimizationResult> {
-    let marks = mark(program.nodes());
-    if marks.all() {
-        return Ok(OptimizationResult::Unchanged);
+pub struct DeadCodeElimination {}
+
+impl DeadCodeElimination {
+    pub fn new() -> Self {
+        Self {}
     }
+}
 
-    sweep(program.nodes_mut(), &marks);
+impl Optimization for DeadCodeElimination {
+    /// Remove all dead nodes from the given program.
+    ///
+    /// `Assert` and `Assume` nodes are considered as critical,
+    /// meaning that they (including their dependencies) will remain.
+    fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
+        let marks = mark(program.nodes());
+        if marks.all() {
+            // No dead nodes
+            return Ok(OptimizationResult::Unchanged);
+        }
 
-    Ok(OptimizationResult::Changed)
+        sweep(program.nodes_mut(), &marks);
+
+        Ok(OptimizationResult::Changed)
+    }
 }
 
 trait DceCritical {

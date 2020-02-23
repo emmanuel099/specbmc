@@ -8,18 +8,30 @@
 use crate::error::Result;
 use crate::expr;
 use crate::lir;
-use crate::lir::optimization::OptimizationResult;
+use crate::lir::optimization::{Optimization, OptimizationResult};
 use std::collections::HashMap;
 
-pub fn propagate_copies(program: &mut lir::Program) -> Result<OptimizationResult> {
-    let copies = determine_copied_variables(program.nodes());
-    if copies.is_empty() {
-        return Ok(OptimizationResult::Unchanged);
+pub struct CopyPropagation {}
+
+impl CopyPropagation {
+    pub fn new() -> Self {
+        Self {}
     }
+}
 
-    replace_copied_variables(&mut program.nodes_mut(), &copies);
+impl Optimization for CopyPropagation {
+    /// Propagate all simple assignments
+    fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
+        let copies = determine_copied_variables(program.nodes());
+        if copies.is_empty() {
+            // No copies
+            return Ok(OptimizationResult::Unchanged);
+        }
 
-    Ok(OptimizationResult::Changed)
+        replace_copied_variables(&mut program.nodes_mut(), &copies);
+
+        Ok(OptimizationResult::Changed)
+    }
 }
 
 fn determine_copied_variables(nodes: &[lir::Node]) -> HashMap<expr::Variable, expr::Variable> {

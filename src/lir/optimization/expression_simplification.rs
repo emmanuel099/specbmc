@@ -1,26 +1,36 @@
 use crate::error::Result;
 use crate::expr::*;
 use crate::lir;
-use crate::lir::optimization::OptimizationResult;
+use crate::lir::optimization::{Optimization, OptimizationResult};
 
-pub fn simplify_expressions(program: &mut lir::Program) -> Result<OptimizationResult> {
-    for node in program.nodes_mut() {
-        match node {
-            lir::Node::Let { expr, .. } => {
-                if let Some(simplified_expr) = simplified_expression(expr) {
-                    *expr = simplified_expr;
-                }
-            }
-            lir::Node::Assert { cond } | lir::Node::Assume { cond } => {
-                if let Some(simplified_cond) = simplified_expression(cond) {
-                    *cond = simplified_cond;
-                }
-            }
-            _ => (),
-        }
+pub struct ExpressionSimplification {}
+
+impl ExpressionSimplification {
+    pub fn new() -> Self {
+        Self {}
     }
+}
 
-    Ok(OptimizationResult::Changed)
+impl Optimization for ExpressionSimplification {
+    fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
+        for node in program.nodes_mut() {
+            match node {
+                lir::Node::Let { expr, .. } => {
+                    if let Some(simplified_expr) = simplified_expression(expr) {
+                        *expr = simplified_expr;
+                    }
+                }
+                lir::Node::Assert { cond } | lir::Node::Assume { cond } => {
+                    if let Some(simplified_cond) = simplified_expression(cond) {
+                        *cond = simplified_cond;
+                    }
+                }
+                _ => (),
+            }
+        }
+
+        Ok(OptimizationResult::Changed)
+    }
 }
 
 fn simplified_expression(expr: &mut Expression) -> Option<Expression> {
