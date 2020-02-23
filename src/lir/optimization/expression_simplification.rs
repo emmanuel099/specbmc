@@ -1,8 +1,9 @@
 use crate::error::Result;
 use crate::expr::*;
 use crate::lir;
+use crate::lir::optimization::OptimizationResult;
 
-pub fn simplify_expressions(program: &mut lir::Program) -> Result<()> {
+pub fn simplify_expressions(program: &mut lir::Program) -> Result<OptimizationResult> {
     for node in program.nodes_mut() {
         match node {
             lir::Node::Let { expr, .. } => {
@@ -19,7 +20,7 @@ pub fn simplify_expressions(program: &mut lir::Program) -> Result<()> {
         }
     }
 
-    Ok(())
+    Ok(OptimizationResult::Changed)
 }
 
 fn simplified_expression(expr: &mut Expression) -> Option<Expression> {

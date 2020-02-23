@@ -5,6 +5,11 @@ mod copy_propagation;
 mod dead_code_elimination;
 mod expression_simplification;
 
+pub enum OptimizationResult {
+    Changed,
+    Unchanged,
+}
+
 pub fn optimize(program: &mut lir::Program) -> Result<()> {
     expression_simplification::simplify_expressions(program)?;
     copy_propagation::propagate_copies(program)?;

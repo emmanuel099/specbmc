@@ -1,18 +1,35 @@
+//! Dead Code Elimination (DCE)
+//!
+//! Mark-and-Sweep like dead code elimination which works like:
+//!   1. Phase (Mark): All useful nodes (including their dependencies) are marked
+//!   2. Phase (Sweep): All unmarked nodes are removed
+//!
+//! This algorithm requires that the program is in SSA form.
+
 use crate::error::Result;
 use crate::expr;
 use crate::lir;
+use crate::lir::optimization::OptimizationResult;
 use bit_vec::BitVec;
 use std::collections::HashMap;
 
-pub fn eliminate_dead_code(program: &mut lir::Program) -> Result<()> {
+/// Remove all dead nodes from the given program.
+///
+/// `Assert` and `Assume` nodes are considered as critical,
+/// meaning that they (including their dependencies) will remain.
+pub fn eliminate_dead_code(program: &mut lir::Program) -> Result<OptimizationResult> {
     let marks = mark(program.nodes());
+    if marks.all() {
+        return Ok(OptimizationResult::Unchanged);
+    }
+
     sweep(program.nodes_mut(), &marks);
 
-    Ok(())
+    Ok(OptimizationResult::Changed)
 }
 
 trait DceCritical {
-    /// Determines if the Instruction is critical, meaning that it should not be removed by DCE.
+    /// Determines if Self is critical, meaning that it should not be removed by DCE.
     fn is_critical(&self) -> bool;
 }
 
@@ -39,7 +56,7 @@ fn variable_definitions(nodes: &[lir::Node]) -> HashMap<&expr::Variable, usize> 
     defs
 }
 
-/// Marks nodes which should not be eliminated.
+/// Mark useful nodes which should not be removed.
 ///
 /// The BitVec contains a single bit for each node.
 /// If the bit for a node is not set, the node can safely be removed.
@@ -60,9 +77,7 @@ fn mark(nodes: &[lir::Node]) -> BitVec {
         });
 
     // Iteratively mark the dependencies
-    while !work_queue.is_empty() {
-        let index = work_queue.pop().unwrap();
-
+    while let Some(index) = work_queue.pop() {
         let mark_def = |var| match defs.get(var) {
             Some(def_index) => {
                 if !marks.get(*def_index).unwrap() {
@@ -74,7 +89,9 @@ fn mark(nodes: &[lir::Node]) -> BitVec {
         };
 
         match &nodes[index] {
-            lir::Node::Let { expr, .. } => expr.variables().iter().for_each(mark_def),
+            lir::Node::Let { expr, .. } => {
+                expr.variables().iter().for_each(mark_def);
+            }
             lir::Node::Assert { cond } | lir::Node::Assume { cond } => {
                 cond.variables().iter().for_each(mark_def)
             }
@@ -85,7 +102,7 @@ fn mark(nodes: &[lir::Node]) -> BitVec {
     marks
 }
 
-/// Removes all unmarked nodes.
+/// Remove all unmarked nodes.
 fn sweep(nodes: &mut Vec<lir::Node>, marks: &BitVec) {
     marks
         .iter()

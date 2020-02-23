@@ -1,17 +1,25 @@
+//! Copy Propagation
+//!
+//! Propagates all simple assignments but doesn't remove them.
+//! Simple assignment is defined as: `x := v` where v is a variable
+//!
+//! This algorithm requires that the program is in SSA form.
+
 use crate::error::Result;
 use crate::expr;
 use crate::lir;
+use crate::lir::optimization::OptimizationResult;
 use std::collections::HashMap;
 
-pub fn propagate_copies(program: &mut lir::Program) -> Result<()> {
+pub fn propagate_copies(program: &mut lir::Program) -> Result<OptimizationResult> {
     let copies = determine_copied_variables(program.nodes());
     if copies.is_empty() {
-        return Ok(());
+        return Ok(OptimizationResult::Unchanged);
     }
 
     replace_copied_variables(&mut program.nodes_mut(), &copies);
 
-    Ok(())
+    Ok(OptimizationResult::Changed)
 }
 
 fn determine_copied_variables(nodes: &[lir::Node]) -> HashMap<expr::Variable, expr::Variable> {
