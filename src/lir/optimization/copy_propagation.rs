@@ -22,19 +22,21 @@ impl CopyPropagation {
 impl Optimization for CopyPropagation {
     /// Propagate all simple assignments
     fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
-        let copies = determine_copied_variables(program.nodes());
+        let copies = determine_copies(program.nodes());
         if copies.is_empty() {
             // No copies
             return Ok(OptimizationResult::Unchanged);
         }
 
-        replace_copied_variables(&mut program.nodes_mut(), &copies);
+        program.propagate_copies(&copies);
 
         Ok(OptimizationResult::Changed)
     }
 }
 
-fn determine_copied_variables(nodes: &[lir::Node]) -> HashMap<expr::Variable, expr::Variable> {
+type CopiedVariables = HashMap<expr::Variable, expr::Variable>;
+
+fn determine_copies(nodes: &[lir::Node]) -> CopiedVariables {
     let mut copies = HashMap::new();
 
     nodes.iter().for_each(|node| match node {
@@ -52,21 +54,28 @@ fn determine_copied_variables(nodes: &[lir::Node]) -> HashMap<expr::Variable, ex
     copies
 }
 
-fn replace_copied_variables(
-    nodes: &mut Vec<lir::Node>,
-    copies: &HashMap<expr::Variable, expr::Variable>,
-) {
-    let replace_if_copied = |var: &mut expr::Variable| match copies.get(var) {
-        Some(src_var) => *var = src_var.clone(),
-        None => (),
-    };
+trait PropagateCopies {
+    fn propagate_copies(&mut self, copies: &CopiedVariables);
+}
 
-    for node in nodes {
-        match node {
-            lir::Node::Let { expr, .. } => {
-                expr.variables_mut().into_iter().for_each(replace_if_copied)
-            }
-            lir::Node::Assert { cond } | lir::Node::Assume { cond } => {
+impl PropagateCopies for lir::Program {
+    fn propagate_copies(&mut self, copies: &CopiedVariables) {
+        self.nodes_mut()
+            .into_iter()
+            .for_each(|node| node.propagate_copies(copies))
+    }
+}
+
+impl PropagateCopies for lir::Node {
+    fn propagate_copies(&mut self, copies: &CopiedVariables) {
+        let replace_if_copied = |var: &mut expr::Variable| match copies.get(var) {
+            Some(src_var) => *var = src_var.clone(),
+            None => (),
+        };
+
+        match self {
+            Self::Let { expr, .. } => expr.variables_mut().into_iter().for_each(replace_if_copied),
+            Self::Assert { cond } | Self::Assume { cond } => {
                 cond.variables_mut().into_iter().for_each(replace_if_copied)
             }
             _ => (),
@@ -83,7 +92,7 @@ fn replace_copied_variables(
 /// Resolved:
 /// b = a
 /// c = a
-fn resolve_copies_of_copies(copies: &mut HashMap<expr::Variable, expr::Variable>) {
+fn resolve_copies_of_copies(copies: &mut CopiedVariables) {
     loop {
         let mut prop: Option<(expr::Variable, expr::Variable)> = None;
         for (copy, var) in copies.iter() {
