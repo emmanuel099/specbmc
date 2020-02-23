@@ -303,4 +303,11 @@ impl BitVector {
     }
 
     // TODO not, neg, comp, repeat, rotateleft, rotateright
+
+    pub fn is_constant(&self) -> bool {
+        match self {
+            Self::Constant(_) => true,
+            _ => false,
+        }
+    }
 }

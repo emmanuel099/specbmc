@@ -177,6 +177,15 @@ impl Expression {
         }
         variables
     }
+
+    pub fn is_constant(&self) -> bool {
+        match &self.operator {
+            Operator::Boolean(op) => op.is_constant(),
+            Operator::Integer(op) => op.is_constant(),
+            Operator::BitVector(op) => op.is_constant(),
+            _ => false,
+        }
+    }
 }
 
 impl From<Variable> for Expression {

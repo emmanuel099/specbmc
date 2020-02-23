@@ -34,27 +34,6 @@ impl Optimization for ConstantFolding {
     }
 }
 
-fn is_const(expr: &Expression) -> bool {
-    if !expr.operands().is_empty() {
-        return false;
-    }
-    match expr.operator() {
-        Operator::Boolean(op) => match op {
-            Boolean::True | Boolean::False => true,
-            _ => false,
-        },
-        Operator::Integer(op) => match op {
-            Integer::Constant(_) => true,
-            _ => false,
-        },
-        Operator::BitVector(op) => match op {
-            BitVector::Constant(_) => true,
-            _ => false,
-        },
-        _ => false,
-    }
-}
-
 fn folded_expression(expr: &mut Expression) -> Option<Expression> {
     if expr.operands().is_empty() {
         // Nothing to fold
@@ -68,7 +47,7 @@ fn folded_expression(expr: &mut Expression) -> Option<Expression> {
         }
     }
 
-    if expr.operands().iter().any(|operand| !is_const(operand)) {
+    if expr.operands().iter().any(|operand| !operand.is_constant()) {
         // Not all operands are const
         return None;
     }

@@ -109,4 +109,11 @@ impl Integer {
     int_comp!(gt, Self::Gt);
     int_comp!(lte, Self::Lte);
     int_comp!(gte, Self::Gte);
+
+    pub fn is_constant(&self) -> bool {
+        match self {
+            Self::Constant(_) => true,
+            _ => false,
+        }
+    }
 }

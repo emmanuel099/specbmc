@@ -156,4 +156,11 @@ impl Boolean {
             Sort::boolean(),
         ))
     }
+
+    pub fn is_constant(&self) -> bool {
+        match self {
+            Self::True | Self::False => true,
+            _ => false,
+        }
+    }
 }
