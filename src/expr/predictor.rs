@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{Expression, Operator, Sort, Variable};
+use crate::expr::{Expression, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -7,12 +7,6 @@ pub enum Predictor {
     TransientStart,
     MisPredict,
     SpeculationWindow,
-}
-
-impl Into<Operator> for Predictor {
-    fn into(self) -> Operator {
-        Operator::Predictor(self)
-    }
 }
 
 impl fmt::Display for Predictor {

@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{Expression, Operator, Sort, Variable};
+use crate::expr::{Expression, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -13,9 +13,13 @@ pub enum Boolean {
     Xor,
 }
 
-impl Into<Operator> for Boolean {
-    fn into(self) -> Operator {
-        Operator::Boolean(self)
+impl From<bool> for Boolean {
+    fn from(value: bool) -> Self {
+        if value {
+            Boolean::True
+        } else {
+            Boolean::False
+        }
     }
 }
 
@@ -39,8 +43,7 @@ impl Boolean {
     }
 
     pub fn constant(value: bool) -> Expression {
-        let op = if value { Boolean::True } else { Boolean::False };
-        Expression::new(op.into(), vec![], Sort::boolean())
+        Expression::new(Self::from(value).into(), vec![], Sort::boolean())
     }
 
     pub fn not(expr: Expression) -> Result<Expression> {

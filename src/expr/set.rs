@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{Expression, Operator, Sort};
+use crate::expr::{Expression, Sort};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -7,12 +7,6 @@ pub enum Set {
     Insert,
     Remove,
     Contains,
-}
-
-impl Into<Operator> for Set {
-    fn into(self) -> Operator {
-        Operator::Set(self)
-    }
 }
 
 impl fmt::Display for Set {

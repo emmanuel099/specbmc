@@ -1,17 +1,11 @@
 use crate::error::Result;
-use crate::expr::{Expression, Operator, Sort, Variable};
+use crate::expr::{Expression, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum PatternHistoryTable {
     Taken,
     NotTaken,
-}
-
-impl Into<Operator> for PatternHistoryTable {
-    fn into(self) -> Operator {
-        Operator::PatternHistoryTable(self)
-    }
 }
 
 impl fmt::Display for PatternHistoryTable {

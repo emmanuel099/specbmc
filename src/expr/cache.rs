@@ -1,16 +1,10 @@
 use crate::error::Result;
-use crate::expr::{Expression, Operator, Sort, Variable};
+use crate::expr::{Expression, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Cache {
     Fetch(usize), // Fetch N bits into the cache
-}
-
-impl Into<Operator> for Cache {
-    fn into(self) -> Operator {
-        Operator::Cache(self)
-    }
 }
 
 impl fmt::Display for Cache {

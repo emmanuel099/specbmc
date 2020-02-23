@@ -1,17 +1,11 @@
 use crate::error::Result;
-use crate::expr::{Expression, Operator, Sort, Variable};
+use crate::expr::{Expression, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Memory {
     Store(usize),
     Load(usize),
-}
-
-impl Into<Operator> for Memory {
-    fn into(self) -> Operator {
-        Operator::Memory(self)
-    }
 }
 
 impl fmt::Display for Memory {

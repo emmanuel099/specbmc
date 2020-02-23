@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{Expression, Operator, Sort, Variable};
+use crate::expr::{Expression, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -18,9 +18,9 @@ pub enum Integer {
     Neg,
 }
 
-impl Into<Operator> for Integer {
-    fn into(self) -> Operator {
-        Operator::Integer(self)
+impl From<u64> for Integer {
+    fn from(value: u64) -> Self {
+        Self::Constant(value)
     }
 }
 
@@ -81,7 +81,7 @@ impl Integer {
     }
 
     pub fn constant(value: u64) -> Expression {
-        Expression::new(Self::Constant(value).into(), vec![], Sort::integer())
+        Expression::new(Self::from(value).into(), vec![], Sort::integer())
     }
 
     int_arith_unary!(abs, Self::Abs);

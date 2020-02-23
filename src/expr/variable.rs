@@ -1,4 +1,4 @@
-use crate::expr::{Expression, Sort};
+use crate::expr::Sort;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -54,11 +54,5 @@ impl Variable {
 impl fmt::Display for Variable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}:{}", self.identifier(), self.sort())
-    }
-}
-
-impl Into<Expression> for Variable {
-    fn into(self) -> Expression {
-        Expression::variable(self)
     }
 }

@@ -1,6 +1,6 @@
 use crate::error::Result;
-use crate::expr::{Expression, Operator, Sort, Variable};
-use falcon::il::Constant as Value;
+use crate::expr::{Expression, Sort, Variable};
+pub use falcon::il::Constant as Value;
 use num_bigint::BigUint;
 use std::fmt;
 
@@ -48,9 +48,9 @@ pub enum BitVector {
     SGe,
 }
 
-impl Into<Operator> for BitVector {
-    fn into(self) -> Operator {
-        Operator::BitVector(self)
+impl From<Value> for BitVector {
+    fn from(value: Value) -> Self {
+        Self::Constant(value)
     }
 }
 

@@ -1,16 +1,10 @@
 use crate::error::Result;
-use crate::expr::{Expression, Operator, Sort, Variable};
+use crate::expr::{Expression, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum BranchTargetBuffer {
     Track,
-}
-
-impl Into<Operator> for BranchTargetBuffer {
-    fn into(self) -> Operator {
-        Operator::BranchTargetBuffer(self)
-    }
 }
 
 impl fmt::Display for BranchTargetBuffer {

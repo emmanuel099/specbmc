@@ -16,6 +16,7 @@ mod variable;
 
 pub use self::array::Array;
 pub use self::bitvector::BitVector;
+pub use self::bitvector::Value as BitVectorValue;
 pub use self::boolean::Boolean;
 pub use self::branch_target_buffer::BranchTargetBuffer;
 pub use self::cache::Cache;
@@ -43,6 +44,27 @@ pub enum Operator {
     BranchTargetBuffer(BranchTargetBuffer),
     PatternHistoryTable(PatternHistoryTable),
 }
+
+macro_rules! impl_operator_from {
+    ( $name:ident ) => {
+        impl From<$name> for Operator {
+            fn from(op: $name) -> Self {
+                Self::$name(op)
+            }
+        }
+    };
+}
+
+impl_operator_from!(Boolean);
+impl_operator_from!(Integer);
+impl_operator_from!(BitVector);
+impl_operator_from!(Array);
+impl_operator_from!(Set);
+impl_operator_from!(Memory);
+impl_operator_from!(Predictor);
+impl_operator_from!(Cache);
+impl_operator_from!(BranchTargetBuffer);
+impl_operator_from!(PatternHistoryTable);
 
 impl fmt::Display for Operator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -153,6 +175,12 @@ impl Expression {
             }
         }
         variables
+    }
+}
+
+impl From<Variable> for Expression {
+    fn from(var: Variable) -> Self {
+        Self::variable(var)
     }
 }
 

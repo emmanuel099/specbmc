@@ -1,17 +1,11 @@
 use crate::error::Result;
-use crate::expr::{Expression, Operator};
+use crate::expr::Expression;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Array {
     Select,
     Store,
-}
-
-impl Into<Operator> for Array {
-    fn into(self) -> Operator {
-        Operator::Array(self)
-    }
 }
 
 impl fmt::Display for Array {
