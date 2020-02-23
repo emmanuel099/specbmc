@@ -1,4 +1,5 @@
 use crate::error::Result;
+use std::convert::TryFrom;
 use std::fmt;
 
 mod array;
@@ -183,6 +184,28 @@ impl From<Variable> for Expression {
         Self::variable(var)
     }
 }
+
+macro_rules! impl_conversion_from_to {
+    ( $name:ident, $ty:ident ) => {
+        impl TryFrom<&Expression> for $ty {
+            type Error = &'static str;
+
+            fn try_from(e: &Expression) -> std::result::Result<$ty, Self::Error> {
+                if !e.operands().is_empty() {
+                    return Err("cannot convert");
+                }
+                match e.operator() {
+                    Operator::$name(op) => $ty::try_from(op),
+                    _ => Err("cannot convert"),
+                }
+            }
+        }
+    };
+}
+
+impl_conversion_from_to!(Boolean, bool);
+impl_conversion_from_to!(Integer, u64);
+impl_conversion_from_to!(BitVector, BitVectorValue);
 
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

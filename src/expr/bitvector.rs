@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::expr::{Expression, Sort, Variable};
 pub use falcon::il::Constant as Value;
 use num_bigint::BigUint;
+use std::convert::TryFrom;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -51,6 +52,17 @@ pub enum BitVector {
 impl From<Value> for BitVector {
     fn from(value: Value) -> Self {
         Self::Constant(value)
+    }
+}
+
+impl TryFrom<&BitVector> for Value {
+    type Error = &'static str;
+
+    fn try_from(b: &BitVector) -> std::result::Result<Value, Self::Error> {
+        match b {
+            BitVector::Constant(value) => Ok(value.clone()),
+            _ => Err("not a constant"),
+        }
     }
 }
 

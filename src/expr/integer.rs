@@ -1,5 +1,6 @@
 use crate::error::Result;
 use crate::expr::{Expression, Sort, Variable};
+use std::convert::TryFrom;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -21,6 +22,17 @@ pub enum Integer {
 impl From<u64> for Integer {
     fn from(value: u64) -> Self {
         Self::Constant(value)
+    }
+}
+
+impl TryFrom<&Integer> for u64 {
+    type Error = &'static str;
+
+    fn try_from(i: &Integer) -> std::result::Result<u64, Self::Error> {
+        match i {
+            Integer::Constant(value) => Ok(*value),
+            _ => Err("not a constant"),
+        }
     }
 }
 

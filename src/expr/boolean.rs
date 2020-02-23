@@ -1,5 +1,6 @@
 use crate::error::Result;
 use crate::expr::{Expression, Sort, Variable};
+use std::convert::TryFrom;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -19,6 +20,18 @@ impl From<bool> for Boolean {
             Boolean::True
         } else {
             Boolean::False
+        }
+    }
+}
+
+impl TryFrom<&Boolean> for bool {
+    type Error = &'static str;
+
+    fn try_from(b: &Boolean) -> std::result::Result<bool, Self::Error> {
+        match b {
+            Boolean::True => Ok(true),
+            Boolean::False => Ok(false),
+            _ => Err("not a constant"),
         }
     }
 }
