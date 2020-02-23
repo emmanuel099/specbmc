@@ -185,27 +185,50 @@ impl From<Variable> for Expression {
     }
 }
 
-macro_rules! impl_conversion_from_to {
-    ( $name:ident, $ty:ident ) => {
-        impl TryFrom<&Expression> for $ty {
-            type Error = &'static str;
+impl TryFrom<&Expression> for bool {
+    type Error = &'static str;
 
-            fn try_from(e: &Expression) -> std::result::Result<$ty, Self::Error> {
-                if !e.operands().is_empty() {
-                    return Err("cannot convert");
-                }
-                match e.operator() {
-                    Operator::$name(op) => $ty::try_from(op),
-                    _ => Err("cannot convert"),
-                }
-            }
+    fn try_from(e: &Expression) -> std::result::Result<bool, Self::Error> {
+        if !e.operands().is_empty() {
+            return Err("cannot convert");
         }
-    };
+        match e.operator() {
+            Operator::Boolean(op) => bool::try_from(op),
+            Operator::BitVector(op) => bool::try_from(op),
+            _ => Err("cannot convert"),
+        }
+    }
 }
 
-impl_conversion_from_to!(Boolean, bool);
-impl_conversion_from_to!(Integer, u64);
-impl_conversion_from_to!(BitVector, BitVectorValue);
+impl TryFrom<&Expression> for u64 {
+    type Error = &'static str;
+
+    fn try_from(e: &Expression) -> std::result::Result<u64, Self::Error> {
+        if !e.operands().is_empty() {
+            return Err("cannot convert");
+        }
+        match e.operator() {
+            Operator::Integer(op) => u64::try_from(op),
+            Operator::BitVector(op) => u64::try_from(op),
+            _ => Err("cannot convert"),
+        }
+    }
+}
+
+impl TryFrom<&Expression> for BitVectorValue {
+    type Error = &'static str;
+
+    fn try_from(e: &Expression) -> std::result::Result<BitVectorValue, Self::Error> {
+        if !e.operands().is_empty() {
+            return Err("cannot convert");
+        }
+        match e.operator() {
+            Operator::Boolean(op) => BitVectorValue::try_from(op),
+            Operator::BitVector(op) => BitVectorValue::try_from(op),
+            _ => Err("cannot convert"),
+        }
+    }
+}
 
 impl fmt::Display for Expression {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

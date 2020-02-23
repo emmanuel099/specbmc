@@ -55,6 +55,30 @@ impl From<Value> for BitVector {
     }
 }
 
+impl TryFrom<&BitVector> for bool {
+    type Error = &'static str;
+
+    fn try_from(b: &BitVector) -> std::result::Result<bool, Self::Error> {
+        match b {
+            BitVector::Constant(value) => Ok(!value.is_zero()),
+            _ => Err("not a constant"),
+        }
+    }
+}
+
+impl TryFrom<&BitVector> for u64 {
+    type Error = &'static str;
+
+    fn try_from(b: &BitVector) -> std::result::Result<u64, Self::Error> {
+        match b {
+            BitVector::Constant(value) => {
+                value.value_u64().ok_or_else(|| "failed to convert to u64")
+            }
+            _ => Err("not a constant"),
+        }
+    }
+}
+
 impl TryFrom<&BitVector> for Value {
     type Error = &'static str;
 
@@ -155,6 +179,15 @@ impl BitVector {
         let bv = Value::new_big(value, bits);
         Expression::new(
             BitVector::Constant(bv).into(),
+            vec![],
+            Sort::bit_vector(bits),
+        )
+    }
+
+    pub fn constant_value(value: Value) -> Expression {
+        let bits = value.bits();
+        Expression::new(
+            BitVector::Constant(value).into(),
             vec![],
             Sort::bit_vector(bits),
         )

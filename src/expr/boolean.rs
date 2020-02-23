@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{Expression, Sort, Variable};
+use crate::expr::{BitVectorValue, Expression, Sort, Variable};
 use std::convert::TryFrom;
 use std::fmt;
 
@@ -31,6 +31,18 @@ impl TryFrom<&Boolean> for bool {
         match b {
             Boolean::True => Ok(true),
             Boolean::False => Ok(false),
+            _ => Err("not a constant"),
+        }
+    }
+}
+
+impl TryFrom<&Boolean> for BitVectorValue {
+    type Error = &'static str;
+
+    fn try_from(b: &Boolean) -> std::result::Result<BitVectorValue, Self::Error> {
+        match b {
+            Boolean::True => Ok(BitVectorValue::new(1, 1)),
+            Boolean::False => Ok(BitVectorValue::new(0, 1)),
             _ => Err("not a constant"),
         }
     }

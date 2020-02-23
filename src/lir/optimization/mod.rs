@@ -1,10 +1,12 @@
 use crate::error::Result;
 use crate::lir;
 
+mod constant_folding;
 mod copy_propagation;
 mod dead_code_elimination;
 mod expression_simplification;
 
+use constant_folding::ConstantFolding;
 use copy_propagation::CopyPropagation;
 use dead_code_elimination::DeadCodeElimination;
 use expression_simplification::ExpressionSimplification;
@@ -38,6 +40,7 @@ impl Optimizer {
     pub fn full() -> Self {
         Self {
             optimizations: vec![
+                Box::new(ConstantFolding::new()),
                 Box::new(ExpressionSimplification::new()),
                 Box::new(CopyPropagation::new()),
                 Box::new(DeadCodeElimination::new()),
