@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::expr::*;
 use crate::lir;
 use crate::lir::optimization::{Optimization, OptimizationResult};
+use std::convert::TryFrom;
 
 pub struct ExpressionSimplification {}
 
@@ -95,17 +96,66 @@ fn simplified_expression(expr: &Expression) -> Option<Expression> {
 }
 
 fn simplified_boolean_expression(op: &Boolean, operands: &[Expression]) -> Option<Expression> {
+    let is_true = |o: &Expression| o.is_constant() && bool::try_from(o).unwrap();
+    let is_false = |o: &Expression| o.is_constant() && !bool::try_from(o).unwrap();
+
     match (op, operands) {
         (Boolean::Or, []) => Some(Boolean::constant(false)),
         (Boolean::Or, [operand]) => Some(operand.clone()), // (or a) -> a
+        (Boolean::Or, operands) => {
+            if operands.iter().any(is_true) {
+                // (or a b true c) -> true
+                Some(Boolean::constant(true))
+            } else if operands.iter().any(is_false) {
+                // (or a b false c) -> (or a b c)
+                let ops_without_false: Vec<Expression> = operands
+                    .into_iter()
+                    .filter(|o| !is_false(o))
+                    .cloned()
+                    .collect();
+                Boolean::disjunction(&ops_without_false).ok()
+            } else {
+                None
+            }
+        }
         (Boolean::And, []) => Some(Boolean::constant(true)),
         (Boolean::And, [operand]) => Some(operand.clone()), // (and a) -> a
+        (Boolean::And, operands) => {
+            if operands.iter().any(is_false) {
+                // (and a b false c) -> false
+                Some(Boolean::constant(false))
+            } else if operands.iter().any(is_true) {
+                // (and a b true c) -> (and a b c)
+                let ops_without_true: Vec<Expression> = operands
+                    .into_iter()
+                    .filter(|o| !is_true(o))
+                    .cloned()
+                    .collect();
+                Boolean::conjunction(&ops_without_true).ok()
+            } else {
+                None
+            }
+        }
         (Boolean::Not, [operand]) => match operand.operator() {
             Operator::Boolean(Boolean::False) => Some(Boolean::constant(true)), // not false -> true
             Operator::Boolean(Boolean::True) => Some(Boolean::constant(false)), // not true -> false
             Operator::Boolean(Boolean::Not) => Some(operand.operands()[0].clone()), // not not a -> a
             _ => None,
         },
+        (Boolean::Imply, [a, b]) => {
+            if is_false(a) || is_true(b) {
+                // false => b -> true, a => true -> true
+                Some(Boolean::constant(true))
+            } else if is_true(a) {
+                // true => b -> b
+                Some(b.clone())
+            } else if is_false(b) {
+                // a => false -> not a
+                Boolean::not(a.clone()).ok()
+            } else {
+                None
+            }
+        }
         _ => None,
     }
 }
