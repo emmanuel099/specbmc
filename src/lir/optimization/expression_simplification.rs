@@ -13,34 +13,60 @@ impl ExpressionSimplification {
 
 impl Optimization for ExpressionSimplification {
     fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
-        for node in program.nodes_mut() {
-            match node {
-                lir::Node::Let { expr, .. } => {
-                    if let Some(simplified_expr) = simplified_expression(expr) {
-                        *expr = simplified_expr;
-                    }
-                }
-                lir::Node::Assert { cond } | lir::Node::Assume { cond } => {
-                    if let Some(simplified_cond) = simplified_expression(cond) {
-                        *cond = simplified_cond;
-                    }
-                }
-                _ => (),
-            }
+        if program.simplify() {
+            Ok(OptimizationResult::Changed)
+        } else {
+            Ok(OptimizationResult::Unchanged)
         }
-
-        Ok(OptimizationResult::Changed)
     }
 }
 
-fn simplified_expression(expr: &mut Expression) -> Option<Expression> {
-    // Simplify operands first
-    for operand in expr.operands_mut() {
-        if let Some(simplified_operand) = simplified_expression(operand) {
-            *operand = simplified_operand;
+trait Simplify {
+    /// Simplify `Self`
+    ///
+    /// Returns true if something changed.
+    fn simplify(&mut self) -> bool;
+}
+
+impl Simplify for lir::Program {
+    fn simplify(&mut self) -> bool {
+        self.nodes_mut()
+            .into_iter()
+            .fold(false, |simplified, node| node.simplify() || simplified)
+    }
+}
+
+impl Simplify for lir::Node {
+    fn simplify(&mut self) -> bool {
+        match self {
+            Self::Let { expr, .. } => expr.simplify(),
+            Self::Assert { cond } | Self::Assume { cond } => cond.simplify(),
+            _ => false,
         }
     }
+}
 
+impl Simplify for Expression {
+    fn simplify(&mut self) -> bool {
+        // Simplify operands first
+        let mut simplified = self
+            .operands_mut()
+            .into_iter()
+            .fold(false, |simplified, operand| {
+                operand.simplify() || simplified
+            });
+
+        // Try to simplify `Self`
+        if let Some(expr) = simplified_expression(self) {
+            *self = expr;
+            simplified = true;
+        }
+
+        simplified
+    }
+}
+
+fn simplified_expression(expr: &Expression) -> Option<Expression> {
     match (expr.operator(), expr.operands()) {
         (Operator::Equal, [lhs, rhs]) => match (lhs.operator(), rhs.operator()) {
             (_, Operator::Boolean(Boolean::True)) => Some(lhs.clone()), // b = true -> b
