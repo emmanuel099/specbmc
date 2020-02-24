@@ -74,7 +74,14 @@ fn simplified_expression(expr: &Expression) -> Option<Expression> {
             (Operator::Boolean(Boolean::True), _) => Some(rhs.clone()), // true = b -> b
             (_, Operator::Boolean(Boolean::False)) => Boolean::not(lhs.clone()).ok(), // b = false -> not b
             (Operator::Boolean(Boolean::False), _) => Boolean::not(rhs.clone()).ok(), // false = b -> not b
-            _ => None,
+            _ => {
+                if lhs == rhs {
+                    // a = a -> true
+                    Some(Boolean::constant(true))
+                } else {
+                    None
+                }
+            }
         },
         (Operator::Ite, [cond, then, _else]) => match cond.operator() {
             Operator::Boolean(Boolean::True) => Some(then.clone()), // (ite true a b) -> a
