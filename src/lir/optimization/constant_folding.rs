@@ -14,65 +14,91 @@ impl ConstantFolding {
 
 impl Optimization for ConstantFolding {
     fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
-        for node in program.nodes_mut() {
-            match node {
-                lir::Node::Let { expr, .. } => {
-                    if let Some(folded_expr) = folded_expression(expr) {
-                        *expr = folded_expr;
-                    }
-                }
-                lir::Node::Assert { cond } | lir::Node::Assume { cond } => {
-                    if let Some(folded_expr) = folded_expression(cond) {
-                        *cond = folded_expr;
-                    }
-                }
-                _ => (),
+        if program.fold() {
+            Ok(OptimizationResult::Changed)
+        } else {
+            Ok(OptimizationResult::Unchanged)
+        }
+    }
+}
+
+trait Fold {
+    /// Fold `Self`
+    ///
+    /// Returns true if something changed.
+    fn fold(&mut self) -> bool;
+}
+
+impl Fold for lir::Program {
+    fn fold(&mut self) -> bool {
+        self.nodes_mut()
+            .into_iter()
+            .fold(false, |folded, node| node.fold() || folded)
+    }
+}
+
+impl Fold for lir::Node {
+    fn fold(&mut self) -> bool {
+        match self {
+            Self::Let { expr, .. } => expr.fold(),
+            Self::Assert { cond } | Self::Assume { cond } => cond.fold(),
+            _ => false,
+        }
+    }
+}
+
+impl Fold for Expression {
+    fn fold(&mut self) -> bool {
+        if self.operands().is_empty() {
+            // Nothing to fold
+            return false;
+        }
+
+        // Fold operands first
+        let mut folded = self
+            .operands_mut()
+            .into_iter()
+            .fold(false, |folded, operand| operand.fold() || folded);
+
+        if self.operands().iter().any(|operand| !operand.is_constant()) {
+            // Not all operands are constant
+            return folded;
+        }
+
+        // Try to fold `Self`
+        match (self.operator(), self.operands()) {
+            (Operator::Equal, [lhs, rhs]) => {
+                *self = Boolean::constant(lhs == rhs);
+                folded = true;
             }
+            (Operator::Boolean(op), operands) => {
+                let values: Vec<bool> = operands
+                    .iter()
+                    .map(|o| bool::try_from(o).unwrap())
+                    .collect();
+                if let Some(result) = evaluate_boolean(op, &values) {
+                    *self = result;
+                    folded = true;
+                }
+            }
+            (Operator::BitVector(op), operands) => {
+                let values: Vec<BitVectorValue> = operands
+                    .iter()
+                    .map(|o| BitVectorValue::try_from(o).unwrap())
+                    .collect();
+                if let Some(result) = evaluate_bitvec(op, &values) {
+                    *self = result;
+                    folded = true;
+                }
+            }
+            _ => (),
         }
 
-        Ok(OptimizationResult::Changed)
+        folded
     }
 }
 
-fn folded_expression(expr: &mut Expression) -> Option<Expression> {
-    if expr.operands().is_empty() {
-        // Nothing to fold
-        return None;
-    }
-
-    // Fold operands first
-    for operand in expr.operands_mut() {
-        if let Some(folded_operand) = folded_expression(operand) {
-            *operand = folded_operand;
-        }
-    }
-
-    if expr.operands().iter().any(|operand| !operand.is_constant()) {
-        // Not all operands are const
-        return None;
-    }
-
-    match (expr.operator(), expr.operands()) {
-        (Operator::Equal, [lhs, rhs]) => Some(Boolean::constant(lhs == rhs)),
-        (Operator::Boolean(op), operands) => {
-            let values: Vec<bool> = operands
-                .iter()
-                .map(|o| bool::try_from(o).unwrap())
-                .collect();
-            fold_boolean(op, &values)
-        }
-        (Operator::BitVector(op), operands) => {
-            let values: Vec<BitVectorValue> = operands
-                .iter()
-                .map(|o| BitVectorValue::try_from(o).unwrap())
-                .collect();
-            fold_bitvec(op, &values)
-        }
-        _ => None,
-    }
-}
-
-fn fold_boolean(op: &Boolean, values: &[bool]) -> Option<Expression> {
+fn evaluate_boolean(op: &Boolean, values: &[bool]) -> Option<Expression> {
     use Boolean::*;
     match (op, values) {
         (Not, [v]) => Some(Boolean::constant(!v)),
@@ -88,7 +114,7 @@ fn fold_boolean(op: &Boolean, values: &[bool]) -> Option<Expression> {
     }
 }
 
-fn fold_bitvec(op: &BitVector, values: &[BitVectorValue]) -> Option<Expression> {
+fn evaluate_bitvec(op: &BitVector, values: &[BitVectorValue]) -> Option<Expression> {
     use BitVector::*;
     match (op, values) {
         (ToBoolean, [v]) => Some(Boolean::constant(!v.is_zero())),
