@@ -166,31 +166,21 @@ impl BitVector {
         Variable::new(name, Sort::bit_vector(bits))
     }
 
-    pub fn constant(value: u64, bits: usize) -> Expression {
-        let bv = Value::new(value, bits);
-        Expression::new(
-            BitVector::Constant(bv).into(),
-            vec![],
-            Sort::bit_vector(bits),
-        )
-    }
-
-    pub fn constant_big(value: BigUint, bits: usize) -> Expression {
-        let bv = Value::new_big(value, bits);
-        Expression::new(
-            BitVector::Constant(bv).into(),
-            vec![],
-            Sort::bit_vector(bits),
-        )
-    }
-
-    pub fn constant_value(value: Value) -> Expression {
+    pub fn constant(value: Value) -> Expression {
         let bits = value.bits();
         Expression::new(
             BitVector::Constant(value).into(),
             vec![],
             Sort::bit_vector(bits),
         )
+    }
+
+    pub fn constant_u64(value: u64, bits: usize) -> Expression {
+        Self::constant(Value::new(value, bits))
+    }
+
+    pub fn constant_big_uint(value: BigUint, bits: usize) -> Expression {
+        Self::constant(Value::new_big(value, bits))
     }
 
     pub fn to_boolean(expr: Expression) -> Result<Expression> {

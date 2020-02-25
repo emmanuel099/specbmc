@@ -116,7 +116,7 @@ fn translate_expr(expr: &il::Expression) -> Result<expr::Expression> {
         }
         il::Expression::Constant(constant) => {
             let constant = if constant.bits() > 1 {
-                expr::BitVector::constant_big(constant.value().clone(), constant.bits())
+                expr::BitVector::constant(constant.clone())
             } else {
                 expr::Boolean::constant(constant.is_one())
             };

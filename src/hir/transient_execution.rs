@@ -53,7 +53,7 @@ impl TransientExecution {
             // started by the current instruction.
             let transient_exec = Expression::equal(
                 Predictor::transient_start(Predictor::variable().into())?,
-                BitVector::constant(inst_addr, 64), // FIXME bit-width
+                BitVector::constant_u64(inst_addr, 64), // FIXME bit-width
             )?;
             cfg.conditional_edge(transient_resolve, rollback, transient_exec)
                 .unwrap();
@@ -198,7 +198,7 @@ fn add_transient_execution_start(
         // initial speculation window size
         let spec_window = Predictor::speculation_window(
             Predictor::variable().into(),
-            BitVector::constant(inst.address().unwrap_or_default(), 64), // FIXME bit-width
+            BitVector::constant_u64(inst.address().unwrap_or_default(), 64), // FIXME bit-width
         )?;
         transient_start.assign(spec_win(), spec_window);
 
@@ -207,7 +207,7 @@ fn add_transient_execution_start(
 
     let transient_exec = Expression::equal(
         Predictor::transient_start(Predictor::variable().into())?,
-        BitVector::constant(inst.address().unwrap_or_default(), 64), // FIXME bit-width
+        BitVector::constant_u64(inst.address().unwrap_or_default(), 64), // FIXME bit-width
     )?;
 
     let normal_exec = Boolean::not(transient_exec.clone())?;
@@ -242,7 +242,7 @@ fn transient_store(
 
     let mis_predicted = Predictor::mis_predict(
         Predictor::variable().into(),
-        BitVector::constant(inst.address().unwrap_or_default(), 64), // FIXME bit-width
+        BitVector::constant_u64(inst.address().unwrap_or_default(), 64), // FIXME bit-width
     )?;
 
     let correctly_predicted = Boolean::not(mis_predicted.clone())?;
@@ -277,7 +277,7 @@ fn transient_conditional_branch(
 
     let mis_predicted = Predictor::mis_predict(
         Predictor::variable().into(),
-        BitVector::constant(inst.address().unwrap_or_default(), 64), // FIXME bit-width
+        BitVector::constant_u64(inst.address().unwrap_or_default(), 64), // FIXME bit-width
     )?;
 
     let correctly_predicted = Boolean::not(mis_predicted.clone())?;

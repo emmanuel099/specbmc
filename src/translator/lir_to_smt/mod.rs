@@ -347,7 +347,7 @@ fn define_memory<T>(
                 expr::Variable::new("mem", mem_array_sort.clone()).into(),
                 expr::BitVector::add(
                     expr::Variable::new("addr", addr_sort.clone()).into(),
-                    expr::BitVector::constant(byte.try_into().unwrap(), address_bits),
+                    expr::BitVector::constant_u64(byte.try_into().unwrap(), address_bits),
                 )?,
             )?);
         }
@@ -369,7 +369,7 @@ fn define_memory<T>(
                 store_expr,
                 expr::BitVector::add(
                     expr::Variable::new("addr", addr_sort.clone()).into(),
-                    expr::BitVector::constant(byte.try_into().unwrap(), address_bits),
+                    expr::BitVector::constant_u64(byte.try_into().unwrap(), address_bits),
                 )?,
                 expr::BitVector::extract(
                     bit_offset + 7,
@@ -437,7 +437,7 @@ fn define_cache<T>(
                 insert_expr,
                 expr::BitVector::add(
                     expr::Variable::new("addr", addr_sort.clone()).into(),
-                    expr::BitVector::constant(byte.try_into().unwrap(), address_bits),
+                    expr::BitVector::constant_u64(byte.try_into().unwrap(), address_bits),
                 )?,
             )?;
         }

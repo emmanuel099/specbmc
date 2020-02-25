@@ -301,7 +301,7 @@ mod tests {
     }
 
     fn expr_const(value: u64) -> expr::Expression {
-        expr::BitVector::constant(value, 64)
+        expr::BitVector::constant_u64(value, 64)
     }
 
     fn variable(name: &str) -> expr::Variable {
