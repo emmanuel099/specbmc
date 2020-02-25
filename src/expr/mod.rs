@@ -30,6 +30,7 @@ pub enum Operator {
     Variable(Variable),
     Ite,
     Equal,
+    Nondet, // Nondeterministic value
     Boolean(Boolean),
     Integer(Integer),
     BitVector(BitVector),
@@ -70,6 +71,7 @@ impl fmt::Display for Operator {
             Self::Variable(v) => v.fmt(f),
             Self::Ite => write!(f, "ite"),
             Self::Equal => write!(f, "="),
+            Self::Nondet => write!(f, "nondet()"),
             Self::Boolean(op) => op.fmt(f),
             Self::Integer(op) => op.fmt(f),
             Self::BitVector(op) => op.fmt(f),
@@ -147,6 +149,10 @@ impl Expression {
         Boolean::not(Self::equal(lhs, rhs)?)
     }
 
+    pub fn nondet(sort: Sort) -> Expression {
+        Expression::new(Operator::Nondet, vec![], sort)
+    }
+
     /// Returns all `Variables` used in this `Expression`
     pub fn variables(&self) -> Vec<&Variable> {
         let mut variables: Vec<&Variable> = Vec::new();
@@ -180,6 +186,13 @@ impl Expression {
             Operator::Boolean(op) => op.is_constant(),
             Operator::Integer(op) => op.is_constant(),
             Operator::BitVector(op) => op.is_constant(),
+            _ => false,
+        }
+    }
+
+    pub fn is_nondet(&self) -> bool {
+        match &self.operator {
+            Operator::Nondet => true,
             _ => false,
         }
     }

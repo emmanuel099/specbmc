@@ -53,7 +53,11 @@ fn define_variable<T>(
     variable: &expr::Variable,
     expr: &expr::Expression,
 ) -> SmtRes<()> {
-    solver.define_const(variable, variable.sort(), &expr)
+    if expr.is_nondet() {
+        solver.declare_const(variable, variable.sort())
+    } else {
+        solver.define_const(variable, variable.sort(), &expr)
+    }
 }
 
 impl Expr2Smt<()> for expr::Expression {
@@ -90,6 +94,11 @@ impl Expr2Smt<()> for expr::Operator {
             Self::Equal => {
                 write!(w, "=")?;
                 Ok(())
+            }
+            Self::Nondet => {
+                // Nondeterministic assignments are handled in define_variable,
+                // everywhere else `nondet` is unexpected.
+                Err("Incorrect use of nondet()".into())
             }
             Self::Boolean(op) => op.expr_to_smt2(w, i),
             Self::Integer(op) => op.expr_to_smt2(w, i),
