@@ -3,6 +3,7 @@
 use crate::error::*;
 use crate::expr;
 use crate::hir;
+use crate::hir::analysis;
 use falcon::graph::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
@@ -27,10 +28,10 @@ fn insert_phi_nodes(program: &mut hir::Program) -> Result<()> {
     }
 
     let dominance_frontiers = cfg.graph().compute_dominance_frontiers(entry)?;
-    let non_local_variables = compute_non_local_variables(&cfg);
+    let global_variables = analysis::global_variables(&program);
 
     for (variable, defs) in variables_mutated_in_blocks(cfg) {
-        if !non_local_variables.contains(&variable) {
+        if !global_variables.contains(&variable) {
             continue; // ignore local variables
         }
 
@@ -105,31 +106,6 @@ fn variables_mutated_in_blocks(
     }
 
     mutated_in
-}
-
-// Computes the set of variables that are live on entry of at least one block.
-// Such variables are denoted as "non locals" in the algorithm for Semi-Pruned SSA.
-fn compute_non_local_variables(cfg: &hir::ControlFlowGraph) -> HashSet<expr::Variable> {
-    let mut non_locals = HashSet::new();
-
-    for block in cfg.blocks() {
-        let mut killed = HashSet::new();
-
-        block.instructions().iter().for_each(|inst| {
-            inst.variables_read()
-                .into_iter()
-                .filter(|variable| !killed.contains(variable))
-                .for_each(|variable| {
-                    non_locals.insert(variable.clone());
-                });
-
-            inst.variables_written().into_iter().for_each(|variable| {
-                killed.insert(variable);
-            });
-        });
-    }
-
-    non_locals
 }
 
 fn rename_variables(program: &mut hir::Program) -> Result<()> {

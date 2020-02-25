@@ -1,5 +1,6 @@
 //! SpecBMC HIR
 
+pub mod analysis;
 mod block;
 mod control_flow_graph;
 mod edge;
