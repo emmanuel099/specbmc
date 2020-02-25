@@ -3,6 +3,14 @@ use crate::expr;
 use crate::hir;
 use falcon::il;
 
+#[rustfmt::skip]
+const SPECULATION_BARRIERS: &'static [&'static str] = &[
+    // Intel
+    "mfence", "lfence", "cpuid",
+    // µASM
+    "spbarr",
+];
+
 pub fn translate_function(function: &il::Function) -> Result<hir::Program> {
     let cfg = translate_control_flow_graph(function.control_flow_graph())?;
 
@@ -32,16 +40,16 @@ fn translate_control_flow_graph(src_cfg: &il::ControlFlowGraph) -> Result<hir::C
     cfg.unconditional_edge(entry, src_entry)?;
     cfg.set_entry(entry)?;
 
-    // add a dedicated exit block and connect all blocks without successor to it
-    let unconnected_blocks: Vec<usize> = cfg
+    // add a dedicated exit block and connect all end blocks (= blocks without successor) to it
+    let end_blocks: Vec<usize> = cfg
         .graph()
         .vertices_without_successors()
         .iter()
         .map(|block| block.index())
         .collect();
     let exit = cfg.new_block()?.index();
-    for block_index in unconnected_blocks {
-        cfg.unconditional_edge(block_index, exit)?;
+    for end_block in end_blocks {
+        cfg.unconditional_edge(end_block, exit)?;
     }
     cfg.set_exit(exit)?;
 
@@ -83,15 +91,13 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
                 let inst = block.conditional_branch(condition, target);
                 inst.set_address(instruction.address());
             }
-            il::Operation::Intrinsic { intrinsic } => match intrinsic.mnemonic() {
-                "mfence" | "lfence" | "spbarr" => {
-                    // FIXME add syscall, cpuid, ...
+            il::Operation::Intrinsic { intrinsic } => {
+                if SPECULATION_BARRIERS.contains(&intrinsic.mnemonic()) {
                     let inst = block.barrier();
                     inst.set_address(instruction.address());
                 }
-                _ => continue,
-            },
-            il::Operation::Nop => continue,
+            }
+            il::Operation::Nop => (),
         }
     }
 
