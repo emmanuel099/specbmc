@@ -2,29 +2,25 @@ use crate::error::Result;
 use std::convert::TryFrom;
 use std::fmt;
 
+mod arch;
 mod array;
 mod bitvector;
 mod boolean;
-mod branch_target_buffer;
-mod cache;
 mod integer;
-mod memory;
-mod pattern_history_table;
-mod predictor;
 mod set;
 mod sort;
 mod variable;
 
+pub use self::arch::BranchTargetBuffer;
+pub use self::arch::Cache;
+pub use self::arch::Memory;
+pub use self::arch::PatternHistoryTable;
+pub use self::arch::Predictor;
 pub use self::array::Array;
 pub use self::bitvector::BitVector;
 pub use self::bitvector::Value as BitVectorValue;
 pub use self::boolean::Boolean;
-pub use self::branch_target_buffer::BranchTargetBuffer;
-pub use self::cache::Cache;
 pub use self::integer::Integer;
-pub use self::memory::Memory;
-pub use self::pattern_history_table::PatternHistoryTable;
-pub use self::predictor::Predictor;
 pub use self::set::Set;
 pub use self::sort::Sort;
 pub use self::variable::Variable;
@@ -39,6 +35,7 @@ pub enum Operator {
     BitVector(BitVector),
     Array(Array),
     Set(Set),
+    // Arch
     Memory(Memory),
     Predictor(Predictor),
     Cache(Cache),

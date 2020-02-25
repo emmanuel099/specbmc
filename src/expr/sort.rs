@@ -8,6 +8,7 @@ pub enum Sort {
     BitVector(usize),
     Array { range: Box<Sort>, domain: Box<Sort> },
     Set { range: Box<Sort> },
+    // Arch
     Memory,
     Predictor,
     Cache,
