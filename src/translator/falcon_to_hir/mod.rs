@@ -34,13 +34,15 @@ fn translate_control_flow_graph(src_cfg: &il::ControlFlowGraph) -> Result<hir::C
         }
     }
 
-    // add a dedicated entry block
+    // Add a dedicated entry block.
+    // This makes sure that the entry block has no predecessors.
     let src_entry = src_cfg.entry().ok_or("CFG entry must be set")?;
     let entry = cfg.new_block()?.index();
     cfg.unconditional_edge(entry, src_entry)?;
     cfg.set_entry(entry)?;
 
-    // add a dedicated exit block and connect all end blocks (= blocks without successor) to it
+    // Add a dedicated exit block and connect all end blocks (= blocks without successor) to it.
+    // This makes sure that there is only a single end block.
     let end_blocks: Vec<usize> = cfg
         .graph()
         .vertices_without_successors()
