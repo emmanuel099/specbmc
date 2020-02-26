@@ -87,6 +87,11 @@ impl InstructionEffects {
                         target.clone(),
                     ));
                 }
+                if self.pht_available {
+                    let location =
+                        BitVector::constant_u64(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
+                    effects.push(Effect::branch_condition(location, condition.clone()));
+                }
             }
             _ => (),
         }

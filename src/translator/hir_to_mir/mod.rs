@@ -159,6 +159,21 @@ fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Resul
                         },
                     )?;
                 }
+                hir::Effect::BranchCondition {
+                    new_pht,
+                    pht,
+                    location,
+                    condition,
+                } => {
+                    let taken =
+                        expr::PatternHistoryTable::taken(pht.clone().into(), location.clone())?;
+                    let not_taken =
+                        expr::PatternHistoryTable::not_taken(pht.clone().into(), location.clone())?;
+                    block.add_let(
+                        new_pht.clone(),
+                        expr::Expression::ite(condition.clone(), taken, not_taken)?,
+                    )?;
+                }
             }
         }
     }

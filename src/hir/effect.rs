@@ -1,4 +1,4 @@
-use crate::expr::{BranchTargetBuffer, Cache, Expression, Variable};
+use crate::expr::{BranchTargetBuffer, Cache, Expression, PatternHistoryTable, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -17,6 +17,13 @@ pub enum Effect {
         condition: Option<Expression>,
         location: Expression,
         target: Expression,
+    },
+    /// Branch condition (taken/not-taken) is tracked in the Pattern History Table
+    BranchCondition {
+        new_pht: Variable,
+        pht: Variable,
+        location: Expression,
+        condition: Expression,
     },
 }
 
@@ -57,6 +64,16 @@ impl Effect {
         }
     }
 
+    /// Create a new `Effect::BranchTarget`.
+    pub fn branch_condition(location: Expression, condition: Expression) -> Self {
+        Self::BranchCondition {
+            new_pht: PatternHistoryTable::variable(),
+            pht: PatternHistoryTable::variable(),
+            location,
+            condition,
+        }
+    }
+
     /// Get each `Variable` read by this `Effect`.
     pub fn variables_read(&self) -> Vec<&Variable> {
         match self {
@@ -81,6 +98,16 @@ impl Effect {
                 )
                 .chain(location.variables().into_iter())
                 .chain(target.variables().into_iter())
+                .collect(),
+            Self::BranchCondition {
+                pht,
+                location,
+                condition,
+                ..
+            } => vec![pht]
+                .into_iter()
+                .chain(location.variables().into_iter())
+                .chain(condition.variables().into_iter())
                 .collect(),
         }
     }
@@ -110,6 +137,16 @@ impl Effect {
                 .chain(location.variables_mut().into_iter())
                 .chain(target.variables_mut().into_iter())
                 .collect(),
+            Self::BranchCondition {
+                pht,
+                location,
+                condition,
+                ..
+            } => vec![pht]
+                .into_iter()
+                .chain(location.variables_mut().into_iter())
+                .chain(condition.variables_mut().into_iter())
+                .collect(),
         }
     }
 
@@ -118,6 +155,7 @@ impl Effect {
         match self {
             Self::CacheFetch { new_cache, .. } => vec![new_cache],
             Self::BranchTarget { new_btb, .. } => vec![new_btb],
+            Self::BranchCondition { new_pht, .. } => vec![new_pht],
         }
     }
 
@@ -126,6 +164,7 @@ impl Effect {
         match self {
             Self::CacheFetch { new_cache, .. } => vec![new_cache],
             Self::BranchTarget { new_btb, .. } => vec![new_btb],
+            Self::BranchCondition { new_pht, .. } => vec![new_pht],
         }
     }
 }
@@ -160,6 +199,16 @@ impl fmt::Display for Effect {
                 }
                 Ok(())
             }
+            Self::BranchCondition {
+                new_pht,
+                pht,
+                location,
+                condition,
+            } => write!(
+                f,
+                "{} = branch_condition({}, {}, {})",
+                new_pht, pht, location, condition
+            ),
         }
     }
 }
