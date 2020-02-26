@@ -7,7 +7,6 @@ pub enum Sort {
     Integer,
     BitVector(usize),
     Array { range: Box<Sort>, domain: Box<Sort> },
-    Set { range: Box<Sort> },
     // Arch
     Memory,
     Predictor,
@@ -33,12 +32,6 @@ impl Sort {
         Self::Array {
             range: Box::new(range.clone()),
             domain: Box::new(domain.clone()),
-        }
-    }
-
-    pub fn set(range: &Sort) -> Self {
-        Self::Set {
-            range: Box::new(range.clone()),
         }
     }
 
@@ -86,13 +79,6 @@ impl Sort {
     pub fn is_array(&self) -> bool {
         match self {
             Sort::Array { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_set(&self) -> bool {
-        match self {
-            Sort::Set { .. } => true,
             _ => false,
         }
     }
@@ -164,14 +150,6 @@ impl Sort {
         }
     }
 
-    pub fn expect_set(&self) -> Result<()> {
-        if self.is_set() {
-            Ok(())
-        } else {
-            Err(format!("Expected Set but was {}", self).into())
-        }
-    }
-
     pub fn expect_memory(&self) -> Result<()> {
         if self.is_memory() {
             Ok(())
@@ -234,13 +212,6 @@ impl Sort {
         }
     }
 
-    pub fn unwrap_set(&self) -> &Sort {
-        match self {
-            Sort::Set { range } => range,
-            _ => panic!("Expected Set"),
-        }
-    }
-
     /// Returns whether this `Sort` survives a transient-execution rollback or not.
     pub fn is_rollback_persistent(&self) -> bool {
         match self {
@@ -257,7 +228,6 @@ impl fmt::Display for Sort {
             Sort::Integer => write!(f, "Integer"),
             Sort::BitVector(width) => write!(f, "BitVec<{}>", width),
             Sort::Array { range, domain } => write!(f, "Array<{}, {}>", range, domain),
-            Sort::Set { range } => write!(f, "Set<{}>", range),
             Sort::Memory => write!(f, "Memory"),
             Sort::Predictor => write!(f, "Predictor"),
             Sort::Cache => write!(f, "Cache"),

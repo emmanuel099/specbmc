@@ -104,7 +104,6 @@ impl Expr2Smt<()> for expr::Operator {
             Self::Integer(op) => op.expr_to_smt2(w, i),
             Self::BitVector(op) => op.expr_to_smt2(w, i),
             Self::Array(op) => op.expr_to_smt2(w, i),
-            Self::Set(op) => op.expr_to_smt2(w, i),
             Self::Memory(op) => op.expr_to_smt2(w, i),
             Self::Predictor(op) => op.expr_to_smt2(w, i),
             Self::Cache(op) => op.expr_to_smt2(w, i),
@@ -218,20 +217,6 @@ impl Expr2Smt<()> for expr::Array {
     }
 }
 
-impl Expr2Smt<()> for expr::Set {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
-    where
-        Writer: ::std::io::Write,
-    {
-        match self {
-            Self::Insert => write!(w, "(store set value true)")?, // FIXME
-            Self::Remove => write!(w, "(store set value false)")?, // FIXME
-            Self::Contains => write!(w, "(select set value)")?,   // FIXME
-        };
-        Ok(())
-    }
-}
-
 impl Expr2Smt<()> for expr::Memory {
     fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
     where
@@ -324,11 +309,6 @@ impl Sort2Smt for expr::Sort {
                 write!(w, " ")?;
                 domain.sort_to_smt2(w)?;
                 write!(w, ")")?
-            }
-            Self::Set { range } => {
-                write!(w, "(Array ")?;
-                range.sort_to_smt2(w)?;
-                write!(w, " Bool)")?
             }
             Self::Memory => write!(w, "Memory")?,
             Self::Predictor => write!(w, "Predictor")?,
@@ -435,7 +415,7 @@ fn define_cache<T>(
     access_widths: &[usize],
 ) -> Result<()> {
     let addr_sort = expr::Sort::bit_vector(address_bits);
-    let cache_set_sort = expr::Sort::set(&addr_sort);
+    let cache_set_sort = expr::Sort::array(&addr_sort, &expr::Sort::boolean());
 
     // cache type
     solver.define_null_sort(&expr::Sort::cache(), &cache_set_sort)?;
@@ -445,12 +425,13 @@ fn define_cache<T>(
         let mut insert_expr: expr::Expression =
             expr::Variable::new("cache", cache_set_sort.clone()).into();
         for byte in 0..(width / 8) {
-            insert_expr = expr::Set::insert(
+            insert_expr = expr::Array::store(
                 insert_expr,
                 expr::BitVector::add(
                     expr::Variable::new("addr", addr_sort.clone()).into(),
                     expr::BitVector::constant_u64(byte.try_into().unwrap(), address_bits),
                 )?,
+                expr::Boolean::constant(true),
             )?;
         }
         solver.define_fun(
