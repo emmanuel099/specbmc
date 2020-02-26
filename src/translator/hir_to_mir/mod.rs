@@ -10,9 +10,6 @@ pub fn translate_program(program: &hir::Program) -> Result<mir::Program> {
 }
 
 fn translate_control_flow_graph(cfg: &hir::ControlFlowGraph) -> Result<mir::BlockGraph> {
-    let entry = cfg.entry().ok_or("CFG entry must be set")?;
-    let exit = cfg.exit().ok_or("CFG exit must be set")?;
-
     let mut block_graph = mir::BlockGraph::new();
 
     for block in cfg.blocks() {
@@ -22,9 +19,6 @@ fn translate_control_flow_graph(cfg: &hir::ControlFlowGraph) -> Result<mir::Bloc
     for edge in cfg.edges() {
         block_graph.add_edge(edge.head(), edge.tail())?;
     }
-
-    block_graph.set_entry(entry)?;
-    block_graph.set_exit(exit)?;
 
     Ok(block_graph)
 }

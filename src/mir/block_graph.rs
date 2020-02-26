@@ -6,50 +6,18 @@ use std::fmt;
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct BlockGraph {
     graph: Graph<Block, Edge>,
-    entry: Option<usize>,
-    exit: Option<usize>,
 }
 
 impl BlockGraph {
     pub fn new() -> Self {
         Self {
             graph: Graph::new(),
-            entry: None,
-            exit: None,
         }
     }
 
     /// Returns the underlying graph
     pub fn graph(&self) -> &Graph<Block, Edge> {
         &self.graph
-    }
-
-    /// Sets the entry point for this `BlockGraph` to the given `Block` index.
-    pub fn set_entry(&mut self, entry: usize) -> Result<()> {
-        if self.graph.has_vertex(entry) {
-            self.entry = Some(entry);
-            return Ok(());
-        }
-        Err("Index does not exist for set_entry".into())
-    }
-
-    /// Get the entry `Block` index for this `BlockGraph`.
-    pub fn entry(&self) -> Option<usize> {
-        self.entry
-    }
-
-    /// Sets the exit point for this `BlockGraph` to the given `Block` index.
-    pub fn set_exit(&mut self, exit: usize) -> Result<()> {
-        if self.graph.has_vertex(exit) {
-            self.exit = Some(exit);
-            return Ok(());
-        }
-        Err("Index does not exist for set_exit".into())
-    }
-
-    /// Get the exit `Block` index for this `BlockGraph`.
-    pub fn exit(&self) -> Option<usize> {
-        self.exit
     }
 
     /// Get a `Block` by index.
@@ -70,24 +38,6 @@ impl BlockGraph {
     /// Get a mutable reference to every `Block` in this `BlockGraph`.
     pub fn blocks_mut(&mut self) -> Vec<&mut Block> {
         self.graph.vertices_mut()
-    }
-
-    /// Returns the entry block for this `BlockGraph`.
-    pub fn entry_block(&self) -> Option<Result<&Block>> {
-        if self.entry.is_none() {
-            None
-        } else {
-            Some(self.block(self.entry.unwrap()))
-        }
-    }
-
-    /// Returns the exit block for this `BlockGraph`.
-    pub fn exit_block(&self) -> Option<Result<&Block>> {
-        if self.exit.is_none() {
-            None
-        } else {
-            Some(self.block(self.exit.unwrap()))
-        }
     }
 
     /// Get the indices of every successor of a `Block` in this `BlockGraph`.
