@@ -265,6 +265,7 @@ impl Expr2Smt<()> for expr::Cache {
         Writer: ::std::io::Write,
     {
         match self {
+            Self::Init => write!(w, "cache-init")?,
             Self::Fetch(width) => write!(w, "cache-fetch{}", width)?,
         };
         Ok(())
@@ -277,6 +278,7 @@ impl Expr2Smt<()> for expr::BranchTargetBuffer {
         Writer: ::std::io::Write,
     {
         match self {
+            Self::Init => write!(w, "btb-init")?,
             Self::Track => write!(w, "btb-track")?,
         };
         Ok(())
@@ -289,6 +291,7 @@ impl Expr2Smt<()> for expr::PatternHistoryTable {
         Writer: ::std::io::Write,
     {
         match self {
+            Self::Init => write!(w, "pht-init")?,
             Self::Taken => write!(w, "pht-taken")?,
             Self::NotTaken => write!(w, "pht-not-taken")?,
         };
@@ -458,6 +461,12 @@ fn define_cache<T>(
         )?;
     }
 
+    solver.define_const(
+        "cache-init",
+        &expr::Sort::cache(),
+        "((as const Cache) false)",
+    )?;
+
     Ok(())
 }
 
@@ -484,12 +493,18 @@ fn define_btb<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
         )?,
     )?;
 
+    solver.define_const(
+        "btb-init",
+        &expr::Sort::branch_target_buffer(),
+        "((as const BranchTargetBuffer) 0)",
+    )?;
+
     Ok(())
 }
 
 fn define_pht<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
     // pht type
-    solver.declare_datatypes(&[("PhtEntry", 0, [""], ["Taken", "NotTaken"])])?;
+    solver.declare_datatypes(&[("PhtEntry", 0, [""], ["Bot", "Taken", "NotTaken"])])?;
 
     solver.define_null_sort(
         &expr::Sort::pattern_history_table(),
@@ -517,6 +532,12 @@ fn define_pht<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
         ],
         &expr::Sort::pattern_history_table(),
         "(store pht location NotTaken)",
+    )?;
+
+    solver.define_const(
+        "pht-init",
+        &expr::Sort::pattern_history_table(),
+        "((as const PatternHistoryTable) Bot)",
     )?;
 
     Ok(())
