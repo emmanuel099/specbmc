@@ -143,6 +143,42 @@ mod tests {
     use super::*;
 
     #[test]
+    fn fold_bitvec_to_boolean_1_should_give_true() {
+        // GIVEN
+        let mut expr = BitVector::to_boolean(BitVector::constant_u64(1, 32)).unwrap();
+
+        // WHEN
+        expr.fold();
+
+        // THEN
+        assert_eq!(expr, Boolean::constant(true));
+    }
+
+    #[test]
+    fn fold_bitvec_to_boolean_42_should_give_true() {
+        // GIVEN
+        let mut expr = BitVector::to_boolean(BitVector::constant_u64(42, 32)).unwrap();
+
+        // WHEN
+        expr.fold();
+
+        // THEN
+        assert_eq!(expr, Boolean::constant(true));
+    }
+
+    #[test]
+    fn fold_bitvec_to_boolean_0_should_give_false() {
+        // GIVEN
+        let mut expr = BitVector::to_boolean(BitVector::constant_u64(0, 32)).unwrap();
+
+        // WHEN
+        expr.fold();
+
+        // THEN
+        assert_eq!(expr, Boolean::constant(false));
+    }
+
+    #[test]
     fn fold_bitvec_from_boolean_true_should_give_1() {
         // GIVEN
         let mut expr = BitVector::from_boolean(32, Boolean::constant(true)).unwrap();
