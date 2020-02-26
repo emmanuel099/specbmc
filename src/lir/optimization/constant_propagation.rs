@@ -39,13 +39,12 @@ type ConstantVariables = HashMap<expr::Variable, expr::Expression>;
 fn determine_constants(nodes: &[lir::Node]) -> ConstantVariables {
     let mut constants = HashMap::new();
 
-    nodes.iter().for_each(|node| match node {
-        lir::Node::Let { var, expr } => {
+    nodes.iter().for_each(|node| {
+        if let lir::Node::Let { var, expr } = node {
             if expr.is_constant() {
                 constants.insert(var.clone(), expr.clone());
             }
         }
-        _ => (),
     });
 
     constants
@@ -58,7 +57,7 @@ trait PropagateConstants {
 impl PropagateConstants for lir::Program {
     fn propagate_constants(&mut self, constants: &ConstantVariables) {
         self.nodes_mut()
-            .into_iter()
+            .iter_mut()
             .for_each(|node| node.propagate_constants(constants))
     }
 }
@@ -76,13 +75,14 @@ impl PropagateConstants for lir::Node {
 impl PropagateConstants for expr::Expression {
     fn propagate_constants(&mut self, constants: &ConstantVariables) {
         match self.operator() {
-            expr::Operator::Variable(var) => match constants.get(var) {
-                Some(constant) => *self = constant.clone(),
-                None => (),
-            },
+            expr::Operator::Variable(var) => {
+                if let Some(constant) = constants.get(var) {
+                    *self = constant.clone();
+                }
+            }
             _ => {
                 self.operands_mut()
-                    .into_iter()
+                    .iter_mut()
                     .for_each(|operand| operand.propagate_constants(constants));
             }
         }

@@ -32,7 +32,7 @@ trait Fold {
 impl Fold for lir::Program {
     fn fold(&mut self) -> bool {
         self.nodes_mut()
-            .into_iter()
+            .iter_mut()
             .fold(false, |folded, node| node.fold() || folded)
     }
 }
@@ -57,7 +57,7 @@ impl Fold for Expression {
         // Fold operands first
         let mut folded = self
             .operands_mut()
-            .into_iter()
+            .iter_mut()
             .fold(false, |folded, operand| operand.fold() || folded);
 
         if self.operands().iter().any(|operand| !operand.is_constant()) {

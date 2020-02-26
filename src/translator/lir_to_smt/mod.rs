@@ -478,9 +478,9 @@ fn define_btb<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
         ],
         &expr::Sort::branch_target_buffer(),
         &expr::Array::store(
-            expr::Variable::new("btb", btb_array_sort.clone()).into(),
+            expr::Variable::new("btb", btb_array_sort).into(),
             expr::Variable::new("location", addr_sort.clone()).into(),
-            expr::Variable::new("target", addr_sort.clone()).into(),
+            expr::Variable::new("target", addr_sort).into(),
         )?,
     )?;
 
@@ -513,7 +513,7 @@ fn define_pht<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
         "pht-not-taken",
         &[
             ("pht", expr::Sort::pattern_history_table()),
-            ("location", addr_sort.clone()),
+            ("location", addr_sort),
         ],
         &expr::Sort::pattern_history_table(),
         "(store pht location NotTaken)",

@@ -39,14 +39,12 @@ type CopiedVariables = HashMap<expr::Variable, expr::Variable>;
 fn determine_copies(nodes: &[lir::Node]) -> CopiedVariables {
     let mut copies = HashMap::new();
 
-    nodes.iter().for_each(|node| match node {
-        lir::Node::Let { var, expr } => match expr.operator() {
-            expr::Operator::Variable(src_var) => {
+    nodes.iter().for_each(|node| {
+        if let lir::Node::Let { var, expr } = node {
+            if let expr::Operator::Variable(src_var) = expr.operator() {
                 copies.insert(var.clone(), src_var.clone());
             }
-            _ => (),
-        },
-        _ => (),
+        }
     });
 
     resolve_copies_of_copies(&mut copies);
@@ -61,16 +59,17 @@ trait PropagateCopies {
 impl PropagateCopies for lir::Program {
     fn propagate_copies(&mut self, copies: &CopiedVariables) {
         self.nodes_mut()
-            .into_iter()
+            .iter_mut()
             .for_each(|node| node.propagate_copies(copies))
     }
 }
 
 impl PropagateCopies for lir::Node {
     fn propagate_copies(&mut self, copies: &CopiedVariables) {
-        let replace_if_copied = |var: &mut expr::Variable| match copies.get(var) {
-            Some(src_var) => *var = src_var.clone(),
-            None => (),
+        let replace_if_copied = |var: &mut expr::Variable| {
+            if let Some(src_var) = copies.get(var) {
+                *var = src_var.clone();
+            }
         };
 
         match self {
@@ -83,7 +82,7 @@ impl PropagateCopies for lir::Node {
     }
 }
 
-/// Resolves copies of copies to avoid that replace_copied_variables needs to be called multiple times.
+/// Resolves copies of copies to avoid that `replace_copied_variables` needs to be called multiple times.
 ///
 /// Given:
 /// b = a
@@ -96,12 +95,9 @@ fn resolve_copies_of_copies(copies: &mut CopiedVariables) {
     loop {
         let mut prop: Option<(expr::Variable, expr::Variable)> = None;
         for (copy, var) in copies.iter() {
-            match copies.get(var) {
-                Some(src_var) => {
-                    prop = Some((copy.clone(), src_var.clone()));
-                    break;
-                }
-                None => (),
+            if let Some(src_var) = copies.get(var) {
+                prop = Some((copy.clone(), src_var.clone()));
+                break;
             }
         }
 

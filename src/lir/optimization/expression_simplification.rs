@@ -32,7 +32,7 @@ trait Simplify {
 impl Simplify for lir::Program {
     fn simplify(&mut self) -> bool {
         self.nodes_mut()
-            .into_iter()
+            .iter_mut()
             .fold(false, |simplified, node| node.simplify() || simplified)
     }
 }
@@ -52,7 +52,7 @@ impl Simplify for Expression {
         // Simplify operands first
         let mut simplified = self
             .operands_mut()
-            .into_iter()
+            .iter_mut()
             .fold(false, |simplified, operand| {
                 operand.simplify() || simplified
             });
@@ -83,11 +83,11 @@ fn simplified_expression(expr: &Expression) -> Option<Expression> {
                 }
             }
         },
-        (Operator::Ite, [cond, then, _else]) => match cond.operator() {
+        (Operator::Ite, [cond, then, r#else]) => match cond.operator() {
             Operator::Boolean(Boolean::True) => Some(then.clone()), // (ite true a b) -> a
-            Operator::Boolean(Boolean::False) => Some(_else.clone()), // (ite false a b) -> b
+            Operator::Boolean(Boolean::False) => Some(r#else.clone()), // (ite false a b) -> b
             _ => {
-                if then == _else {
+                if then == r#else {
                     // (ite c a a) -> a
                     Some(then.clone())
                 } else {
@@ -115,11 +115,8 @@ fn simplified_boolean_expression(op: &Boolean, operands: &[Expression]) -> Optio
                 Some(Boolean::constant(true))
             } else if operands.iter().any(is_false) {
                 // (or a b false c) -> (or a b c)
-                let ops_without_false: Vec<Expression> = operands
-                    .into_iter()
-                    .filter(|o| !is_false(o))
-                    .cloned()
-                    .collect();
+                let ops_without_false: Vec<Expression> =
+                    operands.iter().filter(|o| !is_false(o)).cloned().collect();
                 Boolean::disjunction(&ops_without_false).ok()
             } else {
                 None
@@ -133,11 +130,8 @@ fn simplified_boolean_expression(op: &Boolean, operands: &[Expression]) -> Optio
                 Some(Boolean::constant(false))
             } else if operands.iter().any(is_true) {
                 // (and a b true c) -> (and a b c)
-                let ops_without_true: Vec<Expression> = operands
-                    .into_iter()
-                    .filter(|o| !is_true(o))
-                    .cloned()
-                    .collect();
+                let ops_without_true: Vec<Expression> =
+                    operands.iter().filter(|o| !is_true(o)).cloned().collect();
                 Boolean::conjunction(&ops_without_true).ok()
             } else {
                 None

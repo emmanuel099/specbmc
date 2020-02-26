@@ -54,22 +54,18 @@ impl DceCritical for lir::Node {
 fn variable_definitions(nodes: &[lir::Node]) -> HashMap<&expr::Variable, usize> {
     let mut defs = HashMap::new();
 
-    nodes
-        .iter()
-        .enumerate()
-        .for_each(|(index, node)| match node {
-            lir::Node::Let { var, .. } => {
-                defs.insert(var, index);
-            }
-            _ => (),
-        });
+    nodes.iter().enumerate().for_each(|(index, node)| {
+        if let lir::Node::Let { var, .. } = node {
+            defs.insert(var, index);
+        }
+    });
 
     defs
 }
 
 /// Mark useful nodes which should not be removed.
 ///
-/// The BitVec contains a single bit for each node.
+/// The `BitVec` contains a single bit for each node.
 /// If the bit for a node is not set, the node can safely be removed.
 fn mark(nodes: &[lir::Node]) -> BitVec {
     let defs = variable_definitions(nodes);
@@ -89,14 +85,13 @@ fn mark(nodes: &[lir::Node]) -> BitVec {
 
     // Iteratively mark the dependencies
     while let Some(index) = work_queue.pop() {
-        let mark_def = |var| match defs.get(var) {
-            Some(def_index) => {
+        let mark_def = |var| {
+            if let Some(def_index) = defs.get(var) {
                 if !marks.get(*def_index).unwrap() {
                     marks.set(*def_index, true);
                     work_queue.push(*def_index);
                 }
             }
-            None => (),
         };
 
         match &nodes[index] {
