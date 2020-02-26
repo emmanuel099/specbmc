@@ -27,10 +27,22 @@ pub fn encode_program(program: &lir::Program, debug_file_path: Option<&Path>) ->
 
     let mut assertions: Vec<expr::Expression> = Vec::new();
 
+    // Declare let variables first to avoid ordering problems because of top-down parsing ...
+    for node in program.nodes() {
+        if let lir::Node::Let { var, .. } = node {
+            declare_variable(&mut solver, var)?;
+        }
+    }
+
     for node in program.nodes() {
         match node {
             lir::Node::Comment(text) => solver.comment(&text)?,
-            lir::Node::Let { var, expr } => define_variable(&mut solver, var, expr)?,
+            lir::Node::Let { var, expr } => {
+                if !expr.is_nondet() {
+                    let assignment = expr::Expression::equal(var.clone().into(), expr.clone())?;
+                    solver.assert(&assignment)?
+                }
+            }
             lir::Node::Assert { cond } => {
                 let name = format!("_assertion{}", assertions.len());
                 let assertion = expr::Variable::new(name, expr::Sort::boolean());
@@ -48,13 +60,17 @@ pub fn encode_program(program: &lir::Program, debug_file_path: Option<&Path>) ->
     Ok(())
 }
 
+fn declare_variable<T>(solver: &mut Solver<T>, variable: &expr::Variable) -> SmtRes<()> {
+    solver.declare_const(variable, variable.sort())
+}
+
 fn define_variable<T>(
     solver: &mut Solver<T>,
     variable: &expr::Variable,
     expr: &expr::Expression,
 ) -> SmtRes<()> {
     if expr.is_nondet() {
-        solver.declare_const(variable, variable.sort())
+        declare_variable(solver, variable)
     } else {
         solver.define_const(variable, variable.sort(), &expr)
     }
