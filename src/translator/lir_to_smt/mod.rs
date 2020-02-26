@@ -301,7 +301,7 @@ impl Sort2Smt for expr::Sort {
     {
         match self {
             Self::Boolean => write!(w, "Bool")?,
-            Self::Integer => write!(w, "Integer")?,
+            Self::Integer => write!(w, "Int")?,
             Self::BitVector(width) => write!(w, "(_ BitVec {})", width)?,
             Self::Array { range, domain } => {
                 write!(w, "(Array ")?;
@@ -477,7 +477,7 @@ fn define_btb<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
     solver.define_const(
         "btb-init",
         &expr::Sort::branch_target_buffer(),
-        "((as const BranchTargetBuffer) 0)",
+        &format!("((as const BranchTargetBuffer) (_ bv0 {}))", address_bits),
     )?;
 
     Ok(())
