@@ -117,8 +117,6 @@ fn evaluate_boolean(op: &Boolean, values: &[bool]) -> Option<Expression> {
 fn evaluate_bitvec(op: &BitVector, values: &[BitVectorValue]) -> Option<Expression> {
     use BitVector::*;
     match (op, values) {
-        (ToBoolean, [v]) => Some(Boolean::constant(!v.is_zero())),
-        (FromBoolean(i), [v]) => v.zext(*i).map(BitVector::constant).ok(),
         (Truncate(i), [v]) => v.trun(*i).map(BitVector::constant).ok(),
         (And, [lhs, rhs]) => lhs.and(rhs).map(BitVector::constant).ok(),
         (Or, [lhs, rhs]) => lhs.or(rhs).map(BitVector::constant).ok(),
@@ -176,30 +174,6 @@ mod tests {
 
         // THEN
         assert_eq!(expr, Boolean::constant(false));
-    }
-
-    #[test]
-    fn fold_bitvec_from_boolean_true_should_give_1() {
-        // GIVEN
-        let mut expr = BitVector::from_boolean(32, Boolean::constant(true)).unwrap();
-
-        // WHEN
-        expr.fold();
-
-        // THEN
-        assert_eq!(expr, BitVector::constant_u64(1, 32));
-    }
-
-    #[test]
-    fn fold_bitvec_from_boolean_false_should_give_0() {
-        // GIVEN
-        let mut expr = BitVector::from_boolean(32, Boolean::constant(false)).unwrap();
-
-        // WHEN
-        expr.fold();
-
-        // THEN
-        assert_eq!(expr, BitVector::constant_u64(0, 32));
     }
 
     #[test]

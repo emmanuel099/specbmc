@@ -176,8 +176,6 @@ impl Expr2Smt<()> for expr::BitVector {
     {
         match self {
             Self::Constant(bv) => write!(w, "(_ bv{} {})", bv.value(), bv.bits())?,
-            Self::ToBoolean => write!(w, "bv2bool")?, // FIXME
-            Self::FromBoolean(i) => write!(w, "(bool2bv {})", i)?, // FIXME
             Self::Concat => write!(w, "concat")?,
             Self::Extract(i, j) => write!(w, "(_ extract {} {})", i, j)?,
             Self::Truncate(i) => write!(w, "(_ extract {} 0)", i - 1)?,
