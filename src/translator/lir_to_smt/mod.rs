@@ -223,8 +223,8 @@ impl Expr2Smt<()> for expr::Memory {
         Writer: ::std::io::Write,
     {
         match self {
-            Self::Store(width) => write!(w, "store{}", width)?,
-            Self::Load(width) => write!(w, "load{}", width)?,
+            Self::Store(width) => write!(w, "mem-store{}", width)?,
+            Self::Load(width) => write!(w, "mem-load{}", width)?,
         };
         Ok(())
     }
@@ -344,7 +344,7 @@ fn define_memory<T>(
             )?);
         }
         solver.define_fun(
-            &format!("load{}", width),
+            &format!("mem-load{}", width),
             &[("mem", expr::Sort::memory()), ("addr", addr_sort.clone())],
             &expr::Sort::bit_vector(*width),
             &expr::BitVector::concat(&array_selects)?,
@@ -371,7 +371,7 @@ fn define_memory<T>(
             )?;
         }
         solver.define_fun(
-            &format!("store{}", width),
+            &format!("mem-store{}", width),
             &[
                 ("mem", expr::Sort::memory()),
                 ("addr", addr_sort.clone()),
