@@ -336,30 +336,6 @@ mod tests {
     }
 
     #[test]
-    fn test_compute_non_local_variables() {
-        let cfg = {
-            let mut cfg = hir::ControlFlowGraph::new();
-
-            let block0 = cfg.new_block().unwrap();
-            block0.assign(variable("x"), expr_const(1));
-
-            let block1 = cfg.new_block().unwrap();
-            block1.assign(variable("tmp"), expr_const(1));
-            block1.assign(variable("x"), variable("tmp").into());
-
-            let block2 = cfg.new_block().unwrap();
-            block2.load(variable("y"), variable("x").into());
-
-            cfg
-        };
-
-        assert_eq!(
-            compute_non_local_variables(&cfg),
-            vec![variable("x"), memory()].into_iter().collect()
-        );
-    }
-
-    #[test]
     fn test_renaming_of_expression() {
         // Given: x + y * x
         let mut expression = expr::BitVector::add(

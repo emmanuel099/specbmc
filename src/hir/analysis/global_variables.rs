@@ -25,3 +25,44 @@ pub fn global_variables(program: &hir::Program) -> HashSet<expr::Variable> {
 
     globals
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn memory() -> expr::Variable {
+        expr::Memory::variable()
+    }
+
+    fn expr_const(value: u64) -> expr::Expression {
+        expr::BitVector::constant_u64(value, 64)
+    }
+
+    fn variable(name: &str) -> expr::Variable {
+        expr::BitVector::variable(name, 64)
+    }
+
+    #[test]
+    fn test_global_variables() {
+        let program = {
+            let mut cfg = hir::ControlFlowGraph::new();
+
+            let block0 = cfg.new_block().unwrap();
+            block0.assign(variable("x"), expr_const(1));
+
+            let block1 = cfg.new_block().unwrap();
+            block1.assign(variable("tmp"), expr_const(1));
+            block1.assign(variable("x"), variable("tmp").into());
+
+            let block2 = cfg.new_block().unwrap();
+            block2.load(variable("y"), variable("x").into());
+
+            hir::Program::new(cfg)
+        };
+
+        assert_eq!(
+            global_variables(&program),
+            vec![variable("x"), memory()].into_iter().collect()
+        );
+    }
+}
