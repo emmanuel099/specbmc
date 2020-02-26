@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{Boolean, Expression, Sort, Variable};
+use crate::expr::{Expression, Sort, Variable};
 pub use falcon::il::Constant as Value;
 use num_bigint::BigUint;
 use std::convert::TryFrom;
@@ -184,7 +184,7 @@ impl BitVector {
         let width = expr.sort().unwrap_bit_vector();
 
         let zero = Self::constant_u64(0, width);
-        Boolean::not(Expression::equal(expr, zero)?)
+        Expression::unequal(expr, zero)
     }
 
     pub fn from_boolean(bits: usize, expr: Expression) -> Result<Expression> {
