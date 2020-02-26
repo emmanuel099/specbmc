@@ -231,24 +231,50 @@ impl BitVector {
     bv_comp!(sgt, BitVector::SGt);
     bv_comp!(sge, BitVector::SGe);
 
-    pub fn zero_extend(bits: usize, expr: Expression) -> Result<Expression> {
+    /// Extend the bit-vector given by `expr` with `n` additional zero-bits.
+    ///
+    /// The width of the resulting bit vector is bit-width of `expr` + `n`.
+    pub fn zero_extend(n: usize, expr: Expression) -> Result<Expression> {
         expr.sort().expect_bit_vector()?;
+        let width = expr.sort().unwrap_bit_vector();
 
         Ok(Expression::new(
-            BitVector::ZeroExtend(bits).into(),
+            BitVector::ZeroExtend(n).into(),
             vec![expr],
-            Sort::bit_vector(bits),
+            Sort::bit_vector(width + n),
         ))
     }
 
-    pub fn sign_extend(bits: usize, expr: Expression) -> Result<Expression> {
+    /// Extend the bit-vector given by `expr` with zero-bits such that the resulting width is `bits`.
+    ///
+    /// The width of the resulting bit vector is `bits`.
+    pub fn zero_extend_abs(bits: usize, expr: Expression) -> Result<Expression> {
         expr.sort().expect_bit_vector()?;
+        let width = expr.sort().unwrap_bit_vector();
+        Self::zero_extend(bits - width, expr)
+    }
+
+    /// Sign-extend the bit-vector given by `expr` with `n` additional bits.
+    ///
+    /// The width of the resulting bit vector is bit-width of `expr` + `n`.
+    pub fn sign_extend(n: usize, expr: Expression) -> Result<Expression> {
+        expr.sort().expect_bit_vector()?;
+        let width = expr.sort().unwrap_bit_vector();
 
         Ok(Expression::new(
-            BitVector::SignExtend(bits).into(),
+            BitVector::SignExtend(n).into(),
             vec![expr],
-            Sort::bit_vector(bits),
+            Sort::bit_vector(width + n),
         ))
+    }
+
+    /// Sign-extend the bit-vector given by `expr` with additional bits such that the resulting width is `bits`.
+    ///
+    /// The width of the resulting bit vector is `bits`.
+    pub fn sign_extend_abs(bits: usize, expr: Expression) -> Result<Expression> {
+        expr.sort().expect_bit_vector()?;
+        let width = expr.sort().unwrap_bit_vector();
+        Self::sign_extend(bits - width, expr)
     }
 
     pub fn extract(highest_bit: usize, lowest_bit: usize, expr: Expression) -> Result<Expression> {

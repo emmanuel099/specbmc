@@ -231,17 +231,17 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
             }
             _ => None,
         },
-        (BitVector::ZeroExtend(bits), [operand]) => match operand.operator() {
-            Operator::BitVector(BitVector::ZeroExtend(_)) => {
-                // (zext (zext b)) -> (zext b)
-                BitVector::zero_extend(*bits, operand.operands()[0].clone()).ok()
+        (BitVector::ZeroExtend(n), [operand]) => match operand.operator() {
+            Operator::BitVector(BitVector::ZeroExtend(m)) => {
+                // ((zext n) ((zext m) b)) -> ((zext n+m) b)
+                BitVector::zero_extend(n + m, operand.operands()[0].clone()).ok()
             }
             _ => None,
         },
-        (BitVector::SignExtend(bits), [operand]) => match operand.operator() {
-            Operator::BitVector(BitVector::SignExtend(_)) => {
-                // (sext (sext b)) -> (sext b)
-                BitVector::sign_extend(*bits, operand.operands()[0].clone()).ok()
+        (BitVector::SignExtend(n), [operand]) => match operand.operator() {
+            Operator::BitVector(BitVector::SignExtend(m)) => {
+                // ((sext n) ((sext m) b)) -> ((sext n+m) b)
+                BitVector::sign_extend(n + m, operand.operands()[0].clone()).ok()
             }
             _ => None,
         },

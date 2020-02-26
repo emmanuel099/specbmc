@@ -118,7 +118,7 @@ fn evaluate_bitvec(op: &BitVector, values: &[BitVectorValue]) -> Option<Expressi
     use BitVector::*;
     match (op, values) {
         (ToBoolean, [v]) => Some(Boolean::constant(!v.is_zero())),
-        (FromBoolean(i), [v]) => v.trun(*i).map(BitVector::constant).ok(),
+        (FromBoolean(i), [v]) => v.zext(*i).map(BitVector::constant).ok(),
         (Truncate(i), [v]) => v.trun(*i).map(BitVector::constant).ok(),
         (And, [lhs, rhs]) => lhs.and(rhs).map(BitVector::constant).ok(),
         (Or, [lhs, rhs]) => lhs.or(rhs).map(BitVector::constant).ok(),
@@ -132,8 +132,61 @@ fn evaluate_bitvec(op: &BitVector, values: &[BitVectorValue]) -> Option<Expressi
         (SDiv, [lhs, rhs]) => lhs.divs(rhs).map(BitVector::constant).ok(),
         (SMod, [lhs, rhs]) => lhs.mods(rhs).map(BitVector::constant).ok(),
         (UMod, [lhs, rhs]) => lhs.modu(rhs).map(BitVector::constant).ok(),
-        (ZeroExtend(i), [v]) => v.zext(*i).map(BitVector::constant).ok(),
-        (SignExtend(i), [v]) => v.sext(*i).map(BitVector::constant).ok(),
+        (ZeroExtend(i), [v]) => v.zext(*i + v.bits()).map(BitVector::constant).ok(),
+        (SignExtend(i), [v]) => v.sext(*i + v.bits()).map(BitVector::constant).ok(),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fold_bitvec_from_boolean_true_should_give_1() {
+        // GIVEN
+        let mut expr = BitVector::from_boolean(32, Boolean::constant(true)).unwrap();
+
+        // WHEN
+        expr.fold();
+
+        // THEN
+        assert_eq!(expr, BitVector::constant_u64(1, 32));
+    }
+
+    #[test]
+    fn fold_bitvec_from_boolean_false_should_give_0() {
+        // GIVEN
+        let mut expr = BitVector::from_boolean(32, Boolean::constant(false)).unwrap();
+
+        // WHEN
+        expr.fold();
+
+        // THEN
+        assert_eq!(expr, BitVector::constant_u64(0, 32));
+    }
+
+    #[test]
+    fn fold_bitvec_zero_extend() {
+        // GIVEN
+        let mut expr = BitVector::zero_extend(24, BitVector::constant_u64(42, 8)).unwrap();
+
+        // WHEN
+        expr.fold();
+
+        // THEN
+        assert_eq!(expr, BitVector::constant_u64(42, 32));
+    }
+
+    #[test]
+    fn fold_bitvec_sign_extend() {
+        // GIVEN
+        let mut expr = BitVector::sign_extend(24, BitVector::constant_u64(42, 8)).unwrap();
+
+        // WHEN
+        expr.fold();
+
+        // THEN
+        assert_eq!(expr, BitVector::constant_u64(42, 32));
     }
 }
