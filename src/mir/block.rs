@@ -71,6 +71,30 @@ impl Block {
         self.add_node(Node::new(Operation::new_assume(cond)?));
         Ok(self.nodes.last_mut().unwrap())
     }
+
+    pub fn add_assert_equal_in_self_composition(
+        &mut self,
+        compositions: Vec<usize>,
+        expr: Expression,
+    ) -> Result<&mut Node> {
+        self.add_node(Node::new(Operation::new_assert_equal_in_self_composition(
+            compositions,
+            expr,
+        )));
+        Ok(self.nodes.last_mut().unwrap())
+    }
+
+    pub fn add_assume_equal_in_self_composition(
+        &mut self,
+        compositions: Vec<usize>,
+        expr: Expression,
+    ) -> Result<&mut Node> {
+        self.add_node(Node::new(Operation::new_assume_equal_in_self_composition(
+            compositions,
+            expr,
+        )));
+        Ok(self.nodes.last_mut().unwrap())
+    }
 }
 
 impl graph::Vertex for Block {

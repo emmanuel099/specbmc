@@ -17,6 +17,16 @@ pub enum Operation {
     Assume {
         cond: Expression,
     },
+    /// Assert equality of `expr` in self-compositions.
+    SelfCompAssertEqual {
+        compositions: Vec<usize>,
+        expr: Expression,
+    },
+    /// Assume equality of `expr` in self-compositions.
+    SelfCompAssumeEqual {
+        compositions: Vec<usize>,
+        expr: Expression,
+    },
 }
 
 impl Operation {
@@ -36,6 +46,26 @@ impl Operation {
     pub fn new_assume(cond: Expression) -> Result<Self> {
         cond.sort().expect_boolean()?;
         Ok(Self::Assume { cond })
+    }
+
+    /// Create a new `Operation::SelfCompAssertEqual`.
+    ///
+    /// Asserts that `expr` is equal in all self-compositions given by `compositions`.
+    pub fn new_assert_equal_in_self_composition(
+        compositions: Vec<usize>,
+        expr: Expression,
+    ) -> Self {
+        Self::SelfCompAssertEqual { compositions, expr }
+    }
+
+    /// Create a new `Operation::SelfCompAssumeEqual`.
+    ///
+    /// Assumes that `expr` is equal in all self-compositions given by `compositions`.
+    pub fn new_assume_equal_in_self_composition(
+        compositions: Vec<usize>,
+        expr: Expression,
+    ) -> Self {
+        Self::SelfCompAssumeEqual { compositions, expr }
     }
 
     pub fn is_let(&self) -> bool {
@@ -66,6 +96,12 @@ impl fmt::Display for Operation {
             Self::Let { var, expr } => write!(f, "{} = {}", var, expr),
             Self::Assert { cond } => write!(f, "assert {}", cond),
             Self::Assume { cond } => write!(f, "assume {}", cond),
+            Self::SelfCompAssertEqual { compositions, expr } => {
+                write!(f, "sc-assert-eq {} @ {:?}", expr, compositions)
+            }
+            Self::SelfCompAssumeEqual { compositions, expr } => {
+                write!(f, "sc-assume-eq {} @ {:?}", expr, compositions)
+            }
         }
     }
 }
