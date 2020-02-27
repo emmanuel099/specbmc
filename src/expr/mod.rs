@@ -141,6 +141,24 @@ impl Expression {
         ))
     }
 
+    pub fn all_equal(exprs: &[Expression]) -> Result<Expression> {
+        if exprs.is_empty() {
+            return Ok(Boolean::constant(true));
+        }
+
+        // Make sure that all have the same sort
+        let sort = exprs.first().unwrap().sort();
+        for expr in exprs {
+            expr.sort().expect_sort(sort)?;
+        }
+
+        Ok(Expression::new(
+            Operator::Equal,
+            exprs.to_vec(),
+            Sort::boolean(),
+        ))
+    }
+
     pub fn unequal(lhs: Expression, rhs: Expression) -> Result<Expression> {
         Boolean::not(Self::equal(lhs, rhs)?)
     }
