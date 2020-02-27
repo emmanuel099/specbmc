@@ -18,7 +18,7 @@ fn translate_block(program: &mut lir::Program, block: &mir::Block) -> Result<()>
 
     // make the block's execution condition explicit
     program.append_let(
-        block.execution_condition_variable(),
+        block.execution_condition_variable().clone(),
         block.execution_condition().clone(),
     )?;
 

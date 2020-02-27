@@ -1,4 +1,5 @@
 use crate::error::Result;
+use crate::util::SelfCompose;
 use std::convert::TryFrom;
 use std::fmt;
 
@@ -255,5 +256,15 @@ impl fmt::Display for Expression {
             }
             write!(f, ")")
         }
+    }
+}
+
+impl SelfCompose for Expression {
+    fn self_compose(&self, composition: usize) -> Self {
+        let mut expr = self.clone();
+        expr.variables_mut().iter_mut().for_each(|var| {
+            var.set_composition(Some(composition));
+        });
+        expr
     }
 }

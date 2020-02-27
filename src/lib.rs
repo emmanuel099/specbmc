@@ -10,6 +10,7 @@ pub mod hir;
 pub mod lir;
 pub mod mir;
 pub mod translator;
+pub mod util;
 
 pub mod error {
     error_chain! {
