@@ -115,6 +115,14 @@ fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Resul
                 )?;
                 node.set_address(instruction.address());
             }
+            hir::Operation::Observe { variables } => {
+                for variable in variables {
+                    block.add_assert_equal_in_self_composition(
+                        vec![1, 2],
+                        variable.clone().into(),
+                    )?;
+                }
+            }
             _ => (),
         }
 
