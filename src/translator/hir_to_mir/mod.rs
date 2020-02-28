@@ -106,28 +106,6 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
         hir::Operation::Assign { variable, expr } => {
             nodes.push(mir::Node::new_let(variable.clone(), expr.clone())?);
         }
-        hir::Operation::Store {
-            new_memory,
-            memory,
-            address,
-            expr,
-        } => {
-            nodes.push(mir::Node::new_let(
-                new_memory.clone(),
-                expr::Memory::store(memory.clone().into(), address.clone(), expr.clone())?,
-            )?);
-        }
-        hir::Operation::Load {
-            variable,
-            memory,
-            address,
-        } => {
-            let bit_width = variable.sort().unwrap_bit_vector();
-            nodes.push(mir::Node::new_let(
-                variable.clone(),
-                expr::Memory::load(bit_width, memory.clone().into(), address.clone())?,
-            )?);
-        }
         hir::Operation::Observe { variables } => {
             for variable in variables {
                 nodes.push(mir::Node::new_assert_equal_in_self_composition(
@@ -140,6 +118,12 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
             for operation in operations {
                 nodes.append(&mut translate_operation(operation)?);
             }
+        }
+        hir::Operation::Store { .. } => {
+            panic!("Unexpected store operation, should have been made explicit")
+        }
+        hir::Operation::Load { .. } => {
+            panic!("Unexpected load operation, should have been made explicit")
         }
         _ => (),
     }
