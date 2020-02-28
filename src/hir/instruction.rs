@@ -138,38 +138,22 @@ impl Instruction {
 
     /// Get the variables which will be written by this `Instruction`.
     pub fn variables_written(&self) -> Vec<&Variable> {
-        self.effects
-            .iter()
-            .flat_map(|effect| effect.variables_written())
-            .chain(self.operation.variables_written())
-            .collect()
+        self.operation.variables_written()
     }
 
     /// Get a mutable reference to the variables which will be written by this `Instruction`.
     pub fn variables_written_mut(&mut self) -> Vec<&mut Variable> {
-        self.effects
-            .iter_mut()
-            .flat_map(|effect| effect.variables_written_mut())
-            .chain(self.operation.variables_written_mut())
-            .collect()
+        self.operation.variables_written_mut()
     }
 
     /// Get the variables read by this `Instruction`.
     pub fn variables_read(&self) -> Vec<&Variable> {
-        self.effects
-            .iter()
-            .flat_map(|effect| effect.variables_read())
-            .chain(self.operation.variables_read())
-            .collect()
+        self.operation.variables_read()
     }
 
     /// Get a mutable reference to the variables read by this `Instruction`.
     pub fn variables_read_mut(&mut self) -> Vec<&mut Variable> {
-        self.effects
-            .iter_mut()
-            .flat_map(|effect| effect.variables_read_mut())
-            .chain(self.operation.variables_read_mut())
-            .collect()
+        self.operation.variables_read_mut()
     }
 }
 
@@ -180,7 +164,7 @@ impl fmt::Display for Instruction {
         }
         write!(f, "{}", self.operation)?;
         for effect in &self.effects {
-            write!(f, "\n\t{}", effect)?;
+            write!(f, "\n\t# {}", effect)?;
         }
         Ok(())
     }

@@ -1,9 +1,11 @@
+mod explicit_effects;
 mod init_global_variables;
 mod instruction_effects;
 mod observations;
 mod ssa_transformation;
 mod transient_execution;
 
+pub use self::explicit_effects::ExplicitEffects;
 pub use self::init_global_variables::init_global_variables;
 pub use self::instruction_effects::InstructionEffects;
 pub use self::observations::Observations;

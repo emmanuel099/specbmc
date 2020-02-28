@@ -71,21 +71,16 @@ impl InstructionEffects {
                 if self.btb_available {
                     let location =
                         BitVector::constant_u64(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
-                    effects.push(Effect::unconditional_branch_target(
-                        location,
-                        target.clone(),
-                    ));
+                    effects.push(Effect::branch_target(location, target.clone()));
                 }
             }
             Operation::ConditionalBranch { condition, target } => {
                 if self.btb_available {
                     let location =
                         BitVector::constant_u64(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
-                    effects.push(Effect::conditional_branch_target(
-                        condition.clone(),
-                        location,
-                        target.clone(),
-                    ));
+                    effects.push(
+                        Effect::branch_target(location, target.clone()).only_if(condition.clone()),
+                    );
                 }
                 if self.pht_available {
                     let location =

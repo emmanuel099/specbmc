@@ -24,6 +24,10 @@ impl PatternHistoryTable {
         Variable::new("_pht", Sort::pattern_history_table())
     }
 
+    pub fn variable_nonspec() -> Variable {
+        Variable::new("_pht_ns", Sort::pattern_history_table())
+    }
+
     pub fn init() -> Result<Expression> {
         Ok(Expression::new(
             Self::Init.into(),

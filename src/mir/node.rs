@@ -1,3 +1,5 @@
+use crate::error::Result;
+use crate::expr::{Expression, Variable};
 use crate::mir::Operation;
 use std::fmt;
 
@@ -13,6 +15,38 @@ impl Node {
             operation,
             address: None,
         }
+    }
+
+    pub fn new_let(var: Variable, expr: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::new_let(var, expr)?))
+    }
+
+    pub fn new_assert(cond: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::new_assert(cond)?))
+    }
+
+    pub fn new_assume(cond: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::new_assume(cond)?))
+    }
+
+    pub fn new_assert_equal_in_self_composition(
+        compositions: Vec<usize>,
+        expr: Expression,
+    ) -> Self {
+        Self::new(Operation::new_assert_equal_in_self_composition(
+            compositions,
+            expr,
+        ))
+    }
+
+    pub fn new_assume_equal_in_self_composition(
+        compositions: Vec<usize>,
+        expr: Expression,
+    ) -> Self {
+        Self::new(Operation::new_assume_equal_in_self_composition(
+            compositions,
+            expr,
+        ))
     }
 
     pub fn operation(&self) -> &Operation {

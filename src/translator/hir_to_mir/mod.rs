@@ -82,103 +82,67 @@ fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Resul
             }
         }
 
-        block.add_let(phi_node.out().clone(), phi_expr.unwrap())?;
+        block.add_node(mir::Node::new_let(
+            phi_node.out().clone(),
+            phi_expr.unwrap(),
+        )?);
     }
 
     for instruction in src_block.instructions() {
-        match instruction.operation() {
-            hir::Operation::Assign { variable, expr } => {
-                let node = block.add_let(variable.clone(), expr.clone())?;
-                node.set_address(instruction.address());
-            }
-            hir::Operation::Store {
-                new_memory,
-                memory,
-                address,
-                expr,
-            } => {
-                let node = block.add_let(
-                    new_memory.clone(),
-                    expr::Memory::store(memory.clone().into(), address.clone(), expr.clone())?,
-                )?;
-                node.set_address(instruction.address());
-            }
-            hir::Operation::Load {
-                variable,
-                memory,
-                address,
-            } => {
-                let bit_width = variable.sort().unwrap_bit_vector();
-                let node = block.add_let(
-                    variable.clone(),
-                    expr::Memory::load(bit_width, memory.clone().into(), address.clone())?,
-                )?;
-                node.set_address(instruction.address());
-            }
-            hir::Operation::Observe { variables } => {
-                for variable in variables {
-                    block.add_assert_equal_in_self_composition(
-                        vec![1, 2],
-                        variable.clone().into(),
-                    )?;
-                }
-            }
-            _ => (),
-        }
-
-        for effect in instruction.effects() {
-            match effect {
-                hir::Effect::CacheFetch {
-                    new_cache,
-                    cache,
-                    address,
-                    bit_width,
-                } => {
-                    block.add_let(
-                        new_cache.clone(),
-                        expr::Cache::fetch(*bit_width, cache.clone().into(), address.clone())?,
-                    )?;
-                }
-                hir::Effect::BranchTarget {
-                    new_btb,
-                    btb,
-                    condition,
-                    location,
-                    target,
-                } => {
-                    let track = expr::BranchTargetBuffer::track(
-                        btb.clone().into(),
-                        location.clone(),
-                        target.clone(),
-                    )?;
-                    block.add_let(
-                        new_btb.clone(),
-                        match condition {
-                            Some(condition) => {
-                                expr::Expression::ite(condition.clone(), track, btb.clone().into())?
-                            }
-                            None => track,
-                        },
-                    )?;
-                }
-                hir::Effect::BranchCondition {
-                    new_pht,
-                    pht,
-                    location,
-                    condition,
-                } => {
-                    let taken =
-                        expr::PatternHistoryTable::taken(pht.clone().into(), location.clone())?;
-                    let not_taken =
-                        expr::PatternHistoryTable::not_taken(pht.clone().into(), location.clone())?;
-                    block.add_let(
-                        new_pht.clone(),
-                        expr::Expression::ite(condition.clone(), taken, not_taken)?,
-                    )?;
-                }
-            }
-        }
+        let mut nodes = translate_operation(instruction.operation())?;
+        nodes
+            .iter_mut()
+            .for_each(|node| node.set_address(instruction.address()));
+        block.append_nodes(&mut nodes);
     }
 
     Ok(block)
+}
+
+fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
+    let mut nodes = Vec::new();
+
+    match operation {
+        hir::Operation::Assign { variable, expr } => {
+            nodes.push(mir::Node::new_let(variable.clone(), expr.clone())?);
+        }
+        hir::Operation::Store {
+            new_memory,
+            memory,
+            address,
+            expr,
+        } => {
+            nodes.push(mir::Node::new_let(
+                new_memory.clone(),
+                expr::Memory::store(memory.clone().into(), address.clone(), expr.clone())?,
+            )?);
+        }
+        hir::Operation::Load {
+            variable,
+            memory,
+            address,
+        } => {
+            let bit_width = variable.sort().unwrap_bit_vector();
+            nodes.push(mir::Node::new_let(
+                variable.clone(),
+                expr::Memory::load(bit_width, memory.clone().into(), address.clone())?,
+            )?);
+        }
+        hir::Operation::Observe { variables } => {
+            for variable in variables {
+                nodes.push(mir::Node::new_assert_equal_in_self_composition(
+                    vec![1, 2],
+                    variable.clone().into(),
+                ));
+            }
+        }
+        hir::Operation::Parallel(operations) => {
+            for operation in operations {
+                nodes.append(&mut translate_operation(operation)?);
+            }
+        }
+        _ => (),
+    }
+
+    Ok(nodes)
 }

@@ -22,6 +22,10 @@ impl Cache {
         Variable::new("_cache", Sort::cache())
     }
 
+    pub fn variable_nonspec() -> Variable {
+        Variable::new("_cache_ns", Sort::cache())
+    }
+
     pub fn init() -> Result<Expression> {
         Ok(Expression::new(Self::Init.into(), vec![], Sort::cache()))
     }

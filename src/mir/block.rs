@@ -1,6 +1,5 @@
-use crate::error::Result;
 use crate::expr::{Boolean, Expression, Sort, Variable};
-use crate::mir::{Node, Operation};
+use crate::mir::Node;
 use falcon::graph;
 use std::fmt;
 
@@ -57,43 +56,8 @@ impl Block {
         self.nodes.push(node);
     }
 
-    pub fn add_let(&mut self, var: Variable, expr: Expression) -> Result<&mut Node> {
-        self.add_node(Node::new(Operation::new_let(var, expr)?));
-        Ok(self.nodes.last_mut().unwrap())
-    }
-
-    pub fn add_assert(&mut self, cond: Expression) -> Result<&mut Node> {
-        self.add_node(Node::new(Operation::new_assert(cond)?));
-        Ok(self.nodes.last_mut().unwrap())
-    }
-
-    pub fn add_assume(&mut self, cond: Expression) -> Result<&mut Node> {
-        self.add_node(Node::new(Operation::new_assume(cond)?));
-        Ok(self.nodes.last_mut().unwrap())
-    }
-
-    pub fn add_assert_equal_in_self_composition(
-        &mut self,
-        compositions: Vec<usize>,
-        expr: Expression,
-    ) -> Result<&mut Node> {
-        self.add_node(Node::new(Operation::new_assert_equal_in_self_composition(
-            compositions,
-            expr,
-        )));
-        Ok(self.nodes.last_mut().unwrap())
-    }
-
-    pub fn add_assume_equal_in_self_composition(
-        &mut self,
-        compositions: Vec<usize>,
-        expr: Expression,
-    ) -> Result<&mut Node> {
-        self.add_node(Node::new(Operation::new_assume_equal_in_self_composition(
-            compositions,
-            expr,
-        )));
-        Ok(self.nodes.last_mut().unwrap())
+    pub fn append_nodes(&mut self, nodes: &mut Vec<Node>) {
+        self.nodes.append(nodes);
     }
 }
 

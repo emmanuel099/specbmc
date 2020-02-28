@@ -32,6 +32,8 @@ pub enum Operation {
     Barrier,
     /// Adversary observes the listed variables.
     Observe { variables: Vec<Variable> },
+    /// Parallel operation, meaning that the nested operations happen in parallel.
+    Parallel(Vec<Operation>),
 }
 
 impl Operation {
@@ -77,6 +79,10 @@ impl Operation {
     /// Create a new `Operation::Observe`
     pub fn observe(variables: Vec<Variable>) -> Operation {
         Operation::Observe { variables }
+    }
+
+    pub fn parallel(operations: Vec<Operation>) -> Operation {
+        Operation::Parallel(operations)
     }
 
     pub fn is_assign(&self) -> bool {
@@ -128,6 +134,13 @@ impl Operation {
         }
     }
 
+    pub fn is_parallel(&self) -> bool {
+        match self {
+            Operation::Parallel(_) => true,
+            _ => false,
+        }
+    }
+
     /// Get each `Variable` read by this `Operation`.
     pub fn variables_read(&self) -> Vec<&Variable> {
         match self {
@@ -156,6 +169,10 @@ impl Operation {
                 .collect(),
             Operation::Barrier => Vec::new(),
             Operation::Observe { variables } => variables.iter().collect(),
+            Operation::Parallel(operations) => operations
+                .iter()
+                .flat_map(|op| op.variables_read())
+                .collect(),
         }
     }
 
@@ -187,6 +204,10 @@ impl Operation {
                 .collect(),
             Operation::Barrier => Vec::new(),
             Operation::Observe { variables } => variables.iter_mut().collect(),
+            Operation::Parallel(operations) => operations
+                .iter_mut()
+                .flat_map(|op| op.variables_read_mut())
+                .collect(),
         }
     }
 
@@ -199,6 +220,10 @@ impl Operation {
             | Operation::ConditionalBranch { .. }
             | Operation::Barrier
             | Operation::Observe { .. } => Vec::new(),
+            Operation::Parallel(operations) => operations
+                .iter()
+                .flat_map(|op| op.variables_written())
+                .collect(),
         }
     }
 
@@ -211,6 +236,10 @@ impl Operation {
             | Operation::ConditionalBranch { .. }
             | Operation::Barrier
             | Operation::Observe { .. } => Vec::new(),
+            Operation::Parallel(operations) => operations
+                .iter_mut()
+                .flat_map(|op| op.variables_written_mut())
+                .collect(),
         }
     }
 }
@@ -245,6 +274,15 @@ impl fmt::Display for Operation {
                     write!(f, "{}, ", var)?;
                 }
                 write!(f, ")")
+            }
+            Operation::Parallel(operations) => {
+                if !operations.is_empty() {
+                    write!(f, "{}", operations.first().unwrap())?;
+                    for operation in operations.iter().skip(1) {
+                        write!(f, " || {}", operation)?;
+                    }
+                }
+                Ok(())
             }
         }
     }
