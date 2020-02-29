@@ -218,13 +218,14 @@ mod tests {
         // GIVEN
         let mir_program = {
             let mut block1 = mir::Block::new(1);
-            block1.add_assert(expr::Boolean::constant(true)).unwrap();
-            block1
-                .add_let(expr::Boolean::variable("x"), expr::Boolean::constant(true))
-                .unwrap();
+            block1.add_node(mir::Node::assert(expr::Boolean::constant(true)).unwrap());
+            block1.add_node(
+                mir::Node::assign(expr::Boolean::variable("x"), expr::Boolean::constant(true))
+                    .unwrap(),
+            );
 
             let mut block2 = mir::Block::new(2);
-            block2.add_assume(expr::Boolean::constant(true)).unwrap();
+            block2.add_node(mir::Node::assume(expr::Boolean::constant(true)).unwrap());
 
             let mut block_graph = mir::BlockGraph::new();
             block_graph.add_block(block1).unwrap();
@@ -246,20 +247,16 @@ mod tests {
         // GIVEN
         let mir_program = {
             let mut block1 = mir::Block::new(1);
-            block1
-                .add_assert_equal_in_self_composition(
-                    vec![2, 3],
-                    expr::Boolean::variable("x").into(),
-                )
-                .unwrap();
+            block1.add_node(mir::Node::assert_equal_in_self_composition(
+                vec![2, 3],
+                expr::Boolean::variable("x").into(),
+            ));
 
             let mut block2 = mir::Block::new(2);
-            block2
-                .add_assume_equal_in_self_composition(
-                    vec![3, 4],
-                    expr::Boolean::variable("x").into(),
-                )
-                .unwrap();
+            block2.add_node(mir::Node::assume_equal_in_self_composition(
+                vec![3, 4],
+                expr::Boolean::variable("x").into(),
+            ));
 
             let mut block_graph = mir::BlockGraph::new();
             block_graph.add_block(block1).unwrap();

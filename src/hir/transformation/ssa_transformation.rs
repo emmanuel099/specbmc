@@ -263,16 +263,7 @@ impl SSARename for Program {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn memory() -> expr::Variable {
-        expr::Memory::variable()
-    }
-
-    fn memory_ssa(version: usize) -> expr::Variable {
-        let mut variable = memory();
-        variable.set_version(Some(version));
-        variable
-    }
+    use crate::hir::Operation;
 
     fn expr_const(value: u64) -> expr::Expression {
         expr::BitVector::constant_u64(value, 64)
@@ -292,9 +283,9 @@ mod tests {
     fn test_variables_mutated_in_block() {
         let block = {
             let mut block = Block::new(0);
-            block.assign(variable("x"), expr_const(1));
-            block.load(variable("y"), variable("z").into());
-            block.assign(variable("x"), variable("y").into());
+            block.assign(variable("x"), expr_const(1)).unwrap();
+            block.load(variable("y"), variable("z").into()).unwrap();
+            block.assign(variable("x"), variable("y").into()).unwrap();
             block
         };
 
@@ -310,13 +301,13 @@ mod tests {
             let mut cfg = ControlFlowGraph::new();
 
             let block0 = cfg.new_block().unwrap();
-            block0.assign(variable("x"), expr_const(1));
+            block0.assign(variable("x"), expr_const(1)).unwrap();
 
             let block1 = cfg.new_block().unwrap();
-            block1.load(variable("y"), variable("z").into());
+            block1.load(variable("y"), variable("z").into()).unwrap();
 
             let block2 = cfg.new_block().unwrap();
-            block2.assign(variable("x"), variable("y").into());
+            block2.assign(variable("x"), variable("y").into()).unwrap();
 
             cfg
         };
@@ -376,7 +367,7 @@ mod tests {
     #[test]
     fn test_renaming_of_assign_instruction() {
         // Given: x := x
-        let mut instruction = Instruction::assign(variable("x"), variable("x").into());
+        let mut instruction = Instruction::assign(variable("x"), variable("x").into()).unwrap();
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
@@ -386,27 +377,25 @@ mod tests {
         // Expected: x_2 := x_1
         assert_eq!(
             instruction,
-            Instruction::assign(variable_ssa("x", 2), variable_ssa("x", 1).into(),)
+            Instruction::assign(variable_ssa("x", 2), variable_ssa("x", 1).into(),).unwrap()
         );
     }
 
     #[test]
     fn test_renaming_of_load_instruction() {
-        // Given: x := load(mem, x)
-        let mut instruction = Instruction::load(variable("x"), variable("x").into());
+        // Given: x := load(x)
+        let mut instruction = Instruction::load(variable("x"), variable("x").into()).unwrap();
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
         versioning.new_version(&variable("x")).unwrap();
-        versioning.new_version(&memory()).unwrap();
         instruction.rename_variables(&mut versioning).unwrap();
 
-        // Expected: x_2 := load(mem_1, x_1)
+        // Expected: x_2 := load(x_1)
         assert_eq!(
             instruction.operation(),
-            &hir::Operation::Load {
+            &Operation::Load {
                 variable: variable_ssa("x", 2),
-                memory: memory_ssa(1),
                 address: variable_ssa("x", 1).into(),
             }
         );
@@ -414,23 +403,22 @@ mod tests {
 
     #[test]
     fn test_renaming_of_store_instruction() {
-        // Given: mem := store(mem, x, x)
-        let mut instruction = Instruction::store(variable("x").into(), variable("x").into());
+        // Given: store(x, y)
+        let mut instruction =
+            Instruction::store(variable("x").into(), variable("y").into()).unwrap();
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
         versioning.new_version(&variable("x")).unwrap();
-        versioning.new_version(&memory()).unwrap();
+        versioning.new_version(&variable("y")).unwrap();
         instruction.rename_variables(&mut versioning).unwrap();
 
-        // Expected: mem_2 := store(mem_1, x_1, x_1)
+        // Expected: store(x_1, y_1)
         assert_eq!(
             instruction.operation(),
-            &hir::Operation::Store {
-                new_memory: memory_ssa(2),
-                memory: memory_ssa(1),
+            &Operation::Store {
                 address: variable_ssa("x", 1).into(),
-                expr: variable_ssa("x", 1).into(),
+                expr: variable_ssa("y", 1).into(),
             }
         );
     }
@@ -438,7 +426,7 @@ mod tests {
     #[test]
     fn test_renaming_of_branch_instruction() {
         // Given: branch x
-        let mut instruction = Instruction::branch(variable("x").into());
+        let mut instruction = Instruction::branch(variable("x").into()).unwrap();
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
@@ -448,62 +436,57 @@ mod tests {
         // Expected: branch x_1
         assert_eq!(
             instruction,
-            Instruction::branch(variable_ssa("x", 1).into())
+            Instruction::branch(variable_ssa("x", 1).into()).unwrap()
         );
     }
 
     #[test]
     fn test_renaming_of_block() {
         // Given:
-        // mem = phi[]
         // y = phi []
         // x = y
-        // y = load(mem, x)
+        // y = load(x)
         // x = y
         // z = x
-        let mut block = hir::Block::new(0);
-        block.add_phi_node(PhiNode::new(memory()));
+        let mut block = Block::new(0);
         block.add_phi_node(PhiNode::new(variable("y")));
-        block.assign(variable("x"), variable("y").into());
-        block.load(variable("y"), variable("x").into());
-        block.assign(variable("x"), variable("y").into());
-        block.assign(variable("z"), variable("x").into());
+        block.assign(variable("x"), variable("y").into()).unwrap();
+        block.load(variable("y"), variable("x").into()).unwrap();
+        block.assign(variable("x"), variable("y").into()).unwrap();
+        block.assign(variable("z"), variable("x").into()).unwrap();
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
         block.rename_variables(&mut versioning).unwrap();
 
         // Expected:
-        // mem_1 = phi[]
         // y_1 = phi []
         // x_1 = 1
-        // y_2 = load(mem_1, x_1)
+        // y_2 = load(x_1)
         // x_2 = y_2
         // z_1 = x_2
-        assert_eq!(block.phi_node(0).unwrap(), &PhiNode::new(memory_ssa(1)));
         assert_eq!(
-            block.phi_node(1).unwrap(),
+            block.phi_node(0).unwrap(),
             &PhiNode::new(variable_ssa("y", 1))
         );
         assert_eq!(
             block.instruction(0).unwrap().operation(),
-            &hir::Operation::assign(variable_ssa("x", 1), variable_ssa("y", 1).into())
+            &Operation::assign(variable_ssa("x", 1), variable_ssa("y", 1).into()).unwrap()
         );
         assert_eq!(
             block.instruction(1).unwrap().operation(),
-            &hir::Operation::Load {
+            &Operation::Load {
                 variable: variable_ssa("y", 2),
-                memory: memory_ssa(1),
                 address: variable_ssa("x", 1).into(),
             }
         );
         assert_eq!(
             block.instruction(2).unwrap().operation(),
-            &hir::Operation::assign(variable_ssa("x", 2), variable_ssa("y", 2).into())
+            &Operation::assign(variable_ssa("x", 2), variable_ssa("y", 2).into()).unwrap()
         );
         assert_eq!(
             block.instruction(3).unwrap().operation(),
-            &hir::Operation::assign(variable_ssa("z", 1), variable_ssa("x", 2).into())
+            &Operation::assign(variable_ssa("z", 1), variable_ssa("x", 2).into()).unwrap()
         );
     }
 
@@ -520,15 +503,15 @@ mod tests {
         let mut cfg = ControlFlowGraph::new();
 
         let block0 = cfg.new_block().unwrap();
-        block0.assign(variable("x"), expr_const(1));
+        block0.assign(variable("x"), expr_const(1)).unwrap();
         block0.barrier();
 
         let block1 = cfg.new_block().unwrap();
-        block1.assign(variable("x"), variable("x").into());
+        block1.assign(variable("x"), variable("x").into()).unwrap();
         block1.barrier();
 
         let block2 = cfg.new_block().unwrap();
-        block2.assign(variable("x"), variable("x").into());
+        block2.assign(variable("x"), variable("x").into()).unwrap();
 
         cfg.set_entry(0).unwrap();
 
@@ -550,19 +533,19 @@ mod tests {
         let ssa_block0 = cfg.block(0).unwrap();
         assert_eq!(
             ssa_block0.instruction(0).unwrap().operation(),
-            &hir::Operation::assign(variable_ssa("x", 1), expr_const(1))
+            &Operation::assign(variable_ssa("x", 1), expr_const(1)).unwrap()
         );
 
         let ssa_block1 = cfg.block(1).unwrap();
         assert_eq!(
             ssa_block1.instruction(0).unwrap().operation(),
-            &hir::Operation::assign(variable_ssa("x", 2), variable_ssa("x", 1).into())
+            &Operation::assign(variable_ssa("x", 2), variable_ssa("x", 1).into()).unwrap()
         );
 
         let ssa_block2 = cfg.block(2).unwrap();
         assert_eq!(
             ssa_block2.instruction(0).unwrap().operation(),
-            &hir::Operation::assign(variable_ssa("x", 3), variable_ssa("x", 2).into())
+            &Operation::assign(variable_ssa("x", 3), variable_ssa("x", 2).into()).unwrap()
         );
 
         let ssa_edge01 = cfg.edge(0, 1).unwrap();
@@ -598,14 +581,14 @@ mod tests {
         let mut cfg = ControlFlowGraph::new();
 
         let block0 = cfg.new_block().unwrap();
-        block0.assign(variable("y"), expr_const(1));
+        block0.assign(variable("y"), expr_const(1)).unwrap();
 
         let block1 = cfg.new_block().unwrap();
-        block1.assign(variable("x"), expr_const(2));
-        block1.assign(variable("y"), expr_const(3));
+        block1.assign(variable("x"), expr_const(2)).unwrap();
+        block1.assign(variable("y"), expr_const(3)).unwrap();
 
         let block2 = cfg.new_block().unwrap();
-        block2.assign(variable("x"), expr_const(4));
+        block2.assign(variable("x"), expr_const(4)).unwrap();
 
         let mut phi_node_x = PhiNode::new(variable("x"));
         phi_node_x.add_incoming(variable("x"), 1);
@@ -706,7 +689,7 @@ mod tests {
             // block2
             {
                 let block = cfg.new_block().unwrap();
-                block.assign(variable("x"), expr_const(0));
+                block.assign(variable("x"), expr_const(0)).unwrap();
             }
             // block3
             {
@@ -719,7 +702,7 @@ mod tests {
             // block5
             {
                 let block = cfg.new_block().unwrap();
-                block.assign(variable("y"), variable("x").into());
+                block.assign(variable("y"), variable("x").into()).unwrap();
             }
 
             cfg.unconditional_edge(0, 1).unwrap();
@@ -842,26 +825,28 @@ mod tests {
             // block1
             {
                 let block = cfg.new_block().unwrap();
-                block.assign(variable("x"), expr_const(0));
+                block.assign(variable("x"), expr_const(0)).unwrap();
             }
             // block2
             {
                 let block = cfg.new_block().unwrap();
-                block.assign(variable("tmp"), variable("x").into());
-                block.assign(variable("x"), variable("tmp").into());
+                block.assign(variable("tmp"), variable("x").into()).unwrap();
+                block.assign(variable("x"), variable("tmp").into()).unwrap();
             }
             // block3
             {
                 let block = cfg.new_block().unwrap();
-                block.assign(
-                    variable("x"),
-                    expr::BitVector::add(variable("x").into(), variable("x").into()).unwrap(),
-                );
+                block
+                    .assign(
+                        variable("x"),
+                        expr::BitVector::add(variable("x").into(), variable("x").into()).unwrap(),
+                    )
+                    .unwrap();
             }
             // block4
             {
                 let block = cfg.new_block().unwrap();
-                block.assign(variable("res"), variable("x").into());
+                block.assign(variable("res"), variable("x").into()).unwrap();
             }
             // block5
             {
@@ -925,22 +910,31 @@ mod tests {
             // block1
             {
                 let block = cfg.new_block().unwrap();
-                block.assign(variable_ssa("x", 2), expr_const(0));
+                block.assign(variable_ssa("x", 2), expr_const(0)).unwrap();
             }
             // block2
             {
                 let block = cfg.new_block().unwrap();
-                block.assign(variable_ssa("tmp", 1), variable_ssa("x", 1).into());
-                block.assign(variable_ssa("x", 3), variable_ssa("tmp", 1).into());
+                block
+                    .assign(variable_ssa("tmp", 1), variable_ssa("x", 1).into())
+                    .unwrap();
+                block
+                    .assign(variable_ssa("x", 3), variable_ssa("tmp", 1).into())
+                    .unwrap();
             }
             // block3
             {
                 let block = cfg.new_block().unwrap();
-                block.assign(
-                    variable_ssa("x", 5),
-                    expr::BitVector::add(variable_ssa("x", 4).into(), variable_ssa("x", 4).into())
+                block
+                    .assign(
+                        variable_ssa("x", 5),
+                        expr::BitVector::add(
+                            variable_ssa("x", 4).into(),
+                            variable_ssa("x", 4).into(),
+                        )
                         .unwrap(),
-                );
+                    )
+                    .unwrap();
                 block.add_phi_node({
                     let mut phi_node = PhiNode::new(variable_ssa("x", 4));
                     phi_node.add_incoming(variable_ssa("x", 2), 1);
@@ -951,7 +945,9 @@ mod tests {
             // block4
             {
                 let block = cfg.new_block().unwrap();
-                block.assign(variable_ssa("res", 1), variable_ssa("x", 6).into());
+                block
+                    .assign(variable_ssa("res", 1), variable_ssa("x", 6).into())
+                    .unwrap();
                 block.add_phi_node({
                     let mut phi_node = PhiNode::new(variable_ssa("x", 6));
                     phi_node.add_incoming(variable_ssa("x", 5), 3);
