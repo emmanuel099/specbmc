@@ -197,6 +197,18 @@ impl Block {
         self.instructions.last_mut().unwrap()
     }
 
+    /// Adds an assert operation to the end of this block.
+    pub fn assert(&mut self, condition: Expression) -> &mut Instruction {
+        self.instructions.push(Instruction::assert(condition));
+        self.instructions.last_mut().unwrap()
+    }
+
+    /// Adds an assume operation to the end of this block.
+    pub fn assume(&mut self, condition: Expression) -> &mut Instruction {
+        self.instructions.push(Instruction::assume(condition));
+        self.instructions.last_mut().unwrap()
+    }
+
     /// Adds an observable operation to the end of this block.
     pub fn observable(&mut self, variables: Vec<Variable>) -> &mut Instruction {
         self.instructions.push(Instruction::observable(variables));

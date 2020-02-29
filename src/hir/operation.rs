@@ -27,6 +27,10 @@ pub enum Operation {
     },
     /// Speculation Barrier
     Barrier,
+    /// Assert that the condition is true.
+    Assert { condition: Expression },
+    /// Assume that the condition is true.
+    Assume { condition: Expression },
     /// The listed variables are observable to an adversary.
     Observable { variables: Vec<Variable> },
     /// The listed variables are indistinguishable for an adversary.
@@ -64,6 +68,16 @@ impl Operation {
     /// Create a new `Operation::Barrier`
     pub fn barrier() -> Operation {
         Operation::Barrier
+    }
+
+    /// Create a new `Operation::Assert`.
+    pub fn assert(condition: Expression) -> Self {
+        Self::Assert { condition }
+    }
+
+    /// Create a new `Operation::Assume`.
+    pub fn assume(condition: Expression) -> Self {
+        Self::Assume { condition }
     }
 
     /// Create a new `Operation::Observable`
@@ -122,6 +136,20 @@ impl Operation {
         }
     }
 
+    pub fn is_assert(&self) -> bool {
+        match self {
+            Operation::Assert { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_assume(&self) -> bool {
+        match self {
+            Operation::Assume { .. } => true,
+            _ => false,
+        }
+    }
+
     pub fn is_observable(&self) -> bool {
         match self {
             Operation::Observable { .. } => true,
@@ -159,6 +187,9 @@ impl Operation {
                 .into_iter()
                 .chain(target.variables().into_iter())
                 .collect(),
+            Operation::Assert { condition } | Operation::Assume { condition } => {
+                condition.variables()
+            }
             Operation::Barrier => Vec::new(),
             Operation::Observable { variables } | Operation::Indistinguishable { variables } => {
                 variables.iter().collect()
@@ -186,6 +217,9 @@ impl Operation {
                 .into_iter()
                 .chain(target.variables_mut().into_iter())
                 .collect(),
+            Operation::Assert { condition } | Operation::Assume { condition } => {
+                condition.variables_mut()
+            }
             Operation::Barrier => Vec::new(),
             Operation::Observable { variables } | Operation::Indistinguishable { variables } => {
                 variables.iter_mut().collect()
@@ -205,6 +239,8 @@ impl Operation {
             | Operation::Branch { .. }
             | Operation::ConditionalBranch { .. }
             | Operation::Barrier
+            | Operation::Assert { .. }
+            | Operation::Assume { .. }
             | Operation::Observable { .. }
             | Operation::Indistinguishable { .. } => Vec::new(),
             Operation::Parallel(operations) => operations
@@ -222,6 +258,8 @@ impl Operation {
             | Operation::Branch { .. }
             | Operation::ConditionalBranch { .. }
             | Operation::Barrier
+            | Operation::Assert { .. }
+            | Operation::Assume { .. }
             | Operation::Observable { .. }
             | Operation::Indistinguishable { .. } => Vec::new(),
             Operation::Parallel(operations) => operations
@@ -242,6 +280,8 @@ impl fmt::Display for Operation {
             Operation::ConditionalBranch { condition, target } => {
                 write!(f, "branch {} if {}", target, condition)
             }
+            Operation::Assert { condition } => write!(f, "assert {}", condition),
+            Operation::Assume { condition } => write!(f, "assume {}", condition),
             Operation::Barrier => write!(f, "barrier"),
             Operation::Observable { variables } => {
                 write!(f, "observable(")?;

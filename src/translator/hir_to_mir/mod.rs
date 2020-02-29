@@ -106,6 +106,12 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
         hir::Operation::Assign { variable, expr } => {
             nodes.push(mir::Node::new_let(variable.clone(), expr.clone())?);
         }
+        hir::Operation::Assert { condition } => {
+            nodes.push(mir::Node::new_assert(condition.clone())?);
+        }
+        hir::Operation::Assume { condition } => {
+            nodes.push(mir::Node::new_assume(condition.clone())?);
+        }
         hir::Operation::Observable { variables } => {
             for variable in variables {
                 nodes.push(mir::Node::new_assert_equal_in_self_composition(
@@ -133,7 +139,11 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
         hir::Operation::Load { .. } => {
             panic!("Unexpected load operation, should have been made explicit")
         }
-        _ => (),
+        hir::Operation::Branch { .. }
+        | hir::Operation::ConditionalBranch { .. }
+        | hir::Operation::Barrier => {
+            // ignore
+        }
     }
 
     Ok(nodes)

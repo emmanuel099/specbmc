@@ -51,6 +51,16 @@ impl Instruction {
         Instruction::new(Operation::barrier())
     }
 
+    /// Create a new `Assert` instruction.
+    pub fn assert(condition: Expression) -> Instruction {
+        Instruction::new(Operation::assert(condition))
+    }
+
+    /// Create a new `Assume` instruction.
+    pub fn assume(condition: Expression) -> Instruction {
+        Instruction::new(Operation::assume(condition))
+    }
+
     /// Create a new `Observable` instruction.
     pub fn observable(variables: Vec<Variable>) -> Instruction {
         Instruction::new(Operation::observable(variables))
@@ -89,6 +99,16 @@ impl Instruction {
     /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Barrier`
     pub fn is_barrier(&self) -> bool {
         self.operation.is_barrier()
+    }
+
+    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Assert`
+    pub fn is_assert(&self) -> bool {
+        self.operation.is_assert()
+    }
+
+    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Assume`
+    pub fn is_assume(&self) -> bool {
+        self.operation.is_assume()
     }
 
     /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Observable`
