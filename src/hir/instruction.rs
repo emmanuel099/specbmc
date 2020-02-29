@@ -72,56 +72,6 @@ impl Instruction {
         Self::new(Operation::indistinguishable(variables))
     }
 
-    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Assign`
-    pub fn is_assign(&self) -> bool {
-        self.operation.is_assign()
-    }
-
-    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Store`
-    pub fn is_store(&self) -> bool {
-        self.operation.is_store()
-    }
-
-    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Load`
-    pub fn is_load(&self) -> bool {
-        self.operation.is_load()
-    }
-
-    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Branch`
-    pub fn is_branch(&self) -> bool {
-        self.operation.is_branch()
-    }
-
-    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::ConditionalBranch`
-    pub fn is_conditional_branch(&self) -> bool {
-        self.operation.is_conditional_branch()
-    }
-
-    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Barrier`
-    pub fn is_barrier(&self) -> bool {
-        self.operation.is_barrier()
-    }
-
-    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Assert`
-    pub fn is_assert(&self) -> bool {
-        self.operation.is_assert()
-    }
-
-    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Assume`
-    pub fn is_assume(&self) -> bool {
-        self.operation.is_assume()
-    }
-
-    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Observable`
-    pub fn is_observable(&self) -> bool {
-        self.operation.is_observable()
-    }
-
-    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Indistinguishable`
-    pub fn is_indistinguishable(&self) -> bool {
-        self.operation.is_indistinguishable()
-    }
-
     /// Get the `Operation` for this `Instruction`
     pub fn operation(&self) -> &Operation {
         &self.operation

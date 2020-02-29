@@ -101,85 +101,9 @@ impl Operation {
         Self::Indistinguishable { variables }
     }
 
+    /// Create a new `Operation::Parallel`
     pub fn parallel(operations: Vec<Operation>) -> Self {
         Self::Parallel(operations)
-    }
-
-    pub fn is_assign(&self) -> bool {
-        match self {
-            Self::Assign { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_store(&self) -> bool {
-        match self {
-            Self::Store { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_load(&self) -> bool {
-        match self {
-            Self::Load { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_branch(&self) -> bool {
-        match self {
-            Self::Branch { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_conditional_branch(&self) -> bool {
-        match self {
-            Self::ConditionalBranch { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_barrier(&self) -> bool {
-        match self {
-            Self::Barrier => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_assert(&self) -> bool {
-        match self {
-            Self::Assert { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_assume(&self) -> bool {
-        match self {
-            Self::Assume { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_observable(&self) -> bool {
-        match self {
-            Self::Observable { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_indistinguishable(&self) -> bool {
-        match self {
-            Self::Indistinguishable { .. } => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_parallel(&self) -> bool {
-        match self {
-            Self::Parallel(_) => true,
-            _ => false,
-        }
     }
 
     /// Get each `Variable` read by this `Operation`.
