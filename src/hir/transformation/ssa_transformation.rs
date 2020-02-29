@@ -2,13 +2,13 @@
 
 use crate::error::*;
 use crate::expr;
-use crate::hir;
 use crate::hir::analysis;
+use crate::hir::{Block, ControlFlowGraph, Instruction, PhiNode, Program};
 use falcon::graph::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Transform the HIR program into SSA form.
-pub fn ssa_transformation(program: &hir::Program) -> Result<hir::Program> {
+pub fn ssa_transformation(program: &Program) -> Result<Program> {
     let mut ssa_program = program.clone();
     insert_phi_nodes(&mut ssa_program)?;
     rename_variables(&mut ssa_program)?;
@@ -19,7 +19,7 @@ pub fn ssa_transformation(program: &hir::Program) -> Result<hir::Program> {
 ///
 /// Implements the algorithm for constructing Semi-Pruned SSA form,
 /// see Algorithm 3.1 in "SSA-based Compiler Design" book for more details.
-fn insert_phi_nodes(program: &mut hir::Program) -> Result<()> {
+fn insert_phi_nodes(program: &mut Program) -> Result<()> {
     let cfg = program.control_flow_graph();
     let entry = cfg.entry().ok_or("CFG entry must be set")?;
 
@@ -44,7 +44,7 @@ fn insert_phi_nodes(program: &mut hir::Program) -> Result<()> {
                 }
 
                 let phi_node = {
-                    let mut phi_node = hir::PhiNode::new(variable.clone());
+                    let mut phi_node = PhiNode::new(variable.clone());
 
                     let cfg = program.control_flow_graph();
                     let df_block = cfg.block(*df_index).unwrap();
@@ -82,7 +82,7 @@ fn insert_phi_nodes(program: &mut hir::Program) -> Result<()> {
 }
 
 /// Get the set of variables which are mutated in the given block.
-fn variables_mutated_in_block(block: &hir::Block) -> HashSet<&expr::Variable> {
+fn variables_mutated_in_block(block: &Block) -> HashSet<&expr::Variable> {
     block
         .instructions()
         .iter()
@@ -91,9 +91,7 @@ fn variables_mutated_in_block(block: &hir::Block) -> HashSet<&expr::Variable> {
 }
 
 /// Get a mapping from variables to a set of blocks (indices) in which they are mutated.
-fn variables_mutated_in_blocks(
-    cfg: &hir::ControlFlowGraph,
-) -> HashMap<expr::Variable, HashSet<usize>> {
+fn variables_mutated_in_blocks(cfg: &ControlFlowGraph) -> HashMap<expr::Variable, HashSet<usize>> {
     let mut mutated_in = HashMap::new();
 
     for block in cfg.blocks() {
@@ -108,7 +106,7 @@ fn variables_mutated_in_blocks(
     mutated_in
 }
 
-fn rename_variables(program: &mut hir::Program) -> Result<()> {
+fn rename_variables(program: &mut Program) -> Result<()> {
     let mut versioning = VariableVersioning::new();
     program.rename_variables(&mut versioning)
 }
@@ -171,7 +169,7 @@ impl SSARename for expr::Expression {
     }
 }
 
-impl SSARename for hir::Instruction {
+impl SSARename for Instruction {
     fn rename_variables(&mut self, versioning: &mut VariableVersioning) -> Result<()> {
         // rename all read variables
         for variable in self.variables_read_mut() {
@@ -187,7 +185,7 @@ impl SSARename for hir::Instruction {
     }
 }
 
-impl SSARename for hir::Block {
+impl SSARename for Block {
     fn rename_variables(&mut self, versioning: &mut VariableVersioning) -> Result<()> {
         // introduce new SSA names for phi node outputs
         for phi_node in self.phi_nodes_mut() {
@@ -203,7 +201,7 @@ impl SSARename for hir::Block {
     }
 }
 
-impl SSARename for hir::ControlFlowGraph {
+impl SSARename for ControlFlowGraph {
     fn rename_variables(&mut self, versioning: &mut VariableVersioning) -> Result<()> {
         let entry = self.entry().ok_or("CFG entry must be set")?;
 
@@ -211,7 +209,7 @@ impl SSARename for hir::ControlFlowGraph {
         let dominator_tree = self.graph().compute_dominator_tree(entry)?;
 
         fn dominator_tree_dfs_pre_order_traverse(
-            cfg: &mut hir::ControlFlowGraph,
+            cfg: &mut ControlFlowGraph,
             dominator_tree: &DominatorTree,
             node: usize,
             versioning: &mut VariableVersioning,
@@ -256,7 +254,7 @@ impl SSARename for hir::ControlFlowGraph {
     }
 }
 
-impl SSARename for hir::Program {
+impl SSARename for Program {
     fn rename_variables(&mut self, versioning: &mut VariableVersioning) -> Result<()> {
         self.control_flow_graph_mut().rename_variables(versioning)
     }
@@ -293,7 +291,7 @@ mod tests {
     #[test]
     fn test_variables_mutated_in_block() {
         let block = {
-            let mut block = hir::Block::new(0);
+            let mut block = Block::new(0);
             block.assign(variable("x"), expr_const(1));
             block.load(variable("y"), variable("z").into());
             block.assign(variable("x"), variable("y").into());
@@ -309,7 +307,7 @@ mod tests {
     #[test]
     fn test_variables_mutated_in_blocks() {
         let cfg = {
-            let mut cfg = hir::ControlFlowGraph::new();
+            let mut cfg = ControlFlowGraph::new();
 
             let block0 = cfg.new_block().unwrap();
             block0.assign(variable("x"), expr_const(1));
@@ -365,20 +363,20 @@ mod tests {
     #[test]
     fn test_renaming_of_barrier_instruction() {
         // Given: barrier
-        let mut instruction = hir::Instruction::barrier();
+        let mut instruction = Instruction::barrier();
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
         instruction.rename_variables(&mut versioning).unwrap();
 
         // Expected: barrier
-        assert_eq!(instruction, hir::Instruction::barrier());
+        assert_eq!(instruction, Instruction::barrier());
     }
 
     #[test]
     fn test_renaming_of_assign_instruction() {
         // Given: x := x
-        let mut instruction = hir::Instruction::assign(variable("x"), variable("x").into());
+        let mut instruction = Instruction::assign(variable("x"), variable("x").into());
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
@@ -388,14 +386,14 @@ mod tests {
         // Expected: x_2 := x_1
         assert_eq!(
             instruction,
-            hir::Instruction::assign(variable_ssa("x", 2), variable_ssa("x", 1).into(),)
+            Instruction::assign(variable_ssa("x", 2), variable_ssa("x", 1).into(),)
         );
     }
 
     #[test]
     fn test_renaming_of_load_instruction() {
         // Given: x := load(mem, x)
-        let mut instruction = hir::Instruction::load(variable("x"), variable("x").into());
+        let mut instruction = Instruction::load(variable("x"), variable("x").into());
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
@@ -417,7 +415,7 @@ mod tests {
     #[test]
     fn test_renaming_of_store_instruction() {
         // Given: mem := store(mem, x, x)
-        let mut instruction = hir::Instruction::store(variable("x").into(), variable("x").into());
+        let mut instruction = Instruction::store(variable("x").into(), variable("x").into());
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
@@ -440,7 +438,7 @@ mod tests {
     #[test]
     fn test_renaming_of_branch_instruction() {
         // Given: branch x
-        let mut instruction = hir::Instruction::branch(variable("x").into());
+        let mut instruction = Instruction::branch(variable("x").into());
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
@@ -450,7 +448,7 @@ mod tests {
         // Expected: branch x_1
         assert_eq!(
             instruction,
-            hir::Instruction::branch(variable_ssa("x", 1).into())
+            Instruction::branch(variable_ssa("x", 1).into())
         );
     }
 
@@ -464,8 +462,8 @@ mod tests {
         // x = y
         // z = x
         let mut block = hir::Block::new(0);
-        block.add_phi_node(hir::PhiNode::new(memory()));
-        block.add_phi_node(hir::PhiNode::new(variable("y")));
+        block.add_phi_node(PhiNode::new(memory()));
+        block.add_phi_node(PhiNode::new(variable("y")));
         block.assign(variable("x"), variable("y").into());
         block.load(variable("y"), variable("x").into());
         block.assign(variable("x"), variable("y").into());
@@ -482,13 +480,10 @@ mod tests {
         // y_2 = load(mem_1, x_1)
         // x_2 = y_2
         // z_1 = x_2
-        assert_eq!(
-            block.phi_node(0).unwrap(),
-            &hir::PhiNode::new(memory_ssa(1))
-        );
+        assert_eq!(block.phi_node(0).unwrap(), &PhiNode::new(memory_ssa(1)));
         assert_eq!(
             block.phi_node(1).unwrap(),
-            &hir::PhiNode::new(variable_ssa("y", 1))
+            &PhiNode::new(variable_ssa("y", 1))
         );
         assert_eq!(
             block.instruction(0).unwrap().operation(),
@@ -522,7 +517,7 @@ mod tests {
         // barr  +---+
         // -----     | (x)
         // x = x <---+
-        let mut cfg = hir::ControlFlowGraph::new();
+        let mut cfg = ControlFlowGraph::new();
 
         let block0 = cfg.new_block().unwrap();
         block0.assign(variable("x"), expr_const(1));
@@ -600,7 +595,7 @@ mod tests {
         //        block 3
         // x = phi [x, 1] [x, 2]
         // y = phi [y, 1] [y, 2]
-        let mut cfg = hir::ControlFlowGraph::new();
+        let mut cfg = ControlFlowGraph::new();
 
         let block0 = cfg.new_block().unwrap();
         block0.assign(variable("y"), expr_const(1));
@@ -612,11 +607,11 @@ mod tests {
         let block2 = cfg.new_block().unwrap();
         block2.assign(variable("x"), expr_const(4));
 
-        let mut phi_node_x = hir::PhiNode::new(variable("x"));
+        let mut phi_node_x = PhiNode::new(variable("x"));
         phi_node_x.add_incoming(variable("x"), 1);
         phi_node_x.add_incoming(variable("x"), 2);
 
-        let mut phi_node_y = hir::PhiNode::new(variable("y"));
+        let mut phi_node_y = PhiNode::new(variable("y"));
         phi_node_y.add_incoming(variable("y"), 1);
         phi_node_y.add_incoming(variable("y"), 2);
 
@@ -698,7 +693,7 @@ mod tests {
         //          block 5 <-------+
         //           y = x
         let mut program = {
-            let mut cfg = hir::ControlFlowGraph::new();
+            let mut cfg = ControlFlowGraph::new();
 
             // block0
             {
@@ -738,7 +733,7 @@ mod tests {
 
             cfg.set_entry(0).unwrap();
 
-            hir::Program::new(cfg)
+            Program::new(cfg)
         };
 
         insert_phi_nodes(&mut program).unwrap();
@@ -838,7 +833,7 @@ mod tests {
         //          block 4 <-------+
         //           res = x
         let program = {
-            let mut cfg = hir::ControlFlowGraph::new();
+            let mut cfg = ControlFlowGraph::new();
 
             // block0
             {
@@ -884,7 +879,7 @@ mod tests {
 
             cfg.set_entry(5).unwrap();
 
-            hir::Program::new(cfg)
+            Program::new(cfg)
         };
 
         let ssa_program = ssa_transformation(&program).unwrap();
@@ -915,13 +910,13 @@ mod tests {
         //  x6 = phi [x5, 3] [x3, 2]
         //         res1 = x6
         let expected_program = {
-            let mut cfg = hir::ControlFlowGraph::new();
+            let mut cfg = ControlFlowGraph::new();
 
             // block0
             {
                 let block = cfg.new_block().unwrap();
                 block.add_phi_node({
-                    let mut phi_node = hir::PhiNode::new(variable_ssa("x", 1));
+                    let mut phi_node = PhiNode::new(variable_ssa("x", 1));
                     phi_node.add_incoming(variable_ssa("x", 5), 3);
                     phi_node.add_incoming(variable("x"), 5);
                     phi_node
@@ -947,7 +942,7 @@ mod tests {
                         .unwrap(),
                 );
                 block.add_phi_node({
-                    let mut phi_node = hir::PhiNode::new(variable_ssa("x", 4));
+                    let mut phi_node = PhiNode::new(variable_ssa("x", 4));
                     phi_node.add_incoming(variable_ssa("x", 2), 1);
                     phi_node.add_incoming(variable_ssa("x", 3), 2);
                     phi_node
@@ -958,7 +953,7 @@ mod tests {
                 let block = cfg.new_block().unwrap();
                 block.assign(variable_ssa("res", 1), variable_ssa("x", 6).into());
                 block.add_phi_node({
-                    let mut phi_node = hir::PhiNode::new(variable_ssa("x", 6));
+                    let mut phi_node = PhiNode::new(variable_ssa("x", 6));
                     phi_node.add_incoming(variable_ssa("x", 5), 3);
                     phi_node.add_incoming(variable_ssa("x", 3), 2);
                     phi_node
@@ -980,7 +975,7 @@ mod tests {
 
             cfg.set_entry(5).unwrap();
 
-            hir::Program::new(cfg)
+            Program::new(cfg)
         };
 
         assert_eq!(ssa_program, expected_program);

@@ -15,7 +15,7 @@ pub struct Block {
 
 impl Block {
     pub fn new(index: usize) -> Self {
-        Block {
+        Self {
             index,
             nodes: Vec::new(),
             execution_condition: Boolean::constant(false),

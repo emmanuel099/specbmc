@@ -98,8 +98,8 @@ fn mark(nodes: &[lir::Node]) -> BitVec {
             lir::Node::Let { expr, .. } => {
                 expr.variables().iter().for_each(mark_def);
             }
-            lir::Node::Assert { cond } | lir::Node::Assume { cond } => {
-                cond.variables().iter().for_each(mark_def)
+            lir::Node::Assert { condition } | lir::Node::Assume { condition } => {
+                condition.variables().iter().for_each(mark_def)
             }
             _ => (),
         }

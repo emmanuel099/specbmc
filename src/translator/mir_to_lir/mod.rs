@@ -51,22 +51,22 @@ fn translate_block(
                     expr.self_compose(composition),
                 )?;
             }
-            mir::Operation::Assert { cond } => {
+            mir::Operation::Assert { condition } => {
                 program.append_assert(expr::Boolean::imply(
                     block
                         .execution_condition_variable()
                         .self_compose(composition)
                         .into(), // only if executed
-                    cond.self_compose(composition),
+                    condition.self_compose(composition),
                 )?)?;
             }
-            mir::Operation::Assume { cond } => {
+            mir::Operation::Assume { condition } => {
                 program.append_assume(expr::Boolean::imply(
                     block
                         .execution_condition_variable()
                         .self_compose(composition)
                         .into(), // only if executed
-                    cond.self_compose(composition),
+                    condition.self_compose(composition),
                 )?)?;
             }
             _ => (),

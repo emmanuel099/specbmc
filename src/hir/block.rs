@@ -27,7 +27,7 @@ impl Block {
     }
 
     /// Clone this block and set a new index.
-    pub fn clone_new_index(&self, index: usize) -> Block {
+    pub fn clone_new_index(&self, index: usize) -> Self {
         let mut clone = self.clone();
         clone.index = index;
         clone
@@ -36,7 +36,7 @@ impl Block {
     /// Appends the contents of another `Block` to this `Block`.
     ///
     /// Instruction indices are updated accordingly.
-    pub fn append(&mut self, other: &Block) {
+    pub fn append(&mut self, other: &Self) {
         self.instructions.extend_from_slice(other.instructions());
         self.phi_nodes.extend_from_slice(other.phi_nodes());
     }

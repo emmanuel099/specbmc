@@ -1,7 +1,7 @@
 //! An `Instruction` holds an `Operation`.
 
 use crate::expr::{Expression, Variable};
-use crate::hir::*;
+use crate::hir::{Effect, Operation};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -22,53 +22,53 @@ impl Instruction {
     }
 
     /// Create a new `Assign` instruction.
-    pub fn assign(variable: Variable, expr: Expression) -> Instruction {
-        Instruction::new(Operation::assign(variable, expr))
+    pub fn assign(variable: Variable, expr: Expression) -> Self {
+        Self::new(Operation::assign(variable, expr))
     }
 
     /// Create a new `Store` instruction.
-    pub fn store(address: Expression, expr: Expression) -> Instruction {
-        Instruction::new(Operation::store(address, expr))
+    pub fn store(address: Expression, expr: Expression) -> Self {
+        Self::new(Operation::store(address, expr))
     }
 
     /// Create a new `Load` instruction.
-    pub fn load(variable: Variable, address: Expression) -> Instruction {
-        Instruction::new(Operation::load(variable, address))
+    pub fn load(variable: Variable, address: Expression) -> Self {
+        Self::new(Operation::load(variable, address))
     }
 
     /// Create a new `Branch` instruction.
-    pub fn branch(target: Expression) -> Instruction {
-        Instruction::new(Operation::branch(target))
+    pub fn branch(target: Expression) -> Self {
+        Self::new(Operation::branch(target))
     }
 
     /// Create a new `ConditionalBranch` instruction.
-    pub fn conditional_branch(condition: Expression, target: Expression) -> Instruction {
-        Instruction::new(Operation::conditional_branch(condition, target))
+    pub fn conditional_branch(condition: Expression, target: Expression) -> Self {
+        Self::new(Operation::conditional_branch(condition, target))
     }
 
     /// Create a new `Barrier` instruction.
-    pub fn barrier() -> Instruction {
-        Instruction::new(Operation::barrier())
+    pub fn barrier() -> Self {
+        Self::new(Operation::barrier())
     }
 
     /// Create a new `Assert` instruction.
-    pub fn assert(condition: Expression) -> Instruction {
-        Instruction::new(Operation::assert(condition))
+    pub fn assert(condition: Expression) -> Self {
+        Self::new(Operation::assert(condition))
     }
 
     /// Create a new `Assume` instruction.
-    pub fn assume(condition: Expression) -> Instruction {
-        Instruction::new(Operation::assume(condition))
+    pub fn assume(condition: Expression) -> Self {
+        Self::new(Operation::assume(condition))
     }
 
     /// Create a new `Observable` instruction.
-    pub fn observable(variables: Vec<Variable>) -> Instruction {
-        Instruction::new(Operation::observable(variables))
+    pub fn observable(variables: Vec<Variable>) -> Self {
+        Self::new(Operation::observable(variables))
     }
 
     /// Create a new `Indistinguishable` instruction.
-    pub fn indistinguishable(variables: Vec<Variable>) -> Instruction {
-        Instruction::new(Operation::indistinguishable(variables))
+    pub fn indistinguishable(variables: Vec<Variable>) -> Self {
+        Self::new(Operation::indistinguishable(variables))
     }
 
     /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Assign`

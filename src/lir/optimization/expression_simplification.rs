@@ -41,7 +41,7 @@ impl Simplify for lir::Node {
     fn simplify(&mut self) -> bool {
         match self {
             Self::Let { expr, .. } => expr.simplify(),
-            Self::Assert { cond } | Self::Assume { cond } => cond.simplify(),
+            Self::Assert { condition } | Self::Assume { condition } => condition.simplify(),
             _ => false,
         }
     }

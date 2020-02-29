@@ -41,7 +41,7 @@ impl Fold for lir::Node {
     fn fold(&mut self) -> bool {
         match self {
             Self::Let { expr, .. } => expr.fold(),
-            Self::Assert { cond } | Self::Assume { cond } => cond.fold(),
+            Self::Assert { condition } | Self::Assume { condition } => condition.fold(),
             _ => false,
         }
     }

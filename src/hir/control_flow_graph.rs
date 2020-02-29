@@ -2,7 +2,7 @@
 
 use crate::error::Result;
 use crate::expr::Expression;
-use crate::hir::*;
+use crate::hir::{Block, Edge};
 use falcon::graph;
 use std::cmp;
 use std::collections::BTreeMap;
@@ -13,11 +13,6 @@ use std::fmt;
 /// # Entry and Exit
 /// A `ControlFlowGraph` has an optional, "Entry," and an optional, "Exit." When these are
 /// provided, certain convenience functions become available.
-///
-/// For example, when translating a native instruction to Falcon IL, it can be useful to consider
-/// an instruction as its own `ControlFlowGraph`. `rep scasb` is a great example of when this
-/// pattern is helpful. Instructions in a `Block` will have one entry, and one exit. Explicitly
-/// declaring these makes merging `ControlFlowGraph`s easier.
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct ControlFlowGraph {
     // The internal graph used to store our blocks.
@@ -355,7 +350,7 @@ impl ControlFlowGraph {
     /// In order for this to work, the entry and exit of boths graphs must be
     /// set, which should be the case for all conformant translators. You can
     /// also append to an empty ControlFlowGraph.
-    pub fn append(&mut self, other: &ControlFlowGraph) -> Result<()> {
+    pub fn append(&mut self, other: &Self) -> Result<()> {
         let is_empty = match self.graph.num_vertices() {
             0 => true,
             _ => false,
@@ -394,7 +389,7 @@ impl ControlFlowGraph {
     /// the mapping from the old to the new block indices for the inserted graph.
     ///
     /// This function causes the `ControlFlowGraph` to become disconnected.
-    pub fn insert(&mut self, other: &ControlFlowGraph) -> Result<BTreeMap<usize, usize>> {
+    pub fn insert(&mut self, other: &Self) -> Result<BTreeMap<usize, usize>> {
         // keep track of mapping between old indices and new indices
         let mut block_map: BTreeMap<usize, usize> = BTreeMap::new();
 

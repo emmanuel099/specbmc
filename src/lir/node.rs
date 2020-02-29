@@ -12,17 +12,17 @@ pub enum Node {
     },
     /// Assert that the condition is true.
     Assert {
-        cond: Expression,
+        condition: Expression,
     },
     /// Assume that the condition is true.
     Assume {
-        cond: Expression,
+        condition: Expression,
     },
 }
 
 impl Node {
     /// Create a new `Node::Comment`.
-    pub fn new_comment<S>(text: S) -> Self
+    pub fn comment<S>(text: S) -> Self
     where
         S: Into<String>,
     {
@@ -30,21 +30,21 @@ impl Node {
     }
 
     /// Create a new `Node::Let`.
-    pub fn new_let(var: Variable, expr: Expression) -> Result<Self> {
+    pub fn assign(var: Variable, expr: Expression) -> Result<Self> {
         expr.sort().expect_sort(var.sort())?;
         Ok(Self::Let { var, expr })
     }
 
     /// Create a new `Node::Assert`.
-    pub fn new_assert(cond: Expression) -> Result<Self> {
-        cond.sort().expect_boolean()?;
-        Ok(Self::Assert { cond })
+    pub fn assert(condition: Expression) -> Result<Self> {
+        condition.sort().expect_boolean()?;
+        Ok(Self::Assert { condition })
     }
 
     /// Create a new `Node::Assume`.
-    pub fn new_assume(cond: Expression) -> Result<Self> {
-        cond.sort().expect_boolean()?;
-        Ok(Self::Assume { cond })
+    pub fn assume(condition: Expression) -> Result<Self> {
+        condition.sort().expect_boolean()?;
+        Ok(Self::Assume { condition })
     }
 
     pub fn is_comment(&self) -> bool {
@@ -81,8 +81,8 @@ impl fmt::Display for Node {
         match self {
             Self::Comment(text) => write!(f, "// {}", text),
             Self::Let { var, expr } => write!(f, "{} = {}", var, expr),
-            Self::Assert { cond } => write!(f, "assert {}", cond),
-            Self::Assume { cond } => write!(f, "assume {}", cond),
+            Self::Assert { condition } => write!(f, "assert {}", condition),
+            Self::Assume { condition } => write!(f, "assume {}", condition),
         }
     }
 }

@@ -1,9 +1,9 @@
 use crate::error::Result;
 use crate::expr;
-use crate::hir;
 use crate::hir::analysis;
+use crate::hir::Program;
 
-pub fn init_global_variables(program: &mut hir::Program) -> Result<()> {
+pub fn init_global_variables(program: &mut Program) -> Result<()> {
     let global_variables = analysis::global_variables(&program);
 
     let cfg = program.control_flow_graph_mut();

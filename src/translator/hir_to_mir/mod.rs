@@ -82,7 +82,7 @@ fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Resul
             }
         }
 
-        block.add_node(mir::Node::new_let(
+        block.add_node(mir::Node::assign(
             phi_node.out().clone(),
             phi_expr.unwrap(),
         )?);
@@ -104,17 +104,17 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
 
     match operation {
         hir::Operation::Assign { variable, expr } => {
-            nodes.push(mir::Node::new_let(variable.clone(), expr.clone())?);
+            nodes.push(mir::Node::assign(variable.clone(), expr.clone())?);
         }
         hir::Operation::Assert { condition } => {
-            nodes.push(mir::Node::new_assert(condition.clone())?);
+            nodes.push(mir::Node::assert(condition.clone())?);
         }
         hir::Operation::Assume { condition } => {
-            nodes.push(mir::Node::new_assume(condition.clone())?);
+            nodes.push(mir::Node::assume(condition.clone())?);
         }
         hir::Operation::Observable { variables } => {
             for variable in variables {
-                nodes.push(mir::Node::new_assert_equal_in_self_composition(
+                nodes.push(mir::Node::assert_equal_in_self_composition(
                     vec![1, 2],
                     variable.clone().into(),
                 ));
@@ -122,7 +122,7 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
         }
         hir::Operation::Indistinguishable { variables } => {
             for variable in variables {
-                nodes.push(mir::Node::new_assume_equal_in_self_composition(
+                nodes.push(mir::Node::assume_equal_in_self_composition(
                     vec![1, 2],
                     variable.clone().into(),
                 ));

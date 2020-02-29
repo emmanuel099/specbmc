@@ -21,21 +21,21 @@ impl Program {
     where
         S: Into<String>,
     {
-        self.append_node(Node::new_comment(text));
+        self.append_node(Node::comment(text));
     }
 
     pub fn append_let(&mut self, var: Variable, expr: Expression) -> Result<()> {
-        self.append_node(Node::new_let(var, expr)?);
+        self.append_node(Node::assign(var, expr)?);
         Ok(())
     }
 
-    pub fn append_assert(&mut self, cond: Expression) -> Result<()> {
-        self.append_node(Node::new_assert(cond)?);
+    pub fn append_assert(&mut self, condition: Expression) -> Result<()> {
+        self.append_node(Node::assert(condition)?);
         Ok(())
     }
 
-    pub fn append_assume(&mut self, cond: Expression) -> Result<()> {
-        self.append_node(Node::new_assume(cond)?);
+    pub fn append_assume(&mut self, condition: Expression) -> Result<()> {
+        self.append_node(Node::assume(condition)?);
         Ok(())
     }
 

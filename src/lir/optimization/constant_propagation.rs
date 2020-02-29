@@ -66,7 +66,9 @@ impl PropagateConstants for lir::Node {
     fn propagate_constants(&mut self, constants: &ConstantVariables) {
         match self {
             Self::Let { expr, .. } => expr.propagate_constants(constants),
-            Self::Assert { cond } | Self::Assume { cond } => cond.propagate_constants(constants),
+            Self::Assert { condition } | Self::Assume { condition } => {
+                condition.propagate_constants(constants)
+            }
             _ => (),
         }
     }

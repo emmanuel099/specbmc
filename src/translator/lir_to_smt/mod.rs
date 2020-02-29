@@ -43,13 +43,13 @@ pub fn encode_program(program: &lir::Program, debug_file_path: Option<&Path>) ->
                     solver.assert(&assignment)?
                 }
             }
-            lir::Node::Assert { cond } => {
+            lir::Node::Assert { condition } => {
                 let name = format!("_assertion{}", assertions.len());
                 let assertion = expr::Variable::new(name, expr::Sort::boolean());
-                define_variable(&mut solver, &assertion, &cond)?;
+                define_variable(&mut solver, &assertion, &condition)?;
                 assertions.push(assertion.into())
             }
-            lir::Node::Assume { cond } => solver.assert(&cond)?,
+            lir::Node::Assume { condition } => solver.assert(&condition)?,
         }
     }
 

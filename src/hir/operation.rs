@@ -8,12 +8,12 @@ pub enum Operation {
         variable: Variable,
         expr: Expression,
     },
-    /// Store the value in src at the address given in index.
+    /// Store the value in expr at the address given in index.
     Store {
         address: Expression,
         expr: Expression,
     },
-    /// Load the value in memory at index and place the result in the variable dst.
+    /// Load the value in memory at index and place the result in the variable.
     Load {
         variable: Variable,
         address: Expression,
@@ -35,39 +35,39 @@ pub enum Operation {
     Observable { variables: Vec<Variable> },
     /// The listed variables are indistinguishable for an adversary.
     Indistinguishable { variables: Vec<Variable> },
-    /// Parallel operation, meaning that the nested operations happen in parallel.
+    /// The nested operations happen in parallel.
     Parallel(Vec<Operation>),
 }
 
 impl Operation {
     /// Create a new `Operation::Assign`.
-    pub fn assign(variable: Variable, expr: Expression) -> Operation {
-        Operation::Assign { variable, expr }
+    pub fn assign(variable: Variable, expr: Expression) -> Self {
+        Self::Assign { variable, expr }
     }
 
     /// Create a new `Operation::Store`.
-    pub fn store(address: Expression, expr: Expression) -> Operation {
-        Operation::Store { address, expr }
+    pub fn store(address: Expression, expr: Expression) -> Self {
+        Self::Store { address, expr }
     }
 
     /// Create a new `Operation::Load`.
-    pub fn load(variable: Variable, address: Expression) -> Operation {
-        Operation::Load { variable, address }
+    pub fn load(variable: Variable, address: Expression) -> Self {
+        Self::Load { variable, address }
     }
 
     /// Create a new `Operation::Branch`.
-    pub fn branch(target: Expression) -> Operation {
-        Operation::Branch { target }
+    pub fn branch(target: Expression) -> Self {
+        Self::Branch { target }
     }
 
     /// Create a new `Operation::ConditionalBranch`.
-    pub fn conditional_branch(condition: Expression, target: Expression) -> Operation {
-        Operation::ConditionalBranch { condition, target }
+    pub fn conditional_branch(condition: Expression, target: Expression) -> Self {
+        Self::ConditionalBranch { condition, target }
     }
 
     /// Create a new `Operation::Barrier`
-    pub fn barrier() -> Operation {
-        Operation::Barrier
+    pub fn barrier() -> Self {
+        Self::Barrier
     }
 
     /// Create a new `Operation::Assert`.
@@ -81,92 +81,92 @@ impl Operation {
     }
 
     /// Create a new `Operation::Observable`
-    pub fn observable(variables: Vec<Variable>) -> Operation {
-        Operation::Observable { variables }
+    pub fn observable(variables: Vec<Variable>) -> Self {
+        Self::Observable { variables }
     }
 
     /// Create a new `Operation::Indistinguishable`
-    pub fn indistinguishable(variables: Vec<Variable>) -> Operation {
-        Operation::Indistinguishable { variables }
+    pub fn indistinguishable(variables: Vec<Variable>) -> Self {
+        Self::Indistinguishable { variables }
     }
 
-    pub fn parallel(operations: Vec<Operation>) -> Operation {
-        Operation::Parallel(operations)
+    pub fn parallel(operations: Vec<Operation>) -> Self {
+        Self::Parallel(operations)
     }
 
     pub fn is_assign(&self) -> bool {
         match self {
-            Operation::Assign { .. } => true,
+            Self::Assign { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_store(&self) -> bool {
         match self {
-            Operation::Store { .. } => true,
+            Self::Store { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_load(&self) -> bool {
         match self {
-            Operation::Load { .. } => true,
+            Self::Load { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_branch(&self) -> bool {
         match self {
-            Operation::Branch { .. } => true,
+            Self::Branch { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_conditional_branch(&self) -> bool {
         match self {
-            Operation::ConditionalBranch { .. } => true,
+            Self::ConditionalBranch { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_barrier(&self) -> bool {
         match self {
-            Operation::Barrier => true,
+            Self::Barrier => true,
             _ => false,
         }
     }
 
     pub fn is_assert(&self) -> bool {
         match self {
-            Operation::Assert { .. } => true,
+            Self::Assert { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_assume(&self) -> bool {
         match self {
-            Operation::Assume { .. } => true,
+            Self::Assume { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_observable(&self) -> bool {
         match self {
-            Operation::Observable { .. } => true,
+            Self::Observable { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_indistinguishable(&self) -> bool {
         match self {
-            Operation::Indistinguishable { .. } => true,
+            Self::Indistinguishable { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_parallel(&self) -> bool {
         match self {
-            Operation::Parallel(_) => true,
+            Self::Parallel(_) => true,
             _ => false,
         }
     }
@@ -174,27 +174,25 @@ impl Operation {
     /// Get each `Variable` read by this `Operation`.
     pub fn variables_read(&self) -> Vec<&Variable> {
         match self {
-            Operation::Assign { expr, .. } => expr.variables(),
-            Operation::Store { address, expr, .. } => address
+            Self::Assign { expr, .. } => expr.variables(),
+            Self::Store { address, expr, .. } => address
                 .variables()
                 .into_iter()
                 .chain(expr.variables().into_iter())
                 .collect(),
-            Operation::Load { address, .. } => address.variables(),
-            Operation::Branch { target } => target.variables(),
-            Operation::ConditionalBranch { condition, target } => condition
+            Self::Load { address, .. } => address.variables(),
+            Self::Branch { target } => target.variables(),
+            Self::ConditionalBranch { condition, target } => condition
                 .variables()
                 .into_iter()
                 .chain(target.variables().into_iter())
                 .collect(),
-            Operation::Assert { condition } | Operation::Assume { condition } => {
-                condition.variables()
-            }
-            Operation::Barrier => Vec::new(),
-            Operation::Observable { variables } | Operation::Indistinguishable { variables } => {
+            Self::Assert { condition } | Self::Assume { condition } => condition.variables(),
+            Self::Barrier => Vec::new(),
+            Self::Observable { variables } | Self::Indistinguishable { variables } => {
                 variables.iter().collect()
             }
-            Operation::Parallel(operations) => operations
+            Self::Parallel(operations) => operations
                 .iter()
                 .flat_map(|op| op.variables_read())
                 .collect(),
@@ -204,27 +202,25 @@ impl Operation {
     /// Get a mutable reference to each `Variable` read by this `Operation`.
     pub fn variables_read_mut(&mut self) -> Vec<&mut Variable> {
         match self {
-            Operation::Assign { expr, .. } => expr.variables_mut(),
-            Operation::Store { address, expr, .. } => address
+            Self::Assign { expr, .. } => expr.variables_mut(),
+            Self::Store { address, expr, .. } => address
                 .variables_mut()
                 .into_iter()
                 .chain(expr.variables_mut().into_iter())
                 .collect(),
-            Operation::Load { address, .. } => address.variables_mut(),
-            Operation::Branch { target } => target.variables_mut(),
-            Operation::ConditionalBranch { condition, target } => condition
+            Self::Load { address, .. } => address.variables_mut(),
+            Self::Branch { target } => target.variables_mut(),
+            Self::ConditionalBranch { condition, target } => condition
                 .variables_mut()
                 .into_iter()
                 .chain(target.variables_mut().into_iter())
                 .collect(),
-            Operation::Assert { condition } | Operation::Assume { condition } => {
-                condition.variables_mut()
-            }
-            Operation::Barrier => Vec::new(),
-            Operation::Observable { variables } | Operation::Indistinguishable { variables } => {
+            Self::Assert { condition } | Self::Assume { condition } => condition.variables_mut(),
+            Self::Barrier => Vec::new(),
+            Self::Observable { variables } | Self::Indistinguishable { variables } => {
                 variables.iter_mut().collect()
             }
-            Operation::Parallel(operations) => operations
+            Self::Parallel(operations) => operations
                 .iter_mut()
                 .flat_map(|op| op.variables_read_mut())
                 .collect(),
@@ -234,16 +230,16 @@ impl Operation {
     /// Get a Vec of the `Variable`s written by this `Operation`
     pub fn variables_written(&self) -> Vec<&Variable> {
         match self {
-            Operation::Assign { variable, .. } | Operation::Load { variable, .. } => vec![variable],
-            Operation::Store { .. }
-            | Operation::Branch { .. }
-            | Operation::ConditionalBranch { .. }
-            | Operation::Barrier
-            | Operation::Assert { .. }
-            | Operation::Assume { .. }
-            | Operation::Observable { .. }
-            | Operation::Indistinguishable { .. } => Vec::new(),
-            Operation::Parallel(operations) => operations
+            Self::Assign { variable, .. } | Self::Load { variable, .. } => vec![variable],
+            Self::Store { .. }
+            | Self::Branch { .. }
+            | Self::ConditionalBranch { .. }
+            | Self::Barrier
+            | Self::Assert { .. }
+            | Self::Assume { .. }
+            | Self::Observable { .. }
+            | Self::Indistinguishable { .. } => Vec::new(),
+            Self::Parallel(operations) => operations
                 .iter()
                 .flat_map(|op| op.variables_written())
                 .collect(),
@@ -253,16 +249,16 @@ impl Operation {
     /// Get a Vec of mutable referencer to the `Variable`s written by this `Operation`
     pub fn variables_written_mut(&mut self) -> Vec<&mut Variable> {
         match self {
-            Operation::Assign { variable, .. } | Operation::Load { variable, .. } => vec![variable],
-            Operation::Store { .. }
-            | Operation::Branch { .. }
-            | Operation::ConditionalBranch { .. }
-            | Operation::Barrier
-            | Operation::Assert { .. }
-            | Operation::Assume { .. }
-            | Operation::Observable { .. }
-            | Operation::Indistinguishable { .. } => Vec::new(),
-            Operation::Parallel(operations) => operations
+            Self::Assign { variable, .. } | Self::Load { variable, .. } => vec![variable],
+            Self::Store { .. }
+            | Self::Branch { .. }
+            | Self::ConditionalBranch { .. }
+            | Self::Barrier
+            | Self::Assert { .. }
+            | Self::Assume { .. }
+            | Self::Observable { .. }
+            | Self::Indistinguishable { .. } => Vec::new(),
+            Self::Parallel(operations) => operations
                 .iter_mut()
                 .flat_map(|op| op.variables_written_mut())
                 .collect(),
@@ -273,31 +269,37 @@ impl Operation {
 impl fmt::Display for Operation {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Operation::Assign { variable, expr } => write!(f, "{} = {}", variable, expr),
-            Operation::Store { address, expr } => write!(f, "store({}, {})", address, expr),
-            Operation::Load { variable, address } => write!(f, "{} = load({})", variable, address),
-            Operation::Branch { target } => write!(f, "branch {}", target),
-            Operation::ConditionalBranch { condition, target } => {
+            Self::Assign { variable, expr } => write!(f, "{} = {}", variable, expr),
+            Self::Store { address, expr } => write!(f, "store({}, {})", address, expr),
+            Self::Load { variable, address } => write!(f, "{} = load({})", variable, address),
+            Self::Branch { target } => write!(f, "branch {}", target),
+            Self::ConditionalBranch { condition, target } => {
                 write!(f, "branch {} if {}", target, condition)
             }
-            Operation::Assert { condition } => write!(f, "assert {}", condition),
-            Operation::Assume { condition } => write!(f, "assume {}", condition),
-            Operation::Barrier => write!(f, "barrier"),
-            Operation::Observable { variables } => {
+            Self::Assert { condition } => write!(f, "assert {}", condition),
+            Self::Assume { condition } => write!(f, "assume {}", condition),
+            Self::Barrier => write!(f, "barrier"),
+            Self::Observable { variables } => {
                 write!(f, "observable(")?;
-                for var in variables {
-                    write!(f, "{}, ", var)?;
+                if !variables.is_empty() {
+                    write!(f, "{}", variables.first().unwrap())?;
+                    for var in variables.iter().skip(1) {
+                        write!(f, ", {}", var)?;
+                    }
                 }
                 write!(f, ")")
             }
-            Operation::Indistinguishable { variables } => {
+            Self::Indistinguishable { variables } => {
                 write!(f, "indistinguishable(")?;
-                for var in variables {
-                    write!(f, "{}, ", var)?;
+                if !variables.is_empty() {
+                    write!(f, "{}", variables.first().unwrap())?;
+                    for var in variables.iter().skip(1) {
+                        write!(f, ", {}", var)?;
+                    }
                 }
                 write!(f, ")")
             }
-            Operation::Parallel(operations) => {
+            Self::Parallel(operations) => {
                 if !operations.is_empty() {
                     write!(f, "{}", operations.first().unwrap())?;
                     for operation in operations.iter().skip(1) {

@@ -17,33 +17,27 @@ impl Node {
         }
     }
 
-    pub fn new_let(var: Variable, expr: Expression) -> Result<Self> {
-        Ok(Self::new(Operation::new_let(var, expr)?))
+    pub fn assign(var: Variable, expr: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::assign(var, expr)?))
     }
 
-    pub fn new_assert(cond: Expression) -> Result<Self> {
-        Ok(Self::new(Operation::new_assert(cond)?))
+    pub fn assert(condition: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::assert(condition)?))
     }
 
-    pub fn new_assume(cond: Expression) -> Result<Self> {
-        Ok(Self::new(Operation::new_assume(cond)?))
+    pub fn assume(condition: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::assume(condition)?))
     }
 
-    pub fn new_assert_equal_in_self_composition(
-        compositions: Vec<usize>,
-        expr: Expression,
-    ) -> Self {
-        Self::new(Operation::new_assert_equal_in_self_composition(
+    pub fn assert_equal_in_self_composition(compositions: Vec<usize>, expr: Expression) -> Self {
+        Self::new(Operation::assert_equal_in_self_composition(
             compositions,
             expr,
         ))
     }
 
-    pub fn new_assume_equal_in_self_composition(
-        compositions: Vec<usize>,
-        expr: Expression,
-    ) -> Self {
-        Self::new(Operation::new_assume_equal_in_self_composition(
+    pub fn assume_equal_in_self_composition(compositions: Vec<usize>, expr: Expression) -> Self {
+        Self::new(Operation::assume_equal_in_self_composition(
             compositions,
             expr,
         ))
@@ -51,14 +45,6 @@ impl Node {
 
     pub fn operation(&self) -> &Operation {
         &self.operation
-    }
-
-    pub fn operation_mut(&mut self) -> &mut Operation {
-        &mut self.operation
-    }
-
-    pub fn set_operation(&mut self, operation: Operation) {
-        self.operation = operation;
     }
 
     pub fn address(&self) -> Option<u64> {

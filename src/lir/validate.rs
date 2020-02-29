@@ -32,8 +32,8 @@ pub fn validate_program(program: &lir::Program) -> Result<()> {
                     }
                 }
             }
-            lir::Node::Assert { cond } | lir::Node::Assume { cond } => {
-                for var in cond.variables() {
+            lir::Node::Assert { condition } | lir::Node::Assume { condition } => {
+                for var in condition.variables() {
                     if !defs.contains(var) {
                         return Err(
                             format!("@{}: Use of undefined variable `{}`", index, var).into()

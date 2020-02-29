@@ -74,9 +74,10 @@ impl PropagateCopies for lir::Node {
 
         match self {
             Self::Let { expr, .. } => expr.variables_mut().into_iter().for_each(replace_if_copied),
-            Self::Assert { cond } | Self::Assume { cond } => {
-                cond.variables_mut().into_iter().for_each(replace_if_copied)
-            }
+            Self::Assert { condition } | Self::Assume { condition } => condition
+                .variables_mut()
+                .into_iter()
+                .for_each(replace_if_copied),
             _ => (),
         }
     }
