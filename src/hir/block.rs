@@ -202,6 +202,13 @@ impl Block {
         self.instructions.push(Instruction::observe(variables));
         self.instructions.last_mut().unwrap()
     }
+
+    /// Adds an indistinguishable operation to the end of this block.
+    pub fn indistinguishable(&mut self, variables: Vec<Variable>) -> &mut Instruction {
+        self.instructions
+            .push(Instruction::indistinguishable(variables));
+        self.instructions.last_mut().unwrap()
+    }
 }
 
 impl graph::Vertex for Block {

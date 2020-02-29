@@ -56,6 +56,11 @@ impl Instruction {
         Instruction::new(Operation::observe(variables))
     }
 
+    /// Create a new `Indistinguishable` instruction.
+    pub fn indistinguishable(variables: Vec<Variable>) -> Instruction {
+        Instruction::new(Operation::indistinguishable(variables))
+    }
+
     /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Assign`
     pub fn is_assign(&self) -> bool {
         self.operation.is_assign()
@@ -89,6 +94,11 @@ impl Instruction {
     /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Observe`
     pub fn is_observe(&self) -> bool {
         self.operation.is_observe()
+    }
+
+    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Indistinguishable`
+    pub fn is_indistinguishable(&self) -> bool {
+        self.operation.is_indistinguishable()
     }
 
     /// Get the `Operation` for this `Instruction`

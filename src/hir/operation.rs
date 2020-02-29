@@ -29,6 +29,8 @@ pub enum Operation {
     Barrier,
     /// Adversary observes the listed variables.
     Observe { variables: Vec<Variable> },
+    /// The listed variables are indistinguishable for an adversary.
+    Indistinguishable { variables: Vec<Variable> },
     /// Parallel operation, meaning that the nested operations happen in parallel.
     Parallel(Vec<Operation>),
 }
@@ -67,6 +69,11 @@ impl Operation {
     /// Create a new `Operation::Observe`
     pub fn observe(variables: Vec<Variable>) -> Operation {
         Operation::Observe { variables }
+    }
+
+    /// Create a new `Operation::Indistinguishable`
+    pub fn indistinguishable(variables: Vec<Variable>) -> Operation {
+        Operation::Indistinguishable { variables }
     }
 
     pub fn parallel(operations: Vec<Operation>) -> Operation {
@@ -122,6 +129,13 @@ impl Operation {
         }
     }
 
+    pub fn is_indistinguishable(&self) -> bool {
+        match self {
+            Operation::Indistinguishable { .. } => true,
+            _ => false,
+        }
+    }
+
     pub fn is_parallel(&self) -> bool {
         match self {
             Operation::Parallel(_) => true,
@@ -146,7 +160,9 @@ impl Operation {
                 .chain(target.variables().into_iter())
                 .collect(),
             Operation::Barrier => Vec::new(),
-            Operation::Observe { variables } => variables.iter().collect(),
+            Operation::Observe { variables } | Operation::Indistinguishable { variables } => {
+                variables.iter().collect()
+            }
             Operation::Parallel(operations) => operations
                 .iter()
                 .flat_map(|op| op.variables_read())
@@ -171,7 +187,9 @@ impl Operation {
                 .chain(target.variables_mut().into_iter())
                 .collect(),
             Operation::Barrier => Vec::new(),
-            Operation::Observe { variables } => variables.iter_mut().collect(),
+            Operation::Observe { variables } | Operation::Indistinguishable { variables } => {
+                variables.iter_mut().collect()
+            }
             Operation::Parallel(operations) => operations
                 .iter_mut()
                 .flat_map(|op| op.variables_read_mut())
@@ -187,7 +205,8 @@ impl Operation {
             | Operation::Branch { .. }
             | Operation::ConditionalBranch { .. }
             | Operation::Barrier
-            | Operation::Observe { .. } => Vec::new(),
+            | Operation::Observe { .. }
+            | Operation::Indistinguishable { .. } => Vec::new(),
             Operation::Parallel(operations) => operations
                 .iter()
                 .flat_map(|op| op.variables_written())
@@ -203,7 +222,8 @@ impl Operation {
             | Operation::Branch { .. }
             | Operation::ConditionalBranch { .. }
             | Operation::Barrier
-            | Operation::Observe { .. } => Vec::new(),
+            | Operation::Observe { .. }
+            | Operation::Indistinguishable { .. } => Vec::new(),
             Operation::Parallel(operations) => operations
                 .iter_mut()
                 .flat_map(|op| op.variables_written_mut())
@@ -225,6 +245,13 @@ impl fmt::Display for Operation {
             Operation::Barrier => write!(f, "barrier"),
             Operation::Observe { variables } => {
                 write!(f, "obs(")?;
+                for var in variables {
+                    write!(f, "{}, ", var)?;
+                }
+                write!(f, ")")
+            }
+            Operation::Indistinguishable { variables } => {
+                write!(f, "indistinguishable(")?;
                 for var in variables {
                     write!(f, "{}, ", var)?;
                 }

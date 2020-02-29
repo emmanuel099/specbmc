@@ -114,6 +114,14 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
                 ));
             }
         }
+        hir::Operation::Indistinguishable { variables } => {
+            for variable in variables {
+                nodes.push(mir::Node::new_assume_equal_in_self_composition(
+                    vec![1, 2],
+                    variable.clone().into(),
+                ));
+            }
+        }
         hir::Operation::Parallel(operations) => {
             for operation in operations {
                 nodes.append(&mut translate_operation(operation)?);

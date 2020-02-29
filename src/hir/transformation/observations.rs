@@ -38,7 +38,19 @@ impl Observations {
     pub fn add_observations(&self, program: &mut Program) -> Result<()> {
         let cfg = program.control_flow_graph_mut();
 
+        // Place an observe at the end of the program
+        let exit_block = cfg.exit_block_mut().ok_or("CFG exit must be set")?;
+        exit_block.indistinguishable(self.observable_variables_nonspec());
+        exit_block.observe(self.observable_variables());
+
+        // TODO add more obs if defined so
+
+        Ok(())
+    }
+
+    fn observable_variables(&self) -> Vec<expr::Variable> {
         let mut variables = Vec::new();
+
         if self.cache_available {
             variables.push(expr::Cache::variable());
         }
@@ -49,12 +61,22 @@ impl Observations {
             variables.push(expr::PatternHistoryTable::variable());
         }
 
-        // Place an observe at the end of the program
-        let exit_block = cfg.exit_block_mut().ok_or("CFG exit must be set")?;
-        exit_block.observe(variables);
+        variables
+    }
 
-        // TODO add more obs if defined so
+    fn observable_variables_nonspec(&self) -> Vec<expr::Variable> {
+        let mut variables = Vec::new();
 
-        Ok(())
+        if self.cache_available {
+            variables.push(expr::Cache::variable_nonspec());
+        }
+        if self.btb_available {
+            variables.push(expr::BranchTargetBuffer::variable_nonspec());
+        }
+        if self.pht_available {
+            variables.push(expr::PatternHistoryTable::variable_nonspec());
+        }
+
+        variables
     }
 }
