@@ -43,9 +43,7 @@ impl Block {
 
     /// Get the address of the first instruction in this block
     pub fn address(&self) -> Option<u64> {
-        self.instructions
-            .first()
-            .and_then(|instruction| instruction.address())
+        self.instructions.first().and_then(Instruction::address)
     }
 
     /// Returns the index of this `Block`

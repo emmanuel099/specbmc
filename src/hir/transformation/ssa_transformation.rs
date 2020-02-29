@@ -86,7 +86,7 @@ fn variables_mutated_in_block(block: &Block) -> HashSet<&expr::Variable> {
     block
         .instructions()
         .iter()
-        .flat_map(|inst| inst.variables_written())
+        .flat_map(Instruction::variables_written)
         .collect()
 }
 

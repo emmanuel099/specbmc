@@ -127,10 +127,9 @@ impl Operation {
             Self::Observable { variables } | Self::Indistinguishable { variables } => {
                 variables.iter().collect()
             }
-            Self::Parallel(operations) => operations
-                .iter()
-                .flat_map(|op| op.variables_read())
-                .collect(),
+            Self::Parallel(operations) => {
+                operations.iter().flat_map(Self::variables_read).collect()
+            }
         }
     }
 
@@ -157,7 +156,7 @@ impl Operation {
             }
             Self::Parallel(operations) => operations
                 .iter_mut()
-                .flat_map(|op| op.variables_read_mut())
+                .flat_map(Self::variables_read_mut)
                 .collect(),
         }
     }
@@ -176,7 +175,7 @@ impl Operation {
             | Self::Indistinguishable { .. } => Vec::new(),
             Self::Parallel(operations) => operations
                 .iter()
-                .flat_map(|op| op.variables_written())
+                .flat_map(Self::variables_written)
                 .collect(),
         }
     }
@@ -195,7 +194,7 @@ impl Operation {
             | Self::Indistinguishable { .. } => Vec::new(),
             Self::Parallel(operations) => operations
                 .iter_mut()
-                .flat_map(|op| op.variables_written_mut())
+                .flat_map(Self::variables_written_mut)
                 .collect(),
         }
     }
