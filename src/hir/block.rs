@@ -157,27 +157,28 @@ impl Block {
     }
 
     /// Adds an assign operation to the end of this block.
-    pub fn assign(&mut self, variable: Variable, expr: Expression) -> &mut Instruction {
-        self.instructions.push(Instruction::assign(variable, expr));
-        self.instructions.last_mut().unwrap()
+    pub fn assign(&mut self, variable: Variable, expr: Expression) -> Result<&mut Instruction> {
+        self.instructions.push(Instruction::assign(variable, expr)?);
+        Ok(self.instructions.last_mut().unwrap())
     }
 
     /// Adds a store operation to the end of this block.
-    pub fn store(&mut self, address: Expression, expr: Expression) -> &mut Instruction {
-        self.instructions.push(Instruction::store(address, expr));
-        self.instructions.last_mut().unwrap()
+    pub fn store(&mut self, address: Expression, expr: Expression) -> Result<&mut Instruction> {
+        self.instructions.push(Instruction::store(address, expr)?);
+        Ok(self.instructions.last_mut().unwrap())
     }
 
     /// Adds a load operation to the end of this block.
-    pub fn load(&mut self, variable: Variable, address: Expression) -> &mut Instruction {
-        self.instructions.push(Instruction::load(variable, address));
-        self.instructions.last_mut().unwrap()
+    pub fn load(&mut self, variable: Variable, address: Expression) -> Result<&mut Instruction> {
+        self.instructions
+            .push(Instruction::load(variable, address)?);
+        Ok(self.instructions.last_mut().unwrap())
     }
 
     /// Adds a unconditional branch operation to the end of this block.
-    pub fn branch(&mut self, target: Expression) -> &mut Instruction {
-        self.instructions.push(Instruction::branch(target));
-        self.instructions.last_mut().unwrap()
+    pub fn branch(&mut self, target: Expression) -> Result<&mut Instruction> {
+        self.instructions.push(Instruction::branch(target)?);
+        Ok(self.instructions.last_mut().unwrap())
     }
 
     /// Adds a conditional branch operation to the end of this block.
@@ -185,10 +186,10 @@ impl Block {
         &mut self,
         condition: Expression,
         target: Expression,
-    ) -> &mut Instruction {
+    ) -> Result<&mut Instruction> {
         self.instructions
-            .push(Instruction::conditional_branch(condition, target));
-        self.instructions.last_mut().unwrap()
+            .push(Instruction::conditional_branch(condition, target)?);
+        Ok(self.instructions.last_mut().unwrap())
     }
 
     /// Adds a barrier operation to the end of this block.
@@ -198,15 +199,15 @@ impl Block {
     }
 
     /// Adds an assert operation to the end of this block.
-    pub fn assert(&mut self, condition: Expression) -> &mut Instruction {
-        self.instructions.push(Instruction::assert(condition));
-        self.instructions.last_mut().unwrap()
+    pub fn assert(&mut self, condition: Expression) -> Result<&mut Instruction> {
+        self.instructions.push(Instruction::assert(condition)?);
+        Ok(self.instructions.last_mut().unwrap())
     }
 
     /// Adds an assume operation to the end of this block.
-    pub fn assume(&mut self, condition: Expression) -> &mut Instruction {
-        self.instructions.push(Instruction::assume(condition));
-        self.instructions.last_mut().unwrap()
+    pub fn assume(&mut self, condition: Expression) -> Result<&mut Instruction> {
+        self.instructions.push(Instruction::assume(condition)?);
+        Ok(self.instructions.last_mut().unwrap())
     }
 
     /// Adds an observable operation to the end of this block.

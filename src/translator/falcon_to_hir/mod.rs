@@ -67,30 +67,30 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
                 let variable = translate_scalar(dst)?;
                 let expr = translate_expr(src)?;
                 let expr = maybe_cast(expr, variable.sort())?;
-                let inst = block.assign(variable, expr);
+                let inst = block.assign(variable, expr)?;
                 inst.set_address(instruction.address());
             }
             il::Operation::Store { index, src } => {
                 let address = translate_expr(index)?;
                 let expr = translate_expr(src)?;
-                let inst = block.store(address, expr);
+                let inst = block.store(address, expr)?;
                 inst.set_address(instruction.address());
             }
             il::Operation::Load { dst, index } => {
                 let variable = translate_scalar(dst)?;
                 let address = translate_expr(index)?;
-                let inst = block.load(variable, address);
+                let inst = block.load(variable, address)?;
                 inst.set_address(instruction.address());
             }
             il::Operation::Branch { target } => {
                 let target = translate_expr(target)?;
-                let inst = block.branch(target);
+                let inst = block.branch(target)?;
                 inst.set_address(instruction.address());
             }
             il::Operation::ConditionalBranch { condition, target } => {
                 let condition = translate_expr(condition)?;
                 let target = translate_expr(target)?;
-                let inst = block.conditional_branch(condition, target);
+                let inst = block.conditional_branch(condition, target)?;
                 inst.set_address(instruction.address());
             }
             il::Operation::Intrinsic { intrinsic } => {

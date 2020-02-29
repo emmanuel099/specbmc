@@ -53,10 +53,10 @@ fn encode_effect(effect: &Effect, nonspec: bool) -> Result<Operation> {
     match effect {
         Effect::Conditional { condition, effect } => {
             if let Operation::Assign { variable, expr } = encode_effect(effect, nonspec)? {
-                Ok(Operation::assign(
+                Operation::assign(
                     variable.clone(),
                     expr::Expression::ite(condition.clone(), expr, variable.into())?,
-                ))
+                )
             } else {
                 unimplemented!()
             }
@@ -97,7 +97,7 @@ fn encode_cache_fetch_effect(
     bit_width: usize,
 ) -> Result<Operation> {
     let fetch = expr::Cache::fetch(bit_width, cache.clone().into(), address.clone())?;
-    Ok(Operation::assign(cache, fetch))
+    Operation::assign(cache, fetch)
 }
 
 fn encode_branch_target_effect(
@@ -107,7 +107,7 @@ fn encode_branch_target_effect(
 ) -> Result<Operation> {
     let track =
         expr::BranchTargetBuffer::track(btb.clone().into(), location.clone(), target.clone())?;
-    Ok(Operation::assign(btb, track))
+    Operation::assign(btb, track)
 }
 
 fn encode_branch_condition_effect(
@@ -117,8 +117,8 @@ fn encode_branch_condition_effect(
 ) -> Result<Operation> {
     let taken = expr::PatternHistoryTable::taken(pht.clone().into(), location.clone())?;
     let not_taken = expr::PatternHistoryTable::not_taken(pht.clone().into(), location.clone())?;
-    Ok(Operation::assign(
+    Operation::assign(
         pht,
         expr::Expression::ite(condition.clone(), taken, not_taken)?,
-    ))
+    )
 }

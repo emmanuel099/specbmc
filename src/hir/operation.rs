@@ -1,3 +1,4 @@
+use crate::error::Result;
 use crate::expr::{Expression, Variable};
 use std::fmt;
 
@@ -41,28 +42,36 @@ pub enum Operation {
 
 impl Operation {
     /// Create a new `Operation::Assign`.
-    pub fn assign(variable: Variable, expr: Expression) -> Self {
-        Self::Assign { variable, expr }
+    pub fn assign(variable: Variable, expr: Expression) -> Result<Self> {
+        expr.sort().expect_sort(variable.sort())?;
+        Ok(Self::Assign { variable, expr })
     }
 
     /// Create a new `Operation::Store`.
-    pub fn store(address: Expression, expr: Expression) -> Self {
-        Self::Store { address, expr }
+    pub fn store(address: Expression, expr: Expression) -> Result<Self> {
+        address.sort().expect_bit_vector()?;
+        expr.sort().expect_bit_vector()?;
+        Ok(Self::Store { address, expr })
     }
 
     /// Create a new `Operation::Load`.
-    pub fn load(variable: Variable, address: Expression) -> Self {
-        Self::Load { variable, address }
+    pub fn load(variable: Variable, address: Expression) -> Result<Self> {
+        address.sort().expect_bit_vector()?;
+        variable.sort().expect_bit_vector()?;
+        Ok(Self::Load { variable, address })
     }
 
     /// Create a new `Operation::Branch`.
-    pub fn branch(target: Expression) -> Self {
-        Self::Branch { target }
+    pub fn branch(target: Expression) -> Result<Self> {
+        target.sort().expect_bit_vector()?;
+        Ok(Self::Branch { target })
     }
 
     /// Create a new `Operation::ConditionalBranch`.
-    pub fn conditional_branch(condition: Expression, target: Expression) -> Self {
-        Self::ConditionalBranch { condition, target }
+    pub fn conditional_branch(condition: Expression, target: Expression) -> Result<Self> {
+        condition.sort().expect_boolean()?;
+        target.sort().expect_bit_vector()?;
+        Ok(Self::ConditionalBranch { condition, target })
     }
 
     /// Create a new `Operation::Barrier`
@@ -71,13 +80,15 @@ impl Operation {
     }
 
     /// Create a new `Operation::Assert`.
-    pub fn assert(condition: Expression) -> Self {
-        Self::Assert { condition }
+    pub fn assert(condition: Expression) -> Result<Self> {
+        condition.sort().expect_boolean()?;
+        Ok(Self::Assert { condition })
     }
 
     /// Create a new `Operation::Assume`.
-    pub fn assume(condition: Expression) -> Self {
-        Self::Assume { condition }
+    pub fn assume(condition: Expression) -> Result<Self> {
+        condition.sort().expect_boolean()?;
+        Ok(Self::Assume { condition })
     }
 
     /// Create a new `Operation::Observable`

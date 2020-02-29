@@ -26,14 +26,14 @@ fn replace_store_load_operation_with_assign(operation: &mut Operation) -> Result
             *operation = Operation::assign(
                 Memory::variable(),
                 Memory::store(Memory::variable().into(), address.clone(), expr.clone())?,
-            );
+            )?;
         }
         Operation::Load { variable, address } => {
             let bit_width = variable.sort().unwrap_bit_vector();
             *operation = Operation::assign(
                 variable.clone(),
                 Memory::load(bit_width, Memory::variable().into(), address.clone())?,
-            );
+            )?;
         }
         Operation::Parallel(operations) => {
             for operation in operations {

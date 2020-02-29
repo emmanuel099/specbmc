@@ -200,7 +200,7 @@ fn add_transient_execution_start(
             Predictor::variable().into(),
             BitVector::constant_u64(inst.address().unwrap_or_default(), 64), // FIXME bit-width
         )?;
-        transient_start.assign(spec_win(), spec_window);
+        transient_start.assign(spec_win(), spec_window)?;
 
         transient_start.index()
     };
@@ -373,7 +373,7 @@ fn append_spec_win_decrease_to_all_blocks(cfg: &mut ControlFlowGraph) -> Result<
                 spec_win().into(),
                 Integer::constant(count.try_into().unwrap()),
             )?,
-        );
+        )?;
     }
 
     Ok(())

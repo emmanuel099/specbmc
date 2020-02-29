@@ -1,5 +1,6 @@
 //! An `Instruction` holds an `Operation`.
-
+//!
+use crate::error::Result;
 use crate::expr::{Expression, Variable};
 use crate::hir::{Effect, Operation};
 use std::fmt;
@@ -22,28 +23,28 @@ impl Instruction {
     }
 
     /// Create a new `Assign` instruction.
-    pub fn assign(variable: Variable, expr: Expression) -> Self {
-        Self::new(Operation::assign(variable, expr))
+    pub fn assign(variable: Variable, expr: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::assign(variable, expr)?))
     }
 
     /// Create a new `Store` instruction.
-    pub fn store(address: Expression, expr: Expression) -> Self {
-        Self::new(Operation::store(address, expr))
+    pub fn store(address: Expression, expr: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::store(address, expr)?))
     }
 
     /// Create a new `Load` instruction.
-    pub fn load(variable: Variable, address: Expression) -> Self {
-        Self::new(Operation::load(variable, address))
+    pub fn load(variable: Variable, address: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::load(variable, address)?))
     }
 
     /// Create a new `Branch` instruction.
-    pub fn branch(target: Expression) -> Self {
-        Self::new(Operation::branch(target))
+    pub fn branch(target: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::branch(target)?))
     }
 
     /// Create a new `ConditionalBranch` instruction.
-    pub fn conditional_branch(condition: Expression, target: Expression) -> Self {
-        Self::new(Operation::conditional_branch(condition, target))
+    pub fn conditional_branch(condition: Expression, target: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::conditional_branch(condition, target)?))
     }
 
     /// Create a new `Barrier` instruction.
@@ -52,13 +53,13 @@ impl Instruction {
     }
 
     /// Create a new `Assert` instruction.
-    pub fn assert(condition: Expression) -> Self {
-        Self::new(Operation::assert(condition))
+    pub fn assert(condition: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::assert(condition)?))
     }
 
     /// Create a new `Assume` instruction.
-    pub fn assume(condition: Expression) -> Self {
-        Self::new(Operation::assume(condition))
+    pub fn assume(condition: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::assume(condition)?))
     }
 
     /// Create a new `Observable` instruction.

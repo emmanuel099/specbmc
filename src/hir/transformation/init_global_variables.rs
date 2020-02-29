@@ -11,7 +11,7 @@ pub fn init_global_variables(program: &mut Program) -> Result<()> {
 
     // Havoc all global variables
     for var in global_variables {
-        entry_block.assign(var.clone(), expr::Expression::nondet(var.sort().clone()));
+        entry_block.assign(var.clone(), expr::Expression::nondet(var.sort().clone()))?;
     }
 
     Ok(())
