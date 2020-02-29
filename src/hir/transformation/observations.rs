@@ -48,33 +48,33 @@ impl Observations {
         Ok(())
     }
 
-    fn observable_variables(&self) -> Vec<expr::Variable> {
+    fn observable_variables(&self) -> Vec<expr::Expression> {
         let mut variables = Vec::new();
 
         if self.cache_available {
-            variables.push(expr::Cache::variable());
+            variables.push(expr::Cache::variable().into());
         }
         if self.btb_available {
-            variables.push(expr::BranchTargetBuffer::variable());
+            variables.push(expr::BranchTargetBuffer::variable().into());
         }
         if self.pht_available {
-            variables.push(expr::PatternHistoryTable::variable());
+            variables.push(expr::PatternHistoryTable::variable().into());
         }
 
         variables
     }
 
-    fn observable_variables_nonspec(&self) -> Vec<expr::Variable> {
+    fn observable_variables_nonspec(&self) -> Vec<expr::Expression> {
         let mut variables = Vec::new();
 
         if self.cache_available {
-            variables.push(expr::Cache::variable_nonspec());
+            variables.push(expr::Cache::variable_nonspec().into());
         }
         if self.btb_available {
-            variables.push(expr::BranchTargetBuffer::variable_nonspec());
+            variables.push(expr::BranchTargetBuffer::variable_nonspec().into());
         }
         if self.pht_available {
-            variables.push(expr::PatternHistoryTable::variable_nonspec());
+            variables.push(expr::PatternHistoryTable::variable_nonspec().into());
         }
 
         variables

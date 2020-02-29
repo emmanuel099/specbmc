@@ -112,19 +112,19 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
         hir::Operation::Assume { condition } => {
             nodes.push(mir::Node::assume(condition.clone())?);
         }
-        hir::Operation::Observable { variables } => {
-            for variable in variables {
+        hir::Operation::Observable { exprs } => {
+            for expr in exprs {
                 nodes.push(mir::Node::assert_equal_in_self_composition(
                     vec![1, 2],
-                    variable.clone().into(),
+                    expr.clone(),
                 ));
             }
         }
-        hir::Operation::Indistinguishable { variables } => {
-            for variable in variables {
+        hir::Operation::Indistinguishable { exprs } => {
+            for expr in exprs {
                 nodes.push(mir::Node::assume_equal_in_self_composition(
                     vec![1, 2],
-                    variable.clone().into(),
+                    expr.clone(),
                 ));
             }
         }
