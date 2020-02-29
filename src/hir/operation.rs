@@ -27,8 +27,8 @@ pub enum Operation {
     },
     /// Speculation Barrier
     Barrier,
-    /// Adversary observes the listed variables.
-    Observe { variables: Vec<Variable> },
+    /// The listed variables are observable to an adversary.
+    Observable { variables: Vec<Variable> },
     /// The listed variables are indistinguishable for an adversary.
     Indistinguishable { variables: Vec<Variable> },
     /// Parallel operation, meaning that the nested operations happen in parallel.
@@ -66,9 +66,9 @@ impl Operation {
         Operation::Barrier
     }
 
-    /// Create a new `Operation::Observe`
-    pub fn observe(variables: Vec<Variable>) -> Operation {
-        Operation::Observe { variables }
+    /// Create a new `Operation::Observable`
+    pub fn observable(variables: Vec<Variable>) -> Operation {
+        Operation::Observable { variables }
     }
 
     /// Create a new `Operation::Indistinguishable`
@@ -122,9 +122,9 @@ impl Operation {
         }
     }
 
-    pub fn is_observe(&self) -> bool {
+    pub fn is_observable(&self) -> bool {
         match self {
-            Operation::Observe { .. } => true,
+            Operation::Observable { .. } => true,
             _ => false,
         }
     }
@@ -160,7 +160,7 @@ impl Operation {
                 .chain(target.variables().into_iter())
                 .collect(),
             Operation::Barrier => Vec::new(),
-            Operation::Observe { variables } | Operation::Indistinguishable { variables } => {
+            Operation::Observable { variables } | Operation::Indistinguishable { variables } => {
                 variables.iter().collect()
             }
             Operation::Parallel(operations) => operations
@@ -187,7 +187,7 @@ impl Operation {
                 .chain(target.variables_mut().into_iter())
                 .collect(),
             Operation::Barrier => Vec::new(),
-            Operation::Observe { variables } | Operation::Indistinguishable { variables } => {
+            Operation::Observable { variables } | Operation::Indistinguishable { variables } => {
                 variables.iter_mut().collect()
             }
             Operation::Parallel(operations) => operations
@@ -205,7 +205,7 @@ impl Operation {
             | Operation::Branch { .. }
             | Operation::ConditionalBranch { .. }
             | Operation::Barrier
-            | Operation::Observe { .. }
+            | Operation::Observable { .. }
             | Operation::Indistinguishable { .. } => Vec::new(),
             Operation::Parallel(operations) => operations
                 .iter()
@@ -222,7 +222,7 @@ impl Operation {
             | Operation::Branch { .. }
             | Operation::ConditionalBranch { .. }
             | Operation::Barrier
-            | Operation::Observe { .. }
+            | Operation::Observable { .. }
             | Operation::Indistinguishable { .. } => Vec::new(),
             Operation::Parallel(operations) => operations
                 .iter_mut()
@@ -243,8 +243,8 @@ impl fmt::Display for Operation {
                 write!(f, "branch {} if {}", target, condition)
             }
             Operation::Barrier => write!(f, "barrier"),
-            Operation::Observe { variables } => {
-                write!(f, "obs(")?;
+            Operation::Observable { variables } => {
+                write!(f, "observable(")?;
                 for var in variables {
                     write!(f, "{}, ", var)?;
                 }

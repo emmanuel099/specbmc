@@ -51,9 +51,9 @@ impl Instruction {
         Instruction::new(Operation::barrier())
     }
 
-    /// Create a new `Observe` instruction.
-    pub fn observe(variables: Vec<Variable>) -> Instruction {
-        Instruction::new(Operation::observe(variables))
+    /// Create a new `Observable` instruction.
+    pub fn observable(variables: Vec<Variable>) -> Instruction {
+        Instruction::new(Operation::observable(variables))
     }
 
     /// Create a new `Indistinguishable` instruction.
@@ -91,9 +91,9 @@ impl Instruction {
         self.operation.is_barrier()
     }
 
-    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Observe`
-    pub fn is_observe(&self) -> bool {
-        self.operation.is_observe()
+    /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Observable`
+    pub fn is_observable(&self) -> bool {
+        self.operation.is_observable()
     }
 
     /// Returns `true` if the `Operation` for this `Instruction` is `Operation::Indistinguishable`

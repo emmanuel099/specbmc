@@ -106,7 +106,7 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
         hir::Operation::Assign { variable, expr } => {
             nodes.push(mir::Node::new_let(variable.clone(), expr.clone())?);
         }
-        hir::Operation::Observe { variables } => {
+        hir::Operation::Observable { variables } => {
             for variable in variables {
                 nodes.push(mir::Node::new_assert_equal_in_self_composition(
                     vec![1, 2],

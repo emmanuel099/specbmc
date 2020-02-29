@@ -41,7 +41,7 @@ impl Observations {
         // Place an observe at the end of the program
         let exit_block = cfg.exit_block_mut().ok_or("CFG exit must be set")?;
         exit_block.indistinguishable(self.observable_variables_nonspec());
-        exit_block.observe(self.observable_variables());
+        exit_block.observable(self.observable_variables());
 
         // TODO add more obs if defined so
 
