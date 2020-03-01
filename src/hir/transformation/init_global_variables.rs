@@ -4,6 +4,7 @@ use crate::expr::{
     Variable,
 };
 use crate::hir::{analysis, Block, Program};
+use crate::util::Transform;
 use std::collections::HashSet;
 
 pub struct InitGlobalVariables {
@@ -49,20 +50,6 @@ impl InitGlobalVariables {
     pub fn with_nonspec_effects(&mut self, nonspec_effects: bool) -> &mut Self {
         self.nonspec_effects = nonspec_effects;
         self
-    }
-
-    pub fn transform(&self, program: &mut Program) -> Result<()> {
-        let global_variables = analysis::global_variables(&program);
-
-        let cfg = program.control_flow_graph_mut();
-        let entry_block = cfg.entry_block_mut().ok_or("CFG entry must be set")?;
-
-        self.init_memory(entry_block)?;
-        self.init_predictor(entry_block)?;
-        self.init_microarchitectual_components(entry_block)?;
-        self.init_registers(&global_variables, entry_block)?;
-
-        Ok(())
     }
 
     /// Havoc registers and make low-registers indistinguishable
@@ -139,6 +126,22 @@ impl InitGlobalVariables {
                 )?;
             }
         }
+
+        Ok(())
+    }
+}
+
+impl Transform<Program> for InitGlobalVariables {
+    fn transform(&self, program: &mut Program) -> Result<()> {
+        let global_variables = analysis::global_variables(&program);
+
+        let cfg = program.control_flow_graph_mut();
+        let entry_block = cfg.entry_block_mut().ok_or("CFG entry must be set")?;
+
+        self.init_memory(entry_block)?;
+        self.init_predictor(entry_block)?;
+        self.init_microarchitectual_components(entry_block)?;
+        self.init_registers(&global_variables, entry_block)?;
 
         Ok(())
     }

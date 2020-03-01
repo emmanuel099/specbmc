@@ -1,6 +1,7 @@
 use crate::error::Result;
 use crate::expr;
 use crate::hir::Program;
+use crate::util::Transform;
 
 pub struct Observations {
     cache_available: bool,
@@ -35,19 +36,6 @@ impl Observations {
         self
     }
 
-    pub fn add_observations(&self, program: &mut Program) -> Result<()> {
-        let cfg = program.control_flow_graph_mut();
-
-        // Place an observe at the end of the program
-        let exit_block = cfg.exit_block_mut().ok_or("CFG exit must be set")?;
-        exit_block.indistinguishable(self.observable_variables_nonspec());
-        exit_block.observable(self.observable_variables());
-
-        // TODO add more obs if defined so
-
-        Ok(())
-    }
-
     fn observable_variables(&self) -> Vec<expr::Expression> {
         let mut variables = Vec::new();
 
@@ -78,5 +66,20 @@ impl Observations {
         }
 
         variables
+    }
+}
+
+impl Transform<Program> for Observations {
+    fn transform(&self, program: &mut Program) -> Result<()> {
+        let cfg = program.control_flow_graph_mut();
+
+        // Place an observe at the end of the program
+        let exit_block = cfg.exit_block_mut().ok_or("CFG exit must be set")?;
+        exit_block.indistinguishable(self.observable_variables_nonspec());
+        exit_block.observable(self.observable_variables());
+
+        // TODO add more obs if defined so
+
+        Ok(())
     }
 }

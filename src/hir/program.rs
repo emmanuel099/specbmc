@@ -15,6 +15,10 @@ impl Program {
         &self.control_flow_graph
     }
 
+    pub fn set_control_flow_graph(&mut self, cfg: ControlFlowGraph) {
+        self.control_flow_graph = cfg
+    }
+
     pub fn control_flow_graph_mut(&mut self) -> &mut ControlFlowGraph {
         &mut self.control_flow_graph
     }

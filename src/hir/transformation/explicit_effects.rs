@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::expr;
 use crate::hir::{Effect, Instruction, Operation, Program};
+use crate::util::Transform;
 
 pub struct ExplicitEffects {
     nonspec_effects: bool,
@@ -18,8 +19,10 @@ impl ExplicitEffects {
         self.nonspec_effects = nonspec_effects;
         self
     }
+}
 
-    pub fn transform(&self, program: &mut Program) -> Result<()> {
+impl Transform<Program> for ExplicitEffects {
+    fn transform(&self, program: &mut Program) -> Result<()> {
         for block in program.control_flow_graph_mut().blocks_mut() {
             let additionally_encode_nonspec = self.nonspec_effects && !block.is_transient();
 

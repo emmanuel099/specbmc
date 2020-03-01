@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::expr::BitVector;
 use crate::hir::{Effect, Instruction, Operation, Program};
+use crate::util::Transform;
 
 pub struct InstructionEffects {
     cache_available: bool,
@@ -33,20 +34,6 @@ impl InstructionEffects {
     pub fn with_pattern_history_table(&mut self, available: bool) -> &mut Self {
         self.pht_available = available;
         self
-    }
-
-    pub fn add_effects(&self, program: &mut Program) -> Result<()> {
-        program
-            .control_flow_graph_mut()
-            .blocks_mut()
-            .iter_mut()
-            .for_each(|block| {
-                block.instructions_mut().iter_mut().for_each(|instruction| {
-                    let effects = self.instruction_effects(instruction);
-                    instruction.add_effects(&effects);
-                });
-            });
-        Ok(())
     }
 
     fn instruction_effects(&self, instruction: &Instruction) -> Vec<Effect> {
@@ -92,5 +79,22 @@ impl InstructionEffects {
         }
 
         effects
+    }
+}
+
+impl Transform<Program> for InstructionEffects {
+    fn transform(&self, program: &mut Program) -> Result<()> {
+        program
+            .control_flow_graph_mut()
+            .blocks_mut()
+            .iter_mut()
+            .for_each(|block| {
+                block.instructions_mut().iter_mut().for_each(|instruction| {
+                    let effects = self.instruction_effects(instruction);
+                    instruction.add_effects(&effects);
+                });
+            });
+
+        Ok(())
     }
 }

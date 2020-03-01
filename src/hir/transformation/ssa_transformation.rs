@@ -4,15 +4,26 @@ use crate::error::*;
 use crate::expr;
 use crate::hir::analysis;
 use crate::hir::{Block, ControlFlowGraph, Instruction, PhiNode, Program};
+use crate::util::Transform;
 use falcon::graph::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-/// Transform the HIR program into SSA form.
-pub fn ssa_transformation(program: &Program) -> Result<Program> {
-    let mut ssa_program = program.clone();
-    insert_phi_nodes(&mut ssa_program)?;
-    rename_variables(&mut ssa_program)?;
-    Ok(ssa_program)
+pub struct SSATransformation {}
+
+impl SSATransformation {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Transform<Program> for SSATransformation {
+    /// Transform the HIR program into SSA form.
+    fn transform(&self, program: &mut Program) -> Result<()> {
+        insert_phi_nodes(program)?;
+        rename_variables(program)?;
+
+        Ok(())
+    }
 }
 
 /// Inserts phi nodes where necessary.

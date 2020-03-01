@@ -7,3 +7,7 @@ pub trait SelfCompose {
 pub trait Validate {
     fn validate(&self) -> Result<()>;
 }
+
+pub trait Transform<T> {
+    fn transform(&self, program: &mut T) -> Result<()>;
+}

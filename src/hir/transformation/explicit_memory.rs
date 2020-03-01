@@ -1,6 +1,7 @@
 use crate::error::*;
 use crate::expr::Memory;
 use crate::hir::{Operation, Program};
+use crate::util::Transform;
 
 pub struct ExplicitMemory {}
 
@@ -8,8 +9,10 @@ impl ExplicitMemory {
     pub fn new() -> Self {
         Self {}
     }
+}
 
-    pub fn transform(&self, program: &mut Program) -> Result<()> {
+impl Transform<Program> for ExplicitMemory {
+    fn transform(&self, program: &mut Program) -> Result<()> {
         for block in program.control_flow_graph_mut().blocks_mut() {
             for instruction in block.instructions_mut() {
                 replace_store_load_operation_with_assign(instruction.operation_mut())?;

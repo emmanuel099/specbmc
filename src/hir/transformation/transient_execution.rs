@@ -1,6 +1,7 @@
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Expression, Integer, Predictor, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Instruction, Operation, Program};
+use crate::util::Transform;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 
@@ -31,37 +32,6 @@ impl TransientExecution {
     pub fn with_spectre_stl(&mut self, enabled: bool) -> &mut Self {
         self.spectre_stl = enabled;
         self
-    }
-
-    pub fn encode(&self, src_program: &Program) -> Result<Program> {
-        let (mut cfg, transient_start_rollback_points) =
-            self.build_default_cfg(src_program.control_flow_graph())?;
-
-        let (transient_cfg, transient_entry_points) =
-            self.build_transient_cfg(src_program.control_flow_graph())?;
-
-        let block_map = cfg.insert(&transient_cfg)?;
-
-        // Wire the default and transient CFG together.
-        for (inst_addr, (start, rollback)) in transient_start_rollback_points {
-            let transient_entry = block_map[transient_entry_points.get(&inst_addr).unwrap()];
-            let transient_resolve = block_map[&transient_cfg.exit().unwrap()];
-            cfg.unconditional_edge(start, transient_entry).unwrap();
-
-            // The rollback edge is conditional, because transient_resolve contains multiple outgoing rollback edges.
-            // Therefore, rollback for the current instruction should only be done if the transient execution was
-            // started by the current instruction.
-            let transient_exec = Expression::equal(
-                Predictor::transient_start(Predictor::variable().into())?,
-                BitVector::constant_u64(inst_addr, 64), // FIXME bit-width
-            )?;
-            cfg.conditional_edge(transient_resolve, rollback, transient_exec)
-                .unwrap();
-        }
-
-        cfg.remove_unreachable_blocks()?;
-
-        Ok(Program::new(cfg))
     }
 
     fn build_default_cfg(
@@ -169,6 +139,41 @@ impl TransientExecution {
         }
 
         Ok((transient_cfg, transient_entry_points))
+    }
+}
+
+impl Transform<Program> for TransientExecution {
+    fn transform(&self, program: &mut Program) -> Result<()> {
+        let (mut cfg, transient_start_rollback_points) =
+            self.build_default_cfg(program.control_flow_graph())?;
+
+        let (transient_cfg, transient_entry_points) =
+            self.build_transient_cfg(program.control_flow_graph())?;
+
+        let block_map = cfg.insert(&transient_cfg)?;
+
+        // Wire the default and transient CFG together.
+        for (inst_addr, (start, rollback)) in transient_start_rollback_points {
+            let transient_entry = block_map[transient_entry_points.get(&inst_addr).unwrap()];
+            let transient_resolve = block_map[&transient_cfg.exit().unwrap()];
+            cfg.unconditional_edge(start, transient_entry).unwrap();
+
+            // The rollback edge is conditional, because transient_resolve contains multiple outgoing rollback edges.
+            // Therefore, rollback for the current instruction should only be done if the transient execution was
+            // started by the current instruction.
+            let transient_exec = Expression::equal(
+                Predictor::transient_start(Predictor::variable().into())?,
+                BitVector::constant_u64(inst_addr, 64), // FIXME bit-width
+            )?;
+            cfg.conditional_edge(transient_resolve, rollback, transient_exec)
+                .unwrap();
+        }
+
+        cfg.remove_unreachable_blocks()?;
+
+        program.set_control_flow_graph(cfg);
+
+        Ok(())
     }
 }
 
