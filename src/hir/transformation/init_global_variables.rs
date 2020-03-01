@@ -1,3 +1,4 @@
+use crate::environment::{Environment, SecurityLevel};
 use crate::error::Result;
 use crate::expr::{
     BitVector, BranchTargetBuffer, Cache, Expression, Memory, PatternHistoryTable, Predictor, Sort,
@@ -11,7 +12,11 @@ pub struct InitGlobalVariables {
     cache_available: bool,
     btb_available: bool,
     pht_available: bool,
-    low_memory_addresses: Vec<u64>,
+    memory_default_low: bool,
+    low_memory_addresses: HashSet<u64>,
+    high_memory_addresses: HashSet<u64>,
+    registers_default_low: bool,
+    low_registers: HashSet<String>,
     high_registers: HashSet<String>,
 }
 
@@ -21,8 +26,29 @@ impl InitGlobalVariables {
             cache_available: false,
             btb_available: false,
             pht_available: false,
-            low_memory_addresses: Vec::new(),
+            memory_default_low: false,
+            low_memory_addresses: HashSet::new(),
+            high_memory_addresses: HashSet::new(),
+            registers_default_low: true,
+            low_registers: HashSet::new(),
             high_registers: HashSet::new(),
+        }
+    }
+
+    pub fn new_from_env(env: &Environment) -> Self {
+        let memory_policy = env.policy().memory();
+        let register_policy = env.policy().registers();
+
+        Self {
+            cache_available: env.architecture().cache(),
+            btb_available: env.architecture().branch_target_buffer(),
+            pht_available: env.architecture().pattern_history_table(),
+            memory_default_low: memory_policy.default_level() == SecurityLevel::Low,
+            low_memory_addresses: memory_policy.low().clone(),
+            high_memory_addresses: memory_policy.high().clone(),
+            registers_default_low: register_policy.default_level() == SecurityLevel::Low,
+            low_registers: register_policy.low().clone(),
+            high_registers: register_policy.high().clone(),
         }
     }
 
@@ -49,8 +75,14 @@ impl InitGlobalVariables {
         for reg in regs {
             entry_block.assign(reg.clone(), Expression::nondet(reg.sort().clone()))?;
 
-            if !self.high_registers.contains(reg.name()) {
-                entry_block.indistinguishable(vec![reg.clone().into()]);
+            if self.registers_default_low {
+                if !self.high_registers.contains(reg.name()) {
+                    entry_block.indistinguishable(vec![reg.clone().into()]);
+                }
+            } else {
+                if self.low_registers.contains(reg.name()) {
+                    entry_block.indistinguishable(vec![reg.clone().into()]);
+                }
             }
         }
 
@@ -61,12 +93,17 @@ impl InitGlobalVariables {
     fn init_memory(&self, entry_block: &mut Block) -> Result<()> {
         entry_block.assign(Memory::variable(), Expression::nondet(Sort::memory()))?;
 
-        for address in &self.low_memory_addresses {
-            entry_block.indistinguishable(vec![Memory::load(
-                8,
-                Memory::variable().into(),
-                BitVector::constant_u64(*address, 64),
-            )?]);
+        if self.memory_default_low {
+            println!("low addresses {:?}", self.high_memory_addresses); // TODO
+            unimplemented!();
+        } else {
+            for address in &self.low_memory_addresses {
+                entry_block.indistinguishable(vec![Memory::load(
+                    8,
+                    Memory::variable().into(),
+                    BitVector::constant_u64(*address, 64),
+                )?]);
+            }
         }
 
         Ok(())

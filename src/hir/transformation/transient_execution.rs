@@ -1,3 +1,4 @@
+use crate::environment::Environment;
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Expression, Integer, Predictor, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Instruction, Operation, Program};
@@ -15,6 +16,13 @@ impl TransientExecution {
         Self {
             spectre_pht: false,
             spectre_stl: false,
+        }
+    }
+
+    pub fn new_from_env(env: &Environment) -> Self {
+        Self {
+            spectre_pht: env.analysis().spectre_pht(),
+            spectre_stl: env.analysis().spectre_stl(),
         }
     }
 

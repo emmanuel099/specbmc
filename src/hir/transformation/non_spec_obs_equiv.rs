@@ -1,3 +1,4 @@
+use crate::environment::Environment;
 use crate::error::Result;
 use crate::expr::{BranchTargetBuffer, Cache, Expression, PatternHistoryTable, Sort, Variable};
 use crate::hir::transformation::explicit_effects::InstructionEffectEncoder;
@@ -16,6 +17,14 @@ impl NonSpecObsEquivalence {
             cache_available: false,
             btb_available: false,
             pht_available: false,
+        }
+    }
+
+    pub fn new_from_env(env: &Environment) -> Self {
+        Self {
+            cache_available: env.architecture().cache(),
+            btb_available: env.architecture().branch_target_buffer(),
+            pht_available: env.architecture().pattern_history_table(),
         }
     }
 

@@ -7,7 +7,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum OptimizationLevel {
     #[serde(rename = "none")]
     Disabled,
@@ -23,7 +23,7 @@ impl Default for OptimizationLevel {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Solver {
     #[serde(rename = "z3")]
     Z3,
@@ -39,7 +39,7 @@ impl Default for Solver {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Check {
     #[serde(rename = "transient_leaks")]
     TransientExecutionLeaks,
@@ -123,7 +123,7 @@ impl Default for Architecture {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum SecurityLevel {
     #[serde(rename = "low")]
     Low,
