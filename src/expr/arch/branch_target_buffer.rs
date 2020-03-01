@@ -22,10 +22,6 @@ impl BranchTargetBuffer {
         Variable::new("_btb", Sort::branch_target_buffer())
     }
 
-    pub fn variable_nonspec() -> Variable {
-        Variable::new("_btb_ns", Sort::branch_target_buffer())
-    }
-
     pub fn init() -> Result<Expression> {
         Ok(Expression::new(
             Self::Init.into(),

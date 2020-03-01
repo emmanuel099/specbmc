@@ -51,22 +51,6 @@ impl Observations {
 
         variables
     }
-
-    fn observable_variables_nonspec(&self) -> Vec<expr::Expression> {
-        let mut variables = Vec::new();
-
-        if self.cache_available {
-            variables.push(expr::Cache::variable_nonspec().into());
-        }
-        if self.btb_available {
-            variables.push(expr::BranchTargetBuffer::variable_nonspec().into());
-        }
-        if self.pht_available {
-            variables.push(expr::PatternHistoryTable::variable_nonspec().into());
-        }
-
-        variables
-    }
 }
 
 impl Transform<Program> for Observations {
@@ -75,7 +59,6 @@ impl Transform<Program> for Observations {
 
         // Place an observe at the end of the program
         let exit_block = cfg.exit_block_mut().ok_or("CFG exit must be set")?;
-        exit_block.indistinguishable(self.observable_variables_nonspec());
         exit_block.observable(self.observable_variables());
 
         // TODO add more obs if defined so

@@ -11,7 +11,6 @@ pub struct InitGlobalVariables {
     cache_available: bool,
     btb_available: bool,
     pht_available: bool,
-    nonspec_effects: bool,
     low_memory_addresses: Vec<u64>,
     high_registers: HashSet<String>,
 }
@@ -22,7 +21,6 @@ impl InitGlobalVariables {
             cache_available: false,
             btb_available: false,
             pht_available: false,
-            nonspec_effects: false,
             low_memory_addresses: Vec::new(),
             high_registers: HashSet::new(),
         }
@@ -43,12 +41,6 @@ impl InitGlobalVariables {
     /// Enable or disable Pattern History Table effects.
     pub fn with_pattern_history_table(&mut self, available: bool) -> &mut Self {
         self.pht_available = available;
-        self
-    }
-
-    /// Enable or disable non-speculative effects.
-    pub fn with_nonspec_effects(&mut self, nonspec_effects: bool) -> &mut Self {
-        self.nonspec_effects = nonspec_effects;
         self
     }
 
@@ -91,10 +83,6 @@ impl InitGlobalVariables {
         if self.cache_available {
             entry_block.assign(Cache::variable(), Expression::nondet(Sort::cache()))?;
             entry_block.indistinguishable(vec![Cache::variable().into()]);
-
-            if self.nonspec_effects {
-                entry_block.assign(Cache::variable_nonspec(), Cache::variable().into())?;
-            }
         }
 
         if self.btb_available {
@@ -103,13 +91,6 @@ impl InitGlobalVariables {
                 Expression::nondet(Sort::branch_target_buffer()),
             )?;
             entry_block.indistinguishable(vec![BranchTargetBuffer::variable().into()]);
-
-            if self.nonspec_effects {
-                entry_block.assign(
-                    BranchTargetBuffer::variable_nonspec(),
-                    BranchTargetBuffer::variable().into(),
-                )?;
-            }
         }
 
         if self.pht_available {
@@ -118,13 +99,6 @@ impl InitGlobalVariables {
                 Expression::nondet(Sort::pattern_history_table()),
             )?;
             entry_block.indistinguishable(vec![PatternHistoryTable::variable().into()]);
-
-            if self.nonspec_effects {
-                entry_block.assign(
-                    PatternHistoryTable::variable_nonspec(),
-                    PatternHistoryTable::variable().into(),
-                )?;
-            }
         }
 
         Ok(())
