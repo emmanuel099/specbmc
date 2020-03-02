@@ -254,6 +254,7 @@ fn enabled() -> bool {
 pub struct EnvironmentBuilder {
     file_path: Option<PathBuf>,
     optimization_level: Option<OptimizationLevel>,
+    check: Option<Check>,
     solver: Option<Solver>,
     debug: Option<bool>,
 }
@@ -266,6 +267,11 @@ impl EnvironmentBuilder {
 
     pub fn optimization_level(&mut self, level: OptimizationLevel) -> &mut Self {
         self.optimization_level = Some(level);
+        self
+    }
+
+    pub fn check(&mut self, check: Check) -> &mut Self {
+        self.check = Some(check);
         self
     }
 
@@ -291,6 +297,9 @@ impl EnvironmentBuilder {
 
         if let Some(optimization_level) = self.optimization_level {
             env.optimization_level = optimization_level;
+        }
+        if let Some(check) = self.check {
+            env.analysis.check = check;
         }
         if let Some(solver) = self.solver {
             env.solver = solver;

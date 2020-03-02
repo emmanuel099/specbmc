@@ -38,6 +38,15 @@ fn main() {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("check")
+                .short("c")
+                .long("check")
+                .value_name("TYPE")
+                .possible_values(&["all", "normal", "transient"])
+                .help("Sets the leak check type (overwrites env settings)")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("solver")
                 .long("solver")
                 .value_name("SOLVER")
@@ -118,6 +127,15 @@ fn build_environment(arguments: &ArgMatches) -> Result<environment::Environment>
             "basic" => OptimizationLevel::Basic,
             "full" => OptimizationLevel::Full,
             _ => panic!("unknown optimization level"),
+        });
+    }
+
+    if let Some(check) = arguments.value_of("check") {
+        env_builder.check(match check {
+            "all" => Check::AllLeaks,
+            "normal" => Check::OnlyNormalExecutionLeaks,
+            "transient" => Check::OnlyTransientExecutionLeaks,
+            _ => panic!("unknown check type"),
         });
     }
 
