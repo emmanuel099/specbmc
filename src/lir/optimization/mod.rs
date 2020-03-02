@@ -29,6 +29,13 @@ pub struct Optimizer {
 }
 
 impl Optimizer {
+    pub fn none() -> Self {
+        Self {
+            optimizations: Vec::new(),
+            repetitions: 0,
+        }
+    }
+
     pub fn basic() -> Self {
         Self {
             optimizations: vec![
