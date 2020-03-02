@@ -49,13 +49,13 @@ impl InstructionEffectEncoder {
             return Ok(());
         }
 
-        let mut operations = vec![instruction.operation().clone()];
+        let effect_operations = instruction
+            .effects()
+            .iter()
+            .map(|effect| self.encode_effect(effect))
+            .collect::<Result<Vec<Operation>>>()?;
 
-        for effect in instruction.effects() {
-            operations.push(self.encode_effect(effect)?);
-        }
-
-        *instruction.operation_mut() = Operation::parallel(operations);
+        instruction.add_operations(&effect_operations);
 
         Ok(())
     }

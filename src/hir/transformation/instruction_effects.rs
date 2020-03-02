@@ -48,44 +48,48 @@ impl InstructionEffects {
     fn instruction_effects(&self, instruction: &Instruction) -> Vec<Effect> {
         let mut effects = Vec::new();
 
-        match instruction.operation() {
-            Operation::Store { address, expr, .. } => {
-                if self.cache_available {
-                    let bit_width = expr.sort().unwrap_bit_vector();
-                    effects.push(Effect::cache_fetch(address.clone(), bit_width));
+        instruction
+            .operations()
+            .iter()
+            .for_each(|operation| match operation {
+                Operation::Store { address, expr, .. } => {
+                    if self.cache_available {
+                        let bit_width = expr.sort().unwrap_bit_vector();
+                        effects.push(Effect::cache_fetch(address.clone(), bit_width));
+                    }
                 }
-            }
-            Operation::Load {
-                variable, address, ..
-            } => {
-                if self.cache_available {
-                    let bit_width = variable.sort().unwrap_bit_vector();
-                    effects.push(Effect::cache_fetch(address.clone(), bit_width));
+                Operation::Load {
+                    variable, address, ..
+                } => {
+                    if self.cache_available {
+                        let bit_width = variable.sort().unwrap_bit_vector();
+                        effects.push(Effect::cache_fetch(address.clone(), bit_width));
+                    }
                 }
-            }
-            Operation::Branch { target } => {
-                if self.btb_available {
-                    let location =
-                        BitVector::constant_u64(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
-                    effects.push(Effect::branch_target(location, target.clone()));
+                Operation::Branch { target } => {
+                    if self.btb_available {
+                        let location =
+                            BitVector::constant_u64(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
+                        effects.push(Effect::branch_target(location, target.clone()));
+                    }
                 }
-            }
-            Operation::ConditionalBranch { condition, target } => {
-                if self.btb_available {
-                    let location =
-                        BitVector::constant_u64(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
-                    effects.push(
-                        Effect::branch_target(location, target.clone()).only_if(condition.clone()),
-                    );
+                Operation::ConditionalBranch { condition, target } => {
+                    if self.btb_available {
+                        let location =
+                            BitVector::constant_u64(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
+                        effects.push(
+                            Effect::branch_target(location, target.clone())
+                                .only_if(condition.clone()),
+                        );
+                    }
+                    if self.pht_available {
+                        let location =
+                            BitVector::constant_u64(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
+                        effects.push(Effect::branch_condition(location, condition.clone()));
+                    }
                 }
-                if self.pht_available {
-                    let location =
-                        BitVector::constant_u64(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
-                    effects.push(Effect::branch_condition(location, condition.clone()));
-                }
-            }
-            _ => (),
-        }
+                _ => (),
+            });
 
         effects
     }

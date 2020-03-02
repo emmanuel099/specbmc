@@ -89,11 +89,13 @@ fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Resul
     }
 
     for instruction in src_block.instructions() {
-        let mut nodes = translate_operation(instruction.operation())?;
-        nodes
-            .iter_mut()
-            .for_each(|node| node.set_address(instruction.address()));
-        block.append_nodes(&mut nodes);
+        for operation in instruction.operations() {
+            let mut nodes = translate_operation(operation)?;
+            nodes
+                .iter_mut()
+                .for_each(|node| node.set_address(instruction.address()));
+            block.append_nodes(&mut nodes);
+        }
     }
 
     Ok(block)
@@ -126,11 +128,6 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
                     vec![1, 2],
                     expr.clone(),
                 ));
-            }
-        }
-        hir::Operation::Parallel(operations) => {
-            for operation in operations {
-                nodes.append(&mut translate_operation(operation)?);
             }
         }
         hir::Operation::Store { .. } => {

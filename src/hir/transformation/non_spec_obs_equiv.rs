@@ -89,12 +89,14 @@ impl NonSpecObsEquivalence {
                 encoder.encode_effects(instruction)?;
 
                 // Nonspec equivalent observations
-                if let Operation::Observable { .. } = instruction.operation() {
-                    let mut operations = vec![instruction.operation().clone()];
-                    operations.push(Operation::indistinguishable(
+                if instruction
+                    .operations()
+                    .iter()
+                    .any(Operation::is_observable)
+                {
+                    instruction.add_operation(Operation::indistinguishable(
                         self.observable_variables_nonspec(),
                     ));
-                    *instruction.operation_mut() = Operation::parallel(operations);
                 }
             }
         }

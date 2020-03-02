@@ -36,8 +36,6 @@ pub enum Operation {
     Observable { exprs: Vec<Expression> },
     /// The listed expressions are indistinguishable for an adversary.
     Indistinguishable { exprs: Vec<Expression> },
-    /// The nested operations happen in parallel.
-    Parallel(Vec<Operation>),
 }
 
 impl Operation {
@@ -101,9 +99,74 @@ impl Operation {
         Self::Indistinguishable { exprs }
     }
 
-    /// Create a new `Operation::Parallel`
-    pub fn parallel(operations: Vec<Operation>) -> Self {
-        Self::Parallel(operations)
+    pub fn is_assign(&self) -> bool {
+        match self {
+            Self::Assign { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_store(&self) -> bool {
+        match self {
+            Self::Store { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_load(&self) -> bool {
+        match self {
+            Self::Load { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_branch(&self) -> bool {
+        match self {
+            Self::Branch { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_conditional_branch(&self) -> bool {
+        match self {
+            Self::ConditionalBranch { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_barrier(&self) -> bool {
+        match self {
+            Self::Barrier => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_assert(&self) -> bool {
+        match self {
+            Self::Assert { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_assume(&self) -> bool {
+        match self {
+            Self::Assume { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_observable(&self) -> bool {
+        match self {
+            Self::Observable { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_indistinguishable(&self) -> bool {
+        match self {
+            Self::Indistinguishable { .. } => true,
+            _ => false,
+        }
     }
 
     /// Get each `Variable` read by this `Operation`.
@@ -126,9 +189,6 @@ impl Operation {
             Self::Barrier => Vec::new(),
             Self::Observable { exprs } | Self::Indistinguishable { exprs } => {
                 exprs.iter().flat_map(|expr| expr.variables()).collect()
-            }
-            Self::Parallel(operations) => {
-                operations.iter().flat_map(Self::variables_read).collect()
             }
         }
     }
@@ -155,10 +215,6 @@ impl Operation {
                 .iter_mut()
                 .flat_map(|expr| expr.variables_mut())
                 .collect(),
-            Self::Parallel(operations) => operations
-                .iter_mut()
-                .flat_map(Self::variables_read_mut)
-                .collect(),
         }
     }
 
@@ -174,10 +230,6 @@ impl Operation {
             | Self::Assume { .. }
             | Self::Observable { .. }
             | Self::Indistinguishable { .. } => Vec::new(),
-            Self::Parallel(operations) => operations
-                .iter()
-                .flat_map(Self::variables_written)
-                .collect(),
         }
     }
 
@@ -193,10 +245,6 @@ impl Operation {
             | Self::Assume { .. }
             | Self::Observable { .. }
             | Self::Indistinguishable { .. } => Vec::new(),
-            Self::Parallel(operations) => operations
-                .iter_mut()
-                .flat_map(Self::variables_written_mut)
-                .collect(),
         }
     }
 }
@@ -233,15 +281,6 @@ impl fmt::Display for Operation {
                     }
                 }
                 write!(f, ")")
-            }
-            Self::Parallel(operations) => {
-                if !operations.is_empty() {
-                    write!(f, "{}", operations.first().unwrap())?;
-                    for operation in operations.iter().skip(1) {
-                        write!(f, " || {}", operation)?;
-                    }
-                }
-                Ok(())
             }
         }
     }
