@@ -22,7 +22,7 @@ impl Cache {
 
     pub fn fetch(bit_width: usize, cache: Expression, addr: Expression) -> Result<Expression> {
         cache.sort().expect_cache()?;
-        addr.sort().expect_bit_vector()?;
+        addr.sort().expect_word()?;
 
         Ok(Expression::new(
             Self::Fetch(bit_width).into(),

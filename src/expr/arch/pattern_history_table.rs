@@ -24,7 +24,7 @@ impl PatternHistoryTable {
 
     pub fn taken(pht: Expression, location: Expression) -> Result<Expression> {
         pht.sort().expect_pattern_history_table()?;
-        location.sort().expect_bit_vector()?;
+        location.sort().expect_word()?;
 
         Ok(Expression::new(
             Self::Taken.into(),
@@ -35,7 +35,7 @@ impl PatternHistoryTable {
 
     pub fn not_taken(pht: Expression, location: Expression) -> Result<Expression> {
         pht.sort().expect_pattern_history_table()?;
-        location.sort().expect_bit_vector()?;
+        location.sort().expect_word()?;
 
         Ok(Expression::new(
             Self::NotTaken.into(),

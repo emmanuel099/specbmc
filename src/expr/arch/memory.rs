@@ -24,7 +24,7 @@ impl Memory {
 
     pub fn load(bit_width: usize, memory: Expression, addr: Expression) -> Result<Expression> {
         memory.sort().expect_memory()?;
-        addr.sort().expect_bit_vector()?;
+        addr.sort().expect_word()?;
 
         Ok(Expression::new(
             Self::Load(bit_width).into(),
@@ -35,7 +35,7 @@ impl Memory {
 
     pub fn store(memory: Expression, addr: Expression, value: Expression) -> Result<Expression> {
         memory.sort().expect_memory()?;
-        addr.sort().expect_bit_vector()?;
+        addr.sort().expect_word()?;
         value.sort().expect_bit_vector()?;
 
         let bit_width = value.sort().unwrap_bit_vector();

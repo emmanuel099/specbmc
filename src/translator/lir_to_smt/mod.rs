@@ -9,14 +9,13 @@ use std::convert::TryInto;
 pub fn encode_program<T>(solver: &mut Solver<T>, program: &lir::Program) -> Result<()> {
     solver.set_custom_logic("QF_AUFBV")?;
 
-    let word_size = 64;
     let access_widths = vec![8, 16, 32, 64, 128];
 
-    define_predictor(solver, word_size)?;
-    define_memory(solver, word_size, &access_widths)?;
-    define_cache(solver, word_size, &access_widths)?;
-    define_btb(solver, word_size)?;
-    define_pht(solver, word_size)?;
+    define_predictor(solver)?;
+    define_memory(solver, &access_widths)?;
+    define_cache(solver, &access_widths)?;
+    define_btb(solver)?;
+    define_pht(solver)?;
 
     let mut assertions: Vec<expr::Expression> = Vec::new();
 
@@ -324,15 +323,9 @@ impl Sort2Smt for expr::Sort {
     }
 }
 
-fn define_memory<T>(
-    solver: &mut Solver<T>,
-    address_bits: usize,
-    access_widths: &[usize],
-) -> Result<()> {
-    let addr_sort = expr::Sort::bit_vector(address_bits);
-    let mem_array_sort = expr::Sort::array(&addr_sort, &expr::Sort::bit_vector(8));
-
+fn define_memory<T>(solver: &mut Solver<T>, access_widths: &[usize]) -> Result<()> {
     // memory type
+    let mem_array_sort = expr::Sort::array(&expr::Sort::word(), &expr::Sort::bit_vector(8));
     solver.define_null_sort(&expr::Sort::memory(), &mem_array_sort)?;
 
     // memory load functions
@@ -342,14 +335,14 @@ fn define_memory<T>(
             array_selects.push(expr::Array::select(
                 expr::Variable::new("mem", mem_array_sort.clone()).into(),
                 expr::BitVector::add(
-                    expr::Variable::new("addr", addr_sort.clone()).into(),
-                    expr::BitVector::constant_u64(byte.try_into().unwrap(), address_bits),
+                    expr::Variable::new("addr", expr::Sort::word()).into(),
+                    expr::BitVector::constant_u64(byte.try_into().unwrap(), environment::WORD_SIZE),
                 )?,
             )?);
         }
         solver.define_fun(
             &format!("mem-load{}", width),
-            &[("mem", expr::Sort::memory()), ("addr", addr_sort.clone())],
+            &[("mem", expr::Sort::memory()), ("addr", expr::Sort::word())],
             &expr::Sort::bit_vector(*width),
             &expr::BitVector::concat(&array_selects)?,
         )?;
@@ -364,8 +357,8 @@ fn define_memory<T>(
             store_expr = expr::Array::store(
                 store_expr,
                 expr::BitVector::add(
-                    expr::Variable::new("addr", addr_sort.clone()).into(),
-                    expr::BitVector::constant_u64(byte.try_into().unwrap(), address_bits),
+                    expr::Variable::new("addr", expr::Sort::word()).into(),
+                    expr::BitVector::constant_u64(byte.try_into().unwrap(), environment::WORD_SIZE),
                 )?,
                 expr::BitVector::extract(
                     bit_offset + 7,
@@ -378,7 +371,7 @@ fn define_memory<T>(
             &format!("mem-store{}", width),
             &[
                 ("mem", expr::Sort::memory()),
-                ("addr", addr_sort.clone()),
+                ("addr", expr::Sort::word()),
                 ("val", expr::Sort::bit_vector(*width)),
             ],
             &expr::Sort::memory(),
@@ -389,39 +382,33 @@ fn define_memory<T>(
     Ok(())
 }
 
-fn define_predictor<T>(solver: &mut Solver<T>, word_size: usize) -> Result<()> {
+fn define_predictor<T>(solver: &mut Solver<T>) -> Result<()> {
     solver.declare_sort(&expr::Sort::predictor(), 0)?;
 
     solver.declare_fun(
         "transient-start",
         &[expr::Sort::predictor()],
-        &expr::Sort::bit_vector(word_size),
+        &expr::Sort::word(),
     )?;
 
     solver.declare_fun(
         "mis-predict",
-        &[expr::Sort::predictor(), expr::Sort::bit_vector(word_size)],
+        &[expr::Sort::predictor(), expr::Sort::word()],
         &expr::Sort::boolean(),
     )?;
 
     solver.declare_fun(
         "speculation-window",
-        &[expr::Sort::predictor(), expr::Sort::bit_vector(word_size)],
+        &[expr::Sort::predictor(), expr::Sort::word()],
         &expr::Sort::bit_vector(environment::SPECULATION_WINDOW_SIZE),
     )?;
 
     Ok(())
 }
 
-fn define_cache<T>(
-    solver: &mut Solver<T>,
-    address_bits: usize,
-    access_widths: &[usize],
-) -> Result<()> {
-    let addr_sort = expr::Sort::bit_vector(address_bits);
-    let cache_set_sort = expr::Sort::array(&addr_sort, &expr::Sort::boolean());
-
+fn define_cache<T>(solver: &mut Solver<T>, access_widths: &[usize]) -> Result<()> {
     // cache type
+    let cache_set_sort = expr::Sort::array(&expr::Sort::word(), &expr::Sort::boolean());
     solver.define_null_sort(&expr::Sort::cache(), &cache_set_sort)?;
 
     // cache functions
@@ -432,15 +419,15 @@ fn define_cache<T>(
             insert_expr = expr::Array::store(
                 insert_expr,
                 expr::BitVector::add(
-                    expr::Variable::new("addr", addr_sort.clone()).into(),
-                    expr::BitVector::constant_u64(byte.try_into().unwrap(), address_bits),
+                    expr::Variable::new("addr", expr::Sort::word()).into(),
+                    expr::BitVector::constant_u64(byte.try_into().unwrap(), environment::WORD_SIZE),
                 )?,
                 expr::Boolean::constant(true),
             )?;
         }
         solver.define_fun(
             &format!("cache-fetch{}", width),
-            &[("cache", expr::Sort::cache()), ("addr", addr_sort.clone())],
+            &[("cache", expr::Sort::cache()), ("addr", expr::Sort::word())],
             &expr::Sort::cache(),
             &insert_expr,
         )?;
@@ -449,11 +436,9 @@ fn define_cache<T>(
     Ok(())
 }
 
-fn define_btb<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
-    let addr_sort = expr::Sort::bit_vector(address_bits);
-    let btb_array_sort = expr::Sort::array(&addr_sort, &addr_sort);
-
+fn define_btb<T>(solver: &mut Solver<T>) -> Result<()> {
     // btb type
+    let btb_array_sort = expr::Sort::array(&expr::Sort::word(), &expr::Sort::word());
     solver.define_null_sort(&expr::Sort::branch_target_buffer(), &btb_array_sort)?;
 
     // btb functions
@@ -461,27 +446,25 @@ fn define_btb<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
         "btb-track",
         &[
             ("btb", expr::Sort::branch_target_buffer()),
-            ("location", addr_sort.clone()),
-            ("target", addr_sort.clone()),
+            ("location", expr::Sort::word()),
+            ("target", expr::Sort::word()),
         ],
         &expr::Sort::branch_target_buffer(),
         &expr::Array::store(
             expr::Variable::new("btb", btb_array_sort).into(),
-            expr::Variable::new("location", addr_sort.clone()).into(),
-            expr::Variable::new("target", addr_sort).into(),
+            expr::Variable::new("location", expr::Sort::word()).into(),
+            expr::Variable::new("target", expr::Sort::word()).into(),
         )?,
     )?;
 
     Ok(())
 }
 
-fn define_pht<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
-    let addr_sort = expr::Sort::bit_vector(address_bits);
-
+fn define_pht<T>(solver: &mut Solver<T>) -> Result<()> {
     // pht type
     solver.define_null_sort(
         &expr::Sort::pattern_history_table(),
-        &expr::Sort::array(&addr_sort, &expr::Sort::boolean()),
+        &expr::Sort::array(&expr::Sort::word(), &expr::Sort::boolean()),
     )?;
 
     // pht functions
@@ -489,7 +472,7 @@ fn define_pht<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
         "pht-taken",
         &[
             ("pht", expr::Sort::pattern_history_table()),
-            ("location", addr_sort.clone()),
+            ("location", expr::Sort::word()),
         ],
         &expr::Sort::pattern_history_table(),
         "(store pht location true)",
@@ -499,7 +482,7 @@ fn define_pht<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
         "pht-not-taken",
         &[
             ("pht", expr::Sort::pattern_history_table()),
-            ("location", addr_sort),
+            ("location", expr::Sort::word()),
         ],
         &expr::Sort::pattern_history_table(),
         "(store pht location false)",

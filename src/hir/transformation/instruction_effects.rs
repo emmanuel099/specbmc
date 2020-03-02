@@ -1,4 +1,4 @@
-use crate::environment::Environment;
+use crate::environment::{Environment, WORD_SIZE};
 use crate::error::*;
 use crate::expr::BitVector;
 use crate::hir::{Effect, Instruction, Operation, Program};
@@ -68,23 +68,29 @@ impl InstructionEffects {
                 }
                 Operation::Branch { target } => {
                     if self.btb_available {
-                        let location =
-                            BitVector::constant_u64(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
+                        let location = BitVector::constant_u64(
+                            instruction.address().unwrap_or_default(),
+                            WORD_SIZE,
+                        );
                         effects.push(Effect::branch_target(location, target.clone()));
                     }
                 }
                 Operation::ConditionalBranch { condition, target } => {
                     if self.btb_available {
-                        let location =
-                            BitVector::constant_u64(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
+                        let location = BitVector::constant_u64(
+                            instruction.address().unwrap_or_default(),
+                            WORD_SIZE,
+                        );
                         effects.push(
                             Effect::branch_target(location, target.clone())
                                 .only_if(condition.clone()),
                         );
                     }
                     if self.pht_available {
-                        let location =
-                            BitVector::constant_u64(instruction.address().unwrap_or_default(), 64); // FIXME bit-width
+                        let location = BitVector::constant_u64(
+                            instruction.address().unwrap_or_default(),
+                            WORD_SIZE,
+                        );
                         effects.push(Effect::branch_condition(location, condition.clone()));
                     }
                 }

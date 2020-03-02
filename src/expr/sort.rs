@@ -1,3 +1,4 @@
+use crate::environment;
 use crate::error::Result;
 use std::fmt;
 
@@ -26,6 +27,10 @@ impl Sort {
 
     pub fn bit_vector(width: usize) -> Self {
         Self::BitVector(width)
+    }
+
+    pub fn word() -> Sort {
+        Self::bit_vector(environment::WORD_SIZE)
     }
 
     pub fn array(range: &Sort, domain: &Sort) -> Self {
@@ -72,6 +77,13 @@ impl Sort {
     pub fn is_bit_vector(&self) -> bool {
         match self {
             Sort::BitVector(..) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_word(&self) -> bool {
+        match self {
+            Sort::BitVector(environment::WORD_SIZE) => true,
             _ => false,
         }
     }
@@ -139,6 +151,14 @@ impl Sort {
             Ok(())
         } else {
             Err(format!("Expected BitVec but was {}", self).into())
+        }
+    }
+
+    pub fn expect_word(&self) -> Result<()> {
+        if self.is_word() {
+            Ok(())
+        } else {
+            Err(format!("Expected Word but was {}", self).into())
         }
     }
 

@@ -47,28 +47,28 @@ impl Operation {
 
     /// Create a new `Operation::Store`.
     pub fn store(address: Expression, expr: Expression) -> Result<Self> {
-        address.sort().expect_bit_vector()?;
+        address.sort().expect_word()?;
         expr.sort().expect_bit_vector()?;
         Ok(Self::Store { address, expr })
     }
 
     /// Create a new `Operation::Load`.
     pub fn load(variable: Variable, address: Expression) -> Result<Self> {
-        address.sort().expect_bit_vector()?;
+        address.sort().expect_word()?;
         variable.sort().expect_bit_vector()?;
         Ok(Self::Load { variable, address })
     }
 
     /// Create a new `Operation::Branch`.
     pub fn branch(target: Expression) -> Result<Self> {
-        target.sort().expect_bit_vector()?;
+        target.sort().expect_word()?;
         Ok(Self::Branch { target })
     }
 
     /// Create a new `Operation::ConditionalBranch`.
     pub fn conditional_branch(condition: Expression, target: Expression) -> Result<Self> {
         condition.sort().expect_boolean()?;
-        target.sort().expect_bit_vector()?;
+        target.sort().expect_word()?;
         Ok(Self::ConditionalBranch { condition, target })
     }
 

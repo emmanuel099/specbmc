@@ -8,6 +8,7 @@ use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
 pub const SPECULATION_WINDOW_SIZE: usize = 8;
+pub const WORD_SIZE: usize = 64;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum OptimizationLevel {

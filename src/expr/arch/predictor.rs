@@ -31,13 +31,13 @@ impl Predictor {
         Ok(Expression::new(
             Self::TransientStart.into(),
             vec![predictor],
-            Sort::bit_vector(64), // FIXME bit-width
+            Sort::word(),
         ))
     }
 
     pub fn mis_predict(predictor: Expression, program_location: Expression) -> Result<Expression> {
         predictor.sort().expect_predictor()?;
-        program_location.sort().expect_bit_vector()?;
+        program_location.sort().expect_word()?;
 
         Ok(Expression::new(
             Self::MisPredict.into(),
@@ -51,7 +51,7 @@ impl Predictor {
         program_location: Expression,
     ) -> Result<Expression> {
         predictor.sort().expect_predictor()?;
-        program_location.sort().expect_bit_vector()?;
+        program_location.sort().expect_word()?;
 
         Ok(Expression::new(
             Self::SpeculationWindow.into(),

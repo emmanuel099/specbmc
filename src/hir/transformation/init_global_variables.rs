@@ -1,4 +1,4 @@
-use crate::environment::{Environment, SecurityLevel};
+use crate::environment::{Environment, SecurityLevel, WORD_SIZE};
 use crate::error::Result;
 use crate::expr::{
     BitVector, BranchTargetBuffer, Cache, Expression, Memory, PatternHistoryTable, Predictor, Sort,
@@ -101,7 +101,7 @@ impl InitGlobalVariables {
                 entry_block.indistinguishable(vec![Memory::load(
                     8,
                     Memory::variable().into(),
-                    BitVector::constant_u64(*address, 64),
+                    BitVector::constant_u64(*address, WORD_SIZE),
                 )?]);
             }
         }

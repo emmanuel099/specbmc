@@ -1,4 +1,4 @@
-use crate::environment;
+use crate::environment::{Environment, SPECULATION_WINDOW_SIZE, WORD_SIZE};
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Expression, Predictor, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Instruction, Operation, Program};
@@ -19,7 +19,7 @@ impl TransientExecution {
         }
     }
 
-    pub fn new_from_env(env: &environment::Environment) -> Self {
+    pub fn new_from_env(env: &Environment) -> Self {
         Self {
             spectre_pht: env.analysis().spectre_pht(),
             spectre_stl: env.analysis().spectre_stl(),
@@ -179,7 +179,7 @@ impl Transform<Program> for TransientExecution {
             // started by the current instruction.
             let transient_exec = Expression::equal(
                 Predictor::transient_start(Predictor::variable().into())?,
-                BitVector::constant_u64(inst_addr, 64), // FIXME bit-width
+                BitVector::constant_u64(inst_addr, WORD_SIZE),
             )?;
             cfg.conditional_edge(transient_resolve, rollback, transient_exec)
                 .unwrap();
@@ -195,10 +195,7 @@ impl Transform<Program> for TransientExecution {
 
 /// Speculation-Window Variable
 fn spec_win() -> Variable {
-    Variable::new(
-        "_spec_win",
-        Sort::bit_vector(environment::SPECULATION_WINDOW_SIZE),
-    )
+    Variable::new("_spec_win", Sort::bit_vector(SPECULATION_WINDOW_SIZE))
 }
 
 /// For transient execution start/rollback split the given block into 2 blocks [head] and [tail],
@@ -222,7 +219,7 @@ fn add_transient_execution_start(
         // initial speculation window size
         let spec_window = Predictor::speculation_window(
             Predictor::variable().into(),
-            BitVector::constant_u64(inst.address().unwrap_or_default(), 64), // FIXME bit-width
+            BitVector::constant_u64(inst.address().unwrap_or_default(), WORD_SIZE),
         )?;
         transient_start.assign(spec_win(), spec_window)?;
 
@@ -231,7 +228,7 @@ fn add_transient_execution_start(
 
     let transient_exec = Expression::equal(
         Predictor::transient_start(Predictor::variable().into())?,
-        BitVector::constant_u64(inst.address().unwrap_or_default(), 64), // FIXME bit-width
+        BitVector::constant_u64(inst.address().unwrap_or_default(), WORD_SIZE),
     )?;
 
     let normal_exec = Boolean::not(transient_exec.clone())?;
@@ -266,7 +263,7 @@ fn transient_store(
 
     let mis_predicted = Predictor::mis_predict(
         Predictor::variable().into(),
-        BitVector::constant_u64(inst.address().unwrap_or_default(), 64), // FIXME bit-width
+        BitVector::constant_u64(inst.address().unwrap_or_default(), WORD_SIZE),
     )?;
 
     let correctly_predicted = Boolean::not(mis_predicted.clone())?;
@@ -301,7 +298,7 @@ fn transient_conditional_branch(
 
     let mis_predicted = Predictor::mis_predict(
         Predictor::variable().into(),
-        BitVector::constant_u64(inst.address().unwrap_or_default(), 64), // FIXME bit-width
+        BitVector::constant_u64(inst.address().unwrap_or_default(), WORD_SIZE),
     )?;
 
     let correctly_predicted = Boolean::not(mis_predicted.clone())?;
@@ -370,7 +367,7 @@ fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
         for inst_index in instruction_indices.iter().rev() {
             let tail_index = cfg.split_block_at(block_index, *inst_index)?;
 
-            let zero = BitVector::constant_u64(0, environment::SPECULATION_WINDOW_SIZE);
+            let zero = BitVector::constant_u64(0, SPECULATION_WINDOW_SIZE);
 
             let continue_execution = BitVector::sgt(spec_win().into(), zero.clone())?;
             cfg.conditional_edge(block_index, tail_index, continue_execution)?;
@@ -397,10 +394,7 @@ fn append_spec_win_decrease_to_all_blocks(cfg: &mut ControlFlowGraph) -> Result<
             spec_win(),
             BitVector::sub(
                 spec_win().into(),
-                BitVector::constant_u64(
-                    count.try_into().unwrap(),
-                    environment::SPECULATION_WINDOW_SIZE,
-                ),
+                BitVector::constant_u64(count.try_into().unwrap(), SPECULATION_WINDOW_SIZE),
             )?,
         )?;
     }

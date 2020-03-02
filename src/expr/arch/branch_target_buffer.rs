@@ -22,8 +22,8 @@ impl BranchTargetBuffer {
 
     pub fn track(btb: Expression, location: Expression, target: Expression) -> Result<Expression> {
         btb.sort().expect_branch_target_buffer()?;
-        location.sort().expect_bit_vector()?;
-        target.sort().expect_bit_vector()?;
+        location.sort().expect_word()?;
+        target.sort().expect_word()?;
 
         Ok(Expression::new(
             Self::Track.into(),
