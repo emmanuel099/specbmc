@@ -1,5 +1,4 @@
 use crate::expr::Sort;
-use crate::util::SelfCompose;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -66,18 +65,17 @@ impl Variable {
         };
         format!("{}{}{}", self.name, version_str, composition_str)
     }
+
+    /// Returns a copy of the variable with the composition number set to `composition`.
+    pub fn self_compose(&self, composition: usize) -> Self {
+        let mut var = self.clone();
+        var.set_composition(Some(composition));
+        var
+    }
 }
 
 impl fmt::Display for Variable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}:{}", self.identifier(), self.sort())
-    }
-}
-
-impl SelfCompose for Variable {
-    fn self_compose(&self, composition: usize) -> Self {
-        let mut var = self.clone();
-        var.set_composition(Some(composition));
-        var
     }
 }

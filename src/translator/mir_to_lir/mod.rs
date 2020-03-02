@@ -2,7 +2,6 @@ use crate::error::Result;
 use crate::expr;
 use crate::lir;
 use crate::mir;
-use crate::util::SelfCompose;
 use std::collections::BTreeSet;
 
 pub fn translate_program(mir_program: &mir::Program) -> Result<lir::Program> {

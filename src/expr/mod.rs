@@ -1,5 +1,4 @@
 use crate::error::Result;
-use crate::util::SelfCompose;
 use std::convert::TryFrom;
 use std::fmt;
 
@@ -210,6 +209,15 @@ impl Expression {
             _ => false,
         }
     }
+
+    /// Returns a copy of the expression with the composition number set to `composition` for all variables.
+    pub fn self_compose(&self, composition: usize) -> Self {
+        let mut expr = self.clone();
+        expr.variables_mut().iter_mut().for_each(|var| {
+            var.set_composition(Some(composition));
+        });
+        expr
+    }
 }
 
 impl From<Variable> for Expression {
@@ -274,15 +282,5 @@ impl fmt::Display for Expression {
             }
             write!(f, ")")
         }
-    }
-}
-
-impl SelfCompose for Expression {
-    fn self_compose(&self, composition: usize) -> Self {
-        let mut expr = self.clone();
-        expr.variables_mut().iter_mut().for_each(|var| {
-            var.set_composition(Some(composition));
-        });
-        expr
     }
 }
