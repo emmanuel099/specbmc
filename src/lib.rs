@@ -1,6 +1,9 @@
 extern crate falcon;
 #[macro_use]
 extern crate error_chain;
+extern crate colored;
+extern crate console;
+extern crate indicatif;
 extern crate num_bigint;
 extern crate num_traits;
 extern crate rsmt2;
