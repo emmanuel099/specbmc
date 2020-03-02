@@ -9,7 +9,7 @@ use std::convert::TryInto;
 pub fn encode_program<T>(solver: &mut Solver<T>, program: &lir::Program) -> Result<()> {
     solver.set_custom_logic("QF_AUFBV")?;
 
-    let access_widths = vec![8, 16, 32, 64, 128];
+    let access_widths = vec![8, 16, 32, 64, 128, 256, 512];
 
     define_predictor(solver)?;
     define_memory(solver, &access_widths)?;
