@@ -151,6 +151,10 @@ impl TransientExecution {
 }
 
 impl Transform<Program> for TransientExecution {
+    fn description(&self) -> &'static str {
+        "Add transient execution behavior"
+    }
+
     fn transform(&self, program: &mut Program) -> Result<()> {
         let (mut cfg, transient_start_rollback_points) =
             self.build_default_cfg(program.control_flow_graph())?;

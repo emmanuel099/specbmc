@@ -92,6 +92,10 @@ impl InstructionEffects {
 }
 
 impl Transform<Program> for InstructionEffects {
+    fn description(&self) -> &'static str {
+        "Add instruction effects"
+    }
+
     fn transform(&self, program: &mut Program) -> Result<()> {
         program
             .control_flow_graph_mut()

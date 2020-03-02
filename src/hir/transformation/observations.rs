@@ -63,6 +63,10 @@ impl Observations {
 }
 
 impl Transform<Program> for Observations {
+    fn description(&self) -> &'static str {
+        "Add observations"
+    }
+
     fn transform(&self, program: &mut Program) -> Result<()> {
         let cfg = program.control_flow_graph_mut();
 

@@ -143,6 +143,10 @@ impl InitGlobalVariables {
 }
 
 impl Transform<Program> for InitGlobalVariables {
+    fn description(&self) -> &'static str {
+        "Set up initial state"
+    }
+
     fn transform(&self, program: &mut Program) -> Result<()> {
         let global_variables = analysis::global_variables(&program);
 

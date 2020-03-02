@@ -12,6 +12,10 @@ impl ExplicitEffects {
 }
 
 impl Transform<Program> for ExplicitEffects {
+    fn description(&self) -> &'static str {
+        "Make instruction effects explicit"
+    }
+
     fn transform(&self, program: &mut Program) -> Result<()> {
         let encoder = InstructionEffectEncoder::new(
             expr::Cache::variable(),

@@ -17,6 +17,10 @@ impl SSATransformation {
 }
 
 impl Transform<Program> for SSATransformation {
+    fn description(&self) -> &'static str {
+        "Transform into static single assignment form"
+    }
+
     /// Transform the HIR program into SSA form.
     fn transform(&self, program: &mut Program) -> Result<()> {
         insert_phi_nodes(program)?;

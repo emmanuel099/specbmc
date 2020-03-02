@@ -12,6 +12,10 @@ impl ExplicitMemory {
 }
 
 impl Transform<Program> for ExplicitMemory {
+    fn description(&self) -> &'static str {
+        "Make memory accesses explicit"
+    }
+
     fn transform(&self, program: &mut Program) -> Result<()> {
         for block in program.control_flow_graph_mut().blocks_mut() {
             for instruction in block.instructions_mut() {

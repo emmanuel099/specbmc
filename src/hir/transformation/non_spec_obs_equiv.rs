@@ -116,6 +116,10 @@ fn pht_nonspec() -> Variable {
 }
 
 impl Transform<Program> for NonSpecObsEquivalence {
+    fn description(&self) -> &'static str {
+        "Add non-speculative observational equivalence constraints"
+    }
+
     fn transform(&self, program: &mut Program) -> Result<()> {
         self.encode_nonspec_equivalence(program)?;
 

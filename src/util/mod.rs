@@ -9,5 +9,9 @@ pub trait Validate {
 }
 
 pub trait Transform<T> {
+    /// Concise description of the transformation.
+    fn description(&self) -> &'static str;
+
+    /// Applies the transformation to `program`.
     fn transform(&self, program: &mut T) -> Result<()>;
 }
