@@ -1,5 +1,6 @@
 use crate::error::*;
 use crate::mir::{Block, Edge};
+use crate::util::RenderGraph;
 use falcon::graph::Graph;
 use std::fmt;
 
@@ -63,5 +64,11 @@ impl fmt::Display for BlockGraph {
             writeln!(f, "{}", block)?;
         }
         Ok(())
+    }
+}
+
+impl RenderGraph for BlockGraph {
+    fn render_to_str(&self) -> String {
+        self.graph().dot_graph()
     }
 }

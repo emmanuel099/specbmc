@@ -11,8 +11,7 @@ use rsmt2::Solver;
 use specbmc::environment;
 use specbmc::error::Result;
 use specbmc::translator;
-use specbmc::util::Transform;
-use specbmc::util::Validate;
+use specbmc::util::{RenderGraph, Transform, Validate};
 use specbmc::{hir, lir};
 use std::ffi::OsStr;
 use std::fs::File;
@@ -263,8 +262,20 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
     );
     let mut hir_program = translator::falcon_to_hir::translate_function(function)?;
 
+    if let Some(path) = arguments.value_of("cfg_file") {
+        hir_program
+            .control_flow_graph()
+            .render_to_file(Path::new(path))?;
+    }
+
     println!("{} Transforming HIR ...", style("[4/9]").bold().dim());
     hir_transformations(&env, &mut hir_program)?;
+
+    if let Some(path) = arguments.value_of("transient_cfg_file") {
+        hir_program
+            .control_flow_graph()
+            .render_to_file(Path::new(path))?;
+    }
 
     println!("{} Translating HIR to MIR", style("[5/9]").bold().dim());
     let mir_program = translator::hir_to_mir::translate_program(&hir_program)?;
@@ -283,8 +294,8 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
         environment::Solver::Yices2 => Solver::default_yices_2(parser)?,
     };
 
-    if let Some(file_path) = arguments.value_of("smt_file") {
-        let file = File::create(Path::new(file_path))?;
+    if let Some(path) = arguments.value_of("smt_file") {
+        let file = File::create(Path::new(path))?;
         solver.tee(file)?;
     }
 

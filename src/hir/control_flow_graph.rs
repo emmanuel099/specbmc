@@ -3,6 +3,7 @@
 use crate::error::Result;
 use crate::expr::Expression;
 use crate::hir::{Block, Edge};
+use crate::util::RenderGraph;
 use falcon::graph;
 use std::cmp;
 use std::collections::BTreeMap;
@@ -436,6 +437,12 @@ impl fmt::Display for ControlFlowGraph {
             writeln!(f, "edge {}", edge)?;
         }
         Ok(())
+    }
+}
+
+impl RenderGraph for ControlFlowGraph {
+    fn render_to_str(&self) -> String {
+        self.graph().dot_graph()
     }
 }
 
