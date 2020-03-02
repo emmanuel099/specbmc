@@ -253,7 +253,7 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
     let env = build_environment(arguments)?;
 
     if env.debug() {
-        println!("{}:\n{}", "Environment".bold(), style(&env).red().bold());
+        println!("{}:\n{}\n---", "Environment".bold(), style(&env).cyan());
     }
 
     println!("{} Loading file", style("[1/9]").bold().dim());
