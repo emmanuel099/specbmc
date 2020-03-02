@@ -1,6 +1,6 @@
-use crate::environment::Environment;
+use crate::environment;
 use crate::error::Result;
-use crate::expr::{BitVector, Boolean, Expression, Integer, Predictor, Sort, Variable};
+use crate::expr::{BitVector, Boolean, Expression, Predictor, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Instruction, Operation, Program};
 use crate::util::Transform;
 use std::collections::BTreeMap;
@@ -19,7 +19,7 @@ impl TransientExecution {
         }
     }
 
-    pub fn new_from_env(env: &Environment) -> Self {
+    pub fn new_from_env(env: &environment::Environment) -> Self {
         Self {
             spectre_pht: env.analysis().spectre_pht(),
             spectre_stl: env.analysis().spectre_stl(),
@@ -195,7 +195,10 @@ impl Transform<Program> for TransientExecution {
 
 /// Speculation-Window Variable
 fn spec_win() -> Variable {
-    Variable::new("_spec_win", Sort::Integer)
+    Variable::new(
+        "_spec_win",
+        Sort::bit_vector(environment::SPECULATION_WINDOW_SIZE),
+    )
 }
 
 /// For transient execution start/rollback split the given block into 2 blocks [head] and [tail],
@@ -367,10 +370,12 @@ fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
         for inst_index in instruction_indices.iter().rev() {
             let tail_index = cfg.split_block_at(block_index, *inst_index)?;
 
-            let continue_execution = Integer::gt(spec_win().into(), Integer::constant(0))?;
+            let zero = BitVector::constant_u64(0, environment::SPECULATION_WINDOW_SIZE);
+
+            let continue_execution = BitVector::sgt(spec_win().into(), zero.clone())?;
             cfg.conditional_edge(block_index, tail_index, continue_execution)?;
 
-            let resolve = Integer::lte(spec_win().into(), Integer::constant(0))?;
+            let resolve = BitVector::sle(spec_win().into(), zero)?;
             cfg.conditional_edge(block_index, resolve_block_index, resolve)?;
         }
     }
@@ -390,9 +395,12 @@ fn append_spec_win_decrease_to_all_blocks(cfg: &mut ControlFlowGraph) -> Result<
         let count = block.instruction_count_by_address();
         block.assign(
             spec_win(),
-            Integer::sub(
+            BitVector::sub(
                 spec_win().into(),
-                Integer::constant(count.try_into().unwrap()),
+                BitVector::constant_u64(
+                    count.try_into().unwrap(),
+                    environment::SPECULATION_WINDOW_SIZE,
+                ),
             )?,
         )?;
     }

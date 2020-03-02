@@ -1,3 +1,4 @@
+use crate::environment;
 use crate::error::Result;
 use crate::expr::{Expression, Sort, Variable};
 use std::fmt;
@@ -55,7 +56,7 @@ impl Predictor {
         Ok(Expression::new(
             Self::SpeculationWindow.into(),
             vec![predictor, program_location],
-            Sort::integer(),
+            Sort::bit_vector(environment::SPECULATION_WINDOW_SIZE),
         ))
     }
 }

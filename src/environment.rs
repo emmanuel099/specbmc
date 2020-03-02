@@ -7,6 +7,8 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
+pub const SPECULATION_WINDOW_SIZE: usize = 8;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum OptimizationLevel {
     #[serde(rename = "none")]

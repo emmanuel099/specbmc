@@ -1,3 +1,4 @@
+use crate::environment;
 use crate::error::Result;
 use crate::expr;
 use crate::lir;
@@ -6,6 +7,8 @@ use rsmt2::{SmtRes, Solver};
 use std::convert::TryInto;
 
 pub fn encode_program<T>(solver: &mut Solver<T>, program: &lir::Program) -> Result<()> {
+    solver.set_custom_logic("QF_AUFBV")?;
+
     let word_size = 64;
     let access_widths = vec![8, 16, 32, 64, 128];
 
@@ -404,7 +407,7 @@ fn define_predictor<T>(solver: &mut Solver<T>, word_size: usize) -> Result<()> {
     solver.declare_fun(
         "speculation-window",
         &[expr::Sort::predictor(), expr::Sort::bit_vector(word_size)],
-        &expr::Sort::integer(),
+        &expr::Sort::bit_vector(environment::SPECULATION_WINDOW_SIZE),
     )?;
 
     Ok(())
