@@ -473,17 +473,15 @@ fn define_btb<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
 }
 
 fn define_pht<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
-    // pht type
-    solver.declare_datatypes(&[("PhtEntry", 0, [""], ["Taken", "NotTaken"])])?;
+    let addr_sort = expr::Sort::bit_vector(address_bits);
 
+    // pht type
     solver.define_null_sort(
         &expr::Sort::pattern_history_table(),
-        &format!("(Array (_ BitVec {}) PhtEntry)", address_bits),
+        &expr::Sort::array(&addr_sort, &expr::Sort::boolean()),
     )?;
 
     // pht functions
-    let addr_sort = expr::Sort::bit_vector(address_bits);
-
     solver.define_fun(
         "pht-taken",
         &[
@@ -491,7 +489,7 @@ fn define_pht<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
             ("location", addr_sort.clone()),
         ],
         &expr::Sort::pattern_history_table(),
-        "(store pht location Taken)",
+        "(store pht location true)",
     )?;
 
     solver.define_fun(
@@ -501,7 +499,7 @@ fn define_pht<T>(solver: &mut Solver<T>, address_bits: usize) -> Result<()> {
             ("location", addr_sort),
         ],
         &expr::Sort::pattern_history_table(),
-        "(store pht location NotTaken)",
+        "(store pht location false)",
     )?;
 
     Ok(())
