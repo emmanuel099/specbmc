@@ -4,33 +4,23 @@ use crate::lir;
 use rsmt2::print::{Expr2Smt, Sort2Smt, Sym2Smt};
 use rsmt2::{SmtRes, Solver};
 use std::convert::TryInto;
-use std::fs::File;
-use std::path::Path;
 
-pub fn encode_program(program: &lir::Program, debug_file_path: Option<&Path>) -> Result<()> {
-    let parser = ();
-    let mut solver = Solver::default_z3(parser)?;
-
-    if let Some(path) = debug_file_path {
-        let file = File::create(path)?;
-        solver.tee(file)?;
-    }
-
+pub fn encode_program<T>(solver: &mut Solver<T>, program: &lir::Program) -> Result<()> {
     let word_size = 64;
     let access_widths = vec![8, 16, 32, 64, 128];
 
-    define_predictor(&mut solver, word_size)?;
-    define_memory(&mut solver, word_size, &access_widths)?;
-    define_cache(&mut solver, word_size, &access_widths)?;
-    define_btb(&mut solver, word_size)?;
-    define_pht(&mut solver, word_size)?;
+    define_predictor(solver, word_size)?;
+    define_memory(solver, word_size, &access_widths)?;
+    define_cache(solver, word_size, &access_widths)?;
+    define_btb(solver, word_size)?;
+    define_pht(solver, word_size)?;
 
     let mut assertions: Vec<expr::Expression> = Vec::new();
 
     // Declare let variables first to avoid ordering problems because of top-down parsing ...
     for node in program.nodes() {
         if let lir::Node::Let { var, .. } = node {
-            declare_variable(&mut solver, var)?;
+            declare_variable(solver, var)?;
         }
     }
 
@@ -46,7 +36,7 @@ pub fn encode_program(program: &lir::Program, debug_file_path: Option<&Path>) ->
             lir::Node::Assert { condition } => {
                 let name = format!("_assertion{}", assertions.len());
                 let assertion = expr::Variable::new(name, expr::Sort::boolean());
-                define_variable(&mut solver, &assertion, &condition)?;
+                define_variable(solver, &assertion, &condition)?;
                 assertions.push(assertion.into())
             }
             lir::Node::Assume { condition } => solver.assert(&condition)?,
