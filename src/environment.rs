@@ -41,17 +41,17 @@ impl Default for Solver {
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Check {
-    #[serde(rename = "transient_leaks")]
-    TransientExecutionLeaks,
-    #[serde(rename = "normal_leaks")]
-    NormalExecutionLeaks,
+    #[serde(rename = "only_transient_leaks")]
+    OnlyTransientExecutionLeaks,
+    #[serde(rename = "only_normal_leaks")]
+    OnlyNormalExecutionLeaks,
     #[serde(rename = "all_leaks")]
     AllLeaks,
 }
 
 impl Default for Check {
     fn default() -> Self {
-        Self::TransientExecutionLeaks
+        Self::OnlyTransientExecutionLeaks
     }
 }
 
