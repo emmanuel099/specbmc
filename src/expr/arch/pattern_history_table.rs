@@ -4,7 +4,6 @@ use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum PatternHistoryTable {
-    Init,
     Taken,
     NotTaken,
 }
@@ -12,7 +11,6 @@ pub enum PatternHistoryTable {
 impl fmt::Display for PatternHistoryTable {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Init => write!(f, "pht-init"),
             Self::Taken => write!(f, "pht-taken"),
             Self::NotTaken => write!(f, "pht-not-taken"),
         }
@@ -22,14 +20,6 @@ impl fmt::Display for PatternHistoryTable {
 impl PatternHistoryTable {
     pub fn variable() -> Variable {
         Variable::new("_pht", Sort::pattern_history_table())
-    }
-
-    pub fn init() -> Result<Expression> {
-        Ok(Expression::new(
-            Self::Init.into(),
-            vec![],
-            Sort::pattern_history_table(),
-        ))
     }
 
     pub fn taken(pht: Expression, location: Expression) -> Result<Expression> {
