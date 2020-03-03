@@ -14,6 +14,7 @@ pub mod environment;
 pub mod expr;
 pub mod hir;
 pub mod lir;
+pub mod loader;
 pub mod mir;
 pub mod translator;
 pub mod util;

@@ -4,16 +4,13 @@ use clap::{Arg, ArgMatches};
 use colored::*;
 use console::style;
 use console::Term;
-use falcon::il;
-use falcon::loader::{Elf, Loader};
-use falcon_muasm::loader::MuAsm;
 use rsmt2::Solver;
 use specbmc::environment;
 use specbmc::error::Result;
+use specbmc::loader;
 use specbmc::translator;
 use specbmc::util::{RenderGraph, Transform, Validate};
 use specbmc::{hir, lir};
-use std::ffi::OsStr;
 use std::fs::File;
 use std::path::Path;
 use std::process;
@@ -152,49 +149,6 @@ fn build_environment(arguments: &ArgMatches) -> Result<environment::Environment>
     env_builder.build()
 }
 
-fn load_file(file_path: &Path) -> Result<il::Program> {
-    match file_path.extension().map(OsStr::to_str).flatten() {
-        Some("muasm") => load_muasm_file(file_path),
-        _ => load_elf_file(file_path),
-    }
-}
-
-fn load_elf_file(file_path: &Path) -> Result<il::Program> {
-    let elf = Elf::from_file(file_path)?;
-    let result = elf.program_recursive_verbose();
-    match result {
-        Ok((program, lifting_errors)) => {
-            lifting_errors.iter().for_each(|(func, err)| {
-                println!(
-                    "Lifting {} failed with: {}",
-                    func.name().unwrap_or("unknown"),
-                    err
-                )
-            });
-            Ok(program)
-        }
-        Err(_) => Err("Failed to load ELF file!".into()),
-    }
-}
-
-fn load_muasm_file(file_path: &Path) -> Result<il::Program> {
-    let muasm = MuAsm::from_file(file_path)?;
-    let result = muasm.program_recursive_verbose();
-    match result {
-        Ok((program, lifting_errors)) => {
-            lifting_errors.iter().for_each(|(func, err)| {
-                println!(
-                    "Lifting {} failed with: {}",
-                    func.name().unwrap_or("unknown"),
-                    err
-                )
-            });
-            Ok(program)
-        }
-        Err(_) => Err("Failed to load MuAsm file!".into()),
-    }
-}
-
 fn hir_transformations(env: &environment::Environment, program: &mut hir::Program) -> Result<()> {
     use hir::transformation::*;
 
@@ -245,7 +199,7 @@ fn lir_optimize(env: &environment::Environment, program: &mut lir::Program) -> R
 }
 
 fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
-    let filename = Path::new(arguments.value_of("input_file").unwrap());
+    let input_file = arguments.value_of("input_file").unwrap();
 
     let env = build_environment(arguments)?;
 
@@ -253,29 +207,13 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
         println!("{}:\n{}\n---", "Environment".bold(), style(&env).cyan());
     }
 
-    println!("{} Loading file", style("[1/9]").bold().dim());
-    let program = load_file(filename)?;
-
-    let function = if let Some(name_or_id) = arguments.value_of("function") {
-        match name_or_id.trim().parse::<usize>() {
-            Ok(id) => program.function(id),
-            Err(_) => program.function_by_name(name_or_id),
-        }
-    } else {
-        unimplemented!();
-    }
-    .unwrap(); // FIXME
     println!(
-        "{} Selecting function '{}'",
-        style("[2/9]").bold().dim(),
-        function.name()
+        "{} Loading program '{}'",
+        style("[1/9]").bold().dim(),
+        input_file.yellow()
     );
-
-    println!(
-        "{} Translating Falcon IL to HIR",
-        style("[3/9]").bold().dim()
-    );
-    let mut hir_program = translator::falcon_to_hir::translate_function(function)?;
+    let mut hir_program =
+        loader::load_program(Path::new(input_file), arguments.value_of("function"))?;
 
     if let Some(path) = arguments.value_of("cfg_file") {
         hir_program
