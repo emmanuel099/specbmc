@@ -1,4 +1,4 @@
-use crate::environment::{Environment, SPECULATION_WINDOW_SIZE, WORD_SIZE};
+use crate::environment::{Environment, PredictorStrategy, SPECULATION_WINDOW_SIZE, WORD_SIZE};
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Expression, Predictor, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Instruction, Operation, Program};
@@ -9,6 +9,7 @@ use std::convert::TryInto;
 pub struct TransientExecution {
     spectre_pht: bool,
     spectre_stl: bool,
+    predictor_strategy: PredictorStrategy,
 }
 
 impl TransientExecution {
@@ -16,6 +17,7 @@ impl TransientExecution {
         Self {
             spectre_pht: false,
             spectre_stl: false,
+            predictor_strategy: PredictorStrategy::default(),
         }
     }
 
@@ -23,6 +25,7 @@ impl TransientExecution {
         Self {
             spectre_pht: env.analysis().spectre_pht(),
             spectre_stl: env.analysis().spectre_stl(),
+            predictor_strategy: env.analysis().predictor_strategy(),
         }
     }
 
@@ -39,6 +42,12 @@ impl TransientExecution {
     /// If enabled, speculative store-bypass will be encoded.
     pub fn with_spectre_stl(&mut self, enabled: bool) -> &mut Self {
         self.spectre_stl = enabled;
+        self
+    }
+
+    /// Set the predictor strategy.
+    pub fn with_predictor_strategy(&mut self, strategy: PredictorStrategy) -> &mut Self {
+        self.predictor_strategy = strategy;
         self
     }
 
@@ -130,6 +139,7 @@ impl TransientExecution {
                                     block.index(),
                                     inst_index,
                                     inst,
+                                    self.predictor_strategy,
                                 )?;
                             }
                         }
@@ -248,8 +258,8 @@ fn add_transient_execution_start(
 /// The `Store` instruction can speculatively be by-passed during transient execution.
 /// Therefore, split the given block into 3 blocks [head], [store] and [tail]
 /// and add the following three edges between them:
-///   - Conditional edge with "mis-predicted" from head to tail -> store by-pass
-///   - Conditional edge with "correctly predicted" from head to store -> store execute
+///   - Conditional edge with "speculate" from head to tail -> store by-pass
+///   - Conditional edge with "not speculate" from head to store -> store execute
 ///   - Unconditional edge from store to tail
 fn transient_store(
     cfg: &mut ControlFlowGraph,
@@ -261,18 +271,17 @@ fn transient_store(
     let store_index = cfg.split_block_at(head_index, inst_index)?;
     let tail_index = cfg.split_block_at(store_index, 1)?;
 
-    let mis_predicted = Predictor::mis_predict(
+    let bypass = Predictor::speculate(
         Predictor::variable().into(),
         BitVector::constant_u64(inst.address().unwrap_or_default(), WORD_SIZE),
     )?;
+    let execute = Boolean::not(bypass.clone())?;
 
-    let correctly_predicted = Boolean::not(mis_predicted.clone())?;
-
-    cfg.conditional_edge(head_index, tail_index, mis_predicted)?;
-    cfg.conditional_edge(head_index, store_index, correctly_predicted)?;
+    cfg.conditional_edge(head_index, tail_index, bypass)?;
+    cfg.conditional_edge(head_index, store_index, execute)?;
     cfg.unconditional_edge(store_index, tail_index)?;
 
-    // Transient execution will begin in tail (same as on mis-predict during transient execution).
+    // Transient execution will begin in tail (same as on bypass during transient execution).
     transient_entry_points.insert(inst.address().unwrap(), tail_index);
 
     Ok(())
@@ -280,41 +289,63 @@ fn transient_store(
 
 /// The `ConditionalBranch` instruction can be mis-predicted during transient execution.
 /// Therefore, split the given block into 2 blocks [head] and [branch],
-/// and additionally add a new block [mis_predict].
+/// and additionally add a new block [speculate].
 /// Then add the following edges between them:
-///   - Conditional edge with "mis-predicted" from head to mis_predict -> mis-predicted execution
+///   - Conditional edge with "speculate" from head to speculate -> speculative execution
 ///   - Conditional edge with "correctly predicted" from head to branch -> correct execution
-///   - Conditional edges from mis_predict to each successor of the branch instruction
-///     but with negated conditions
+///   - Conditional edges from speculate to each successor of the branch instruction,
+///     the conditions of these edges depend on the strategy in use
 fn transient_conditional_branch(
     cfg: &mut ControlFlowGraph,
     transient_entry_points: &mut BTreeMap<u64, usize>,
     head_index: usize,
     inst_index: usize,
     inst: &Instruction,
+    predictor_strategy: PredictorStrategy,
 ) -> Result<()> {
     let branch_index = cfg.split_block_at(head_index, inst_index)?;
-    let mis_predict_index = cfg.new_block()?.index();
+    let speculate_index = cfg.new_block()?.index();
 
-    let mis_predicted = Predictor::mis_predict(
+    let speculate = Predictor::speculate(
         Predictor::variable().into(),
         BitVector::constant_u64(inst.address().unwrap_or_default(), WORD_SIZE),
     )?;
+    let execute_correctly = Boolean::not(speculate.clone())?;
 
-    let correctly_predicted = Boolean::not(mis_predicted.clone())?;
+    cfg.conditional_edge(head_index, speculate_index, speculate)?;
+    cfg.conditional_edge(head_index, branch_index, execute_correctly)?;
 
-    cfg.conditional_edge(head_index, mis_predict_index, mis_predicted)?;
-    cfg.conditional_edge(head_index, branch_index, correctly_predicted)?;
+    match predictor_strategy {
+        PredictorStrategy::ChoosePath => {
+            // Add taken/not-taken edges from speculate to successors
+            if let &[not_taken_succ, taken_succ] = cfg.successor_indices(branch_index)?.as_slice() {
+                // TODO This assumes that the successors are always ordered like this.
+                //      Make this code order independent by checking the target instead.
 
-    // Add negated conditional edges from mis_predict to all branch successors
-    for successor in cfg.successor_indices(branch_index)? {
-        let edge = cfg.edge(branch_index, successor)?;
-        let negated_condition = Boolean::not(edge.condition().unwrap().clone())?;
-        cfg.conditional_edge(mis_predict_index, successor, negated_condition)?;
+                let taken = Predictor::taken(
+                    Predictor::variable().into(),
+                    BitVector::constant_u64(inst.address().unwrap_or_default(), WORD_SIZE),
+                )?;
+                let not_taken = Boolean::not(taken.clone())?;
+
+                cfg.conditional_edge(speculate_index, not_taken_succ, not_taken)?;
+                cfg.conditional_edge(speculate_index, taken_succ, taken)?;
+            } else {
+                return Err("Expected two successors for conditional branch".into());
+            }
+        }
+        PredictorStrategy::InvertCondition => {
+            // Add negated conditional edges from speculate to all branch successors
+            for successor in cfg.successor_indices(branch_index)? {
+                let edge = cfg.edge(branch_index, successor)?;
+                let negated_condition = Boolean::not(edge.condition().unwrap().clone())?;
+                cfg.conditional_edge(speculate_index, successor, negated_condition)?;
+            }
+        }
     }
 
-    // Transient execution will begin in mis_predict.
-    transient_entry_points.insert(inst.address().unwrap(), mis_predict_index);
+    // Transient execution will begin in speculate.
+    transient_entry_points.insert(inst.address().unwrap(), speculate_index);
 
     Ok(())
 }

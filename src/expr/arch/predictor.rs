@@ -6,16 +6,18 @@ use std::fmt;
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Predictor {
     TransientStart,
-    MisPredict,
     SpeculationWindow,
+    Speculate,
+    Taken,
 }
 
 impl fmt::Display for Predictor {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::TransientStart => write!(f, "transient-start"),
-            Self::MisPredict => write!(f, "mis-predict"),
             Self::SpeculationWindow => write!(f, "speculation-window"),
+            Self::Speculate => write!(f, "speculate"),
+            Self::Taken => write!(f, "taken"),
         }
     }
 }
@@ -35,17 +37,6 @@ impl Predictor {
         ))
     }
 
-    pub fn mis_predict(predictor: Expression, program_location: Expression) -> Result<Expression> {
-        predictor.sort().expect_predictor()?;
-        program_location.sort().expect_word()?;
-
-        Ok(Expression::new(
-            Self::MisPredict.into(),
-            vec![predictor, program_location],
-            Sort::boolean(),
-        ))
-    }
-
     pub fn speculation_window(
         predictor: Expression,
         program_location: Expression,
@@ -57,6 +48,28 @@ impl Predictor {
             Self::SpeculationWindow.into(),
             vec![predictor, program_location],
             Sort::bit_vector(environment::SPECULATION_WINDOW_SIZE),
+        ))
+    }
+
+    pub fn speculate(predictor: Expression, program_location: Expression) -> Result<Expression> {
+        predictor.sort().expect_predictor()?;
+        program_location.sort().expect_word()?;
+
+        Ok(Expression::new(
+            Self::Speculate.into(),
+            vec![predictor, program_location],
+            Sort::boolean(),
+        ))
+    }
+
+    pub fn taken(predictor: Expression, program_location: Expression) -> Result<Expression> {
+        predictor.sort().expect_predictor()?;
+        program_location.sort().expect_word()?;
+
+        Ok(Expression::new(
+            Self::Taken.into(),
+            vec![predictor, program_location],
+            Sort::boolean(),
         ))
     }
 }

@@ -58,6 +58,20 @@ impl Default for Check {
     }
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
+pub enum PredictorStrategy {
+    #[serde(rename = "choose_path")]
+    ChoosePath, // aka Taken/Not-Taken Predictor
+    #[serde(rename = "invert_condition")]
+    InvertCondition, // aka Mis-Predict Predictor
+}
+
+impl Default for PredictorStrategy {
+    fn default() -> Self {
+        Self::ChoosePath
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Analysis {
     #[serde(default = "enabled")]
@@ -66,6 +80,8 @@ pub struct Analysis {
     spectre_stl: bool,
     #[serde(default)]
     check: Check,
+    #[serde(default)]
+    predictor_strategy: PredictorStrategy,
 }
 
 impl Analysis {
@@ -80,6 +96,10 @@ impl Analysis {
     pub fn check(&self) -> Check {
         self.check
     }
+
+    pub fn predictor_strategy(&self) -> PredictorStrategy {
+        self.predictor_strategy
+    }
 }
 
 impl Default for Analysis {
@@ -88,6 +108,7 @@ impl Default for Analysis {
             spectre_pht: true,
             spectre_stl: false,
             check: Check::default(),
+            predictor_strategy: PredictorStrategy::default(),
         }
     }
 }

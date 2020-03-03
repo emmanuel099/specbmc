@@ -243,8 +243,9 @@ impl Expr2Smt<()> for expr::Predictor {
     {
         match self {
             Self::TransientStart => write!(w, "transient-start")?,
-            Self::MisPredict => write!(w, "mis-predict")?,
             Self::SpeculationWindow => write!(w, "speculation-window")?,
+            Self::Speculate => write!(w, "predictor-speculate")?,
+            Self::Taken => write!(w, "predictor-taken")?,
         };
         Ok(())
     }
@@ -392,15 +393,21 @@ fn define_predictor<T>(solver: &mut Solver<T>) -> Result<()> {
     )?;
 
     solver.declare_fun(
-        "mis-predict",
+        "speculation-window",
+        &[expr::Sort::predictor(), expr::Sort::word()],
+        &expr::Sort::bit_vector(environment::SPECULATION_WINDOW_SIZE),
+    )?;
+
+    solver.declare_fun(
+        "predictor-speculate",
         &[expr::Sort::predictor(), expr::Sort::word()],
         &expr::Sort::boolean(),
     )?;
 
     solver.declare_fun(
-        "speculation-window",
+        "predictor-taken",
         &[expr::Sort::predictor(), expr::Sort::word()],
-        &expr::Sort::bit_vector(environment::SPECULATION_WINDOW_SIZE),
+        &expr::Sort::boolean(),
     )?;
 
     Ok(())
