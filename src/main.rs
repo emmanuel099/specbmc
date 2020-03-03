@@ -110,8 +110,25 @@ fn build_environment(arguments: &ArgMatches) -> Result<environment::Environment>
 
     let mut env_builder = EnvironmentBuilder::default();
 
-    if let Some(file) = arguments.value_of("environment_file") {
-        env_builder.from_file(Path::new(file));
+    if let Some(file_path) = arguments.value_of("environment_file") {
+        // Load given environment file
+        let env_file = Path::new(file_path);
+        if !env_file.is_file() {
+            return Err(format!("Environment file '{}' does not exist", file_path).into());
+        }
+        env_builder.from_file(Path::new(env_file));
+    } else {
+        // Try to find a environment file for the current input
+        let input_file = Path::new(arguments.value_of("input_file").unwrap());
+        let env_file = input_file.with_extension("yaml");
+        if env_file.is_file() {
+            // Environment file exists, use it
+            println!(
+                "Using environment defined in '{}'",
+                style(&env_file.to_str().unwrap()).yellow()
+            );
+            env_builder.from_file(&env_file);
+        }
     }
 
     if let Some(level) = arguments.value_of("optimization_level") {
