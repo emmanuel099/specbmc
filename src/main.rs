@@ -78,24 +78,21 @@ fn main() {
                 .long("cfg")
                 .value_name("FILE")
                 .help("Prints the CFG into the file")
-                .takes_value(true)
-                .default_value("cfg.dot"),
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("transient_cfg_file")
                 .long("trans-cfg")
                 .value_name("FILE")
                 .help("Prints the CFG (with transient behavior) into the file")
-                .takes_value(true)
-                .default_value("cfg_trans.dot"),
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("smt_file")
                 .long("smt")
                 .value_name("FILE")
                 .help("Prints the SMT-2 formula into the file")
-                .takes_value(true)
-                .default_value("formula.smt"),
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("input_file")
