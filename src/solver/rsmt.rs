@@ -2,54 +2,102 @@ use crate::environment;
 use crate::error::Result;
 use crate::expr;
 use crate::lir;
+use crate::solver::{AssertionCheck, CheckResult, DumpFormula};
 use rsmt2::print::{Expr2Smt, Sort2Smt, Sym2Smt};
 use rsmt2::{SmtRes, Solver};
 use std::convert::TryInto;
+use std::fs::File;
+use std::path::Path;
 
-pub fn encode_program<T>(solver: &mut Solver<T>, program: &lir::Program) -> Result<()> {
-    solver.set_custom_logic("QF_AUFBV")?;
+pub struct RSMTSolver {
+    solver: rsmt2::Solver<Parser>,
+}
 
-    let access_widths = vec![8, 16, 32, 64, 128, 256, 512];
+impl RSMTSolver {
+    pub fn new_from_env(env: &environment::Environment) -> Result<Self> {
+        let parser = Parser::new();
+        let solver = match env.solver() {
+            environment::Solver::Z3 => Solver::default_z3(parser)?,
+            environment::Solver::CVC4 => Solver::default_cvc4(parser)?,
+            environment::Solver::Yices2 => Solver::default_yices_2(parser)?,
+        };
 
-    define_predictor(solver)?;
-    define_memory(solver, &access_widths)?;
-    define_cache(solver, &access_widths)?;
-    define_btb(solver)?;
-    define_pht(solver)?;
-
-    let mut assertions: Vec<expr::Expression> = Vec::new();
-
-    // Declare let variables first to avoid ordering problems because of top-down parsing ...
-    for node in program.nodes() {
-        if let lir::Node::Let { var, .. } = node {
-            declare_variable(solver, var)?;
-        }
+        Ok(Self { solver })
     }
+}
 
-    for node in program.nodes() {
-        match node {
-            lir::Node::Comment(text) => solver.comment(&text)?,
-            lir::Node::Let { var, expr } => {
-                if !expr.is_nondet() {
-                    let assignment = expr::Expression::equal(var.clone().into(), expr.clone())?;
-                    solver.assert(&assignment)?
+impl DumpFormula for RSMTSolver {
+    fn dump_formula_to_file(&mut self, path: &Path) -> Result<()> {
+        let file = File::create(Path::new(path))?;
+        Ok(self.solver.tee(file)?)
+    }
+}
+
+impl AssertionCheck for RSMTSolver {
+    fn encode_program(&mut self, program: &lir::Program) -> Result<()> {
+        self.solver.set_custom_logic("QF_AUFBV")?;
+
+        let access_widths = vec![8, 16, 32, 64, 128, 256, 512];
+
+        define_predictor(&mut self.solver)?;
+        define_memory(&mut self.solver, &access_widths)?;
+        define_cache(&mut self.solver, &access_widths)?;
+        define_btb(&mut self.solver)?;
+        define_pht(&mut self.solver)?;
+
+        let mut assertions: Vec<expr::Expression> = Vec::new();
+
+        // Declare let variables first to avoid ordering problems because of top-down parsing ...
+        for node in program.nodes() {
+            if let lir::Node::Let { var, .. } = node {
+                declare_variable(&mut self.solver, var)?;
+            }
+        }
+
+        for node in program.nodes() {
+            match node {
+                lir::Node::Comment(text) => self.solver.comment(&text)?,
+                lir::Node::Let { var, expr } => {
+                    if !expr.is_nondet() {
+                        let assignment = expr::Expression::equal(var.clone().into(), expr.clone())?;
+                        self.solver.assert(&assignment)?
+                    }
                 }
+                lir::Node::Assert { condition } => {
+                    let name = format!("_assertion{}", assertions.len());
+                    let assertion = expr::Variable::new(name, expr::Sort::boolean());
+                    define_variable(&mut self.solver, &assertion, &condition)?;
+                    assertions.push(assertion.into())
+                }
+                lir::Node::Assume { condition } => self.solver.assert(&condition)?,
             }
-            lir::Node::Assert { condition } => {
-                let name = format!("_assertion{}", assertions.len());
-                let assertion = expr::Variable::new(name, expr::Sort::boolean());
-                define_variable(solver, &assertion, &condition)?;
-                assertions.push(assertion.into())
-            }
-            lir::Node::Assume { condition } => solver.assert(&condition)?,
         }
+
+        self.solver
+            .assert(&expr::Boolean::not(expr::Boolean::conjunction(
+                &assertions,
+            )?)?)?;
+
+        Ok(())
     }
 
-    solver.assert(&expr::Boolean::not(expr::Boolean::conjunction(
-        &assertions,
-    )?)?)?;
+    fn check_assertions(&mut self) -> Result<CheckResult> {
+        let is_sat = self.solver.check_sat()?;
+        if is_sat {
+            Ok(CheckResult::AssertionViolated)
+        } else {
+            Ok(CheckResult::AssertionsHold)
+        }
+    }
+}
 
-    Ok(())
+#[derive(Clone, Copy)]
+struct Parser;
+
+impl Parser {
+    pub fn new() -> Self {
+        Self {}
+    }
 }
 
 fn declare_variable<T>(solver: &mut Solver<T>, variable: &expr::Variable) -> SmtRes<()> {

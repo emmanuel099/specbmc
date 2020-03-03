@@ -18,6 +18,7 @@ pub mod hir;
 pub mod lir;
 pub mod loader;
 pub mod mir;
+pub mod solver;
 pub mod translator;
 pub mod util;
 

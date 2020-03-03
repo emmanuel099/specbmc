@@ -4,14 +4,13 @@ use clap::{Arg, ArgMatches};
 use colored::*;
 use console::style;
 use console::Term;
-use rsmt2::Solver;
 use specbmc::environment;
 use specbmc::error::Result;
 use specbmc::loader;
+use specbmc::solver::*;
 use specbmc::translator;
 use specbmc::util::{RenderGraph, Transform, Validate};
 use specbmc::{hir, lir};
-use std::fs::File;
 use std::path::Path;
 use std::process;
 
@@ -253,37 +252,29 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
     let mut lir_program = translator::mir_to_lir::translate_program(&mir_program)?;
     lir_program.validate()?;
 
-    println!("{} Optimizing LIR ...", style("[7/9]").bold().dim());
+    println!("{} Optimizing LIR", style("[7/9]").bold().dim());
     lir_optimize(&env, &mut lir_program)?;
 
-    let parser = ();
-    let mut solver = match env.solver() {
-        environment::Solver::Z3 => Solver::default_z3(parser)?,
-        environment::Solver::CVC4 => Solver::default_cvc4(parser)?,
-        environment::Solver::Yices2 => Solver::default_yices_2(parser)?,
-    };
-
+    let mut solver = create_solver(&env)?;
     if let Some(path) = arguments.value_of("smt_file") {
-        let file = File::create(Path::new(path))?;
-        solver.tee(file)?;
+        solver.dump_formula_to_file(Path::new(path))?
     }
 
-    println!(
-        "{} Encoding LIR as SMT formula",
-        style("[8/9]").bold().dim()
-    );
-    translator::lir_to_smt::encode_program(&mut solver, &lir_program)?;
+    println!("{} Encoding LIR", style("[8/9]").bold().dim());
+    solver.encode_program(&lir_program)?;
 
     if arguments.is_present("skip_solving") {
-        solver.print_check_sat()?;
-    } else {
-        println!("{} Solving SMT formula ...", style("[9/9]").bold().dim());
-        let is_sat = solver.check_sat()?;
-        if is_sat {
+        return Ok(());
+    }
+
+    println!("{} Searching for leaks ...", style("[9/9]").bold().dim());
+    match solver.check_assertions()? {
+        CheckResult::AssertionsHold => {
+            println!("{}", "Program is safe.".bold().green());
+        }
+        CheckResult::AssertionViolated => {
             println!("{}", "Leak detected!".bold().red());
             process::exit(1);
-        } else {
-            println!("{}", "Program is safe.".bold().green());
         }
     }
 
