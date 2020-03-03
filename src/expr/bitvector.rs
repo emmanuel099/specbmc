@@ -335,7 +335,27 @@ impl BitVector {
         ))
     }
 
-    // TODO comp, rotateleft, rotateright
+    pub fn rotate_left(n: usize, expr: Expression) -> Result<Expression> {
+        expr.sort().expect_bit_vector()?;
+
+        let result_sort = expr.sort().clone();
+        Ok(Expression::new(
+            BitVector::RotateLeft(n).into(),
+            vec![expr],
+            result_sort,
+        ))
+    }
+
+    pub fn rotate_right(n: usize, expr: Expression) -> Result<Expression> {
+        expr.sort().expect_bit_vector()?;
+
+        let result_sort = expr.sort().clone();
+        Ok(Expression::new(
+            BitVector::RotateRight(n).into(),
+            vec![expr],
+            result_sort,
+        ))
+    }
 
     pub fn is_constant(&self) -> bool {
         match self {
