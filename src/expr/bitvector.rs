@@ -134,6 +134,17 @@ impl fmt::Display for BitVector {
     }
 }
 
+macro_rules! bv_unary {
+    ( $name:ident, $op:expr ) => {
+        pub fn $name(expr: Expression) -> Result<Expression> {
+            expr.sort().expect_bit_vector()?;
+
+            let result_sort = expr.sort().clone();
+            Ok(Expression::new($op.into(), vec![expr], result_sort))
+        }
+    };
+}
+
 macro_rules! bv_arith {
     ( $name:ident, $op:expr ) => {
         pub fn $name(lhs: Expression, rhs: Expression) -> Result<Expression> {
@@ -194,6 +205,9 @@ impl BitVector {
         let one = Self::constant_u64(1, bits);
         Expression::ite(expr, one, zero)
     }
+
+    bv_unary!(not, BitVector::Not);
+    bv_unary!(neg, BitVector::Neg);
 
     bv_arith!(and, BitVector::And);
     bv_arith!(or, BitVector::Or);
@@ -310,7 +324,7 @@ impl BitVector {
         ))
     }
 
-    // TODO not, neg, comp, repeat, rotateleft, rotateright
+    // TODO comp, repeat, rotateleft, rotateright
 
     pub fn is_constant(&self) -> bool {
         match self {
