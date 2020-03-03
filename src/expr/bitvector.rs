@@ -324,7 +324,18 @@ impl BitVector {
         ))
     }
 
-    // TODO comp, repeat, rotateleft, rotateright
+    pub fn repeat(n: usize, expr: Expression) -> Result<Expression> {
+        expr.sort().expect_bit_vector()?;
+        let width = expr.sort().unwrap_bit_vector();
+
+        Ok(Expression::new(
+            BitVector::Repeat(n).into(),
+            vec![expr],
+            Sort::bit_vector(width * n),
+        ))
+    }
+
+    // TODO comp, rotateleft, rotateright
 
     pub fn is_constant(&self) -> bool {
         match self {
