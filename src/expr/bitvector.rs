@@ -186,7 +186,8 @@ impl BitVector {
         Self::constant(Value::new(value, bits))
     }
 
-    pub fn constant_big_uint(value: BigUint, bits: usize) -> Expression {
+    pub fn constant_big_uint(value: BigUint) -> Expression {
+        let bits = value.bits();
         Self::constant(Value::new_big(value, bits))
     }
 
