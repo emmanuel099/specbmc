@@ -56,8 +56,7 @@ fn main() {
                 .long("func")
                 .value_name("NAME|ID")
                 .help("Sets the name/id of the function to be checked")
-                .takes_value(true)
-                .required(true),
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("debug")

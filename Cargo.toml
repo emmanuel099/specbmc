@@ -18,7 +18,7 @@ error-chain = "0.12"
 num-bigint = "0.2"
 num-traits = "0.2.1"
 falcon = { git = "https://github.com/emmanuel099/falcon" }
-falcon_muasm = { git = "https://github.com/emmanuel099/falcon-muasm" }
+muasm_parser = { git = "https://github.com/emmanuel099/muasm-parser" }
 rsmt2 = "0.11.0-beta.2"
 bit-vec = "0.6.1"
 serde = { version = "1.0.104", features = ["derive"] }

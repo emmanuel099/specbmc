@@ -4,6 +4,7 @@ extern crate error_chain;
 extern crate colored;
 extern crate console;
 extern crate indicatif;
+extern crate muasm_parser;
 extern crate num_bigint;
 extern crate num_traits;
 extern crate rsmt2;
