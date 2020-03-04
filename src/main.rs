@@ -20,7 +20,7 @@ fn main() {
                 .short("e")
                 .long("env")
                 .value_name("FILE")
-                .help("Sets the environment file to use")
+                .help("Sets environment file to use")
                 .takes_value(true),
         )
         .arg(
@@ -29,7 +29,7 @@ fn main() {
                 .long("opt")
                 .value_name("LEVEL")
                 .possible_values(&["none", "basic", "full"])
-                .help("Sets the optimization level (overwrites env settings)")
+                .help("Sets optimization level (overwrites env settings)")
                 .takes_value(true),
         )
         .arg(
@@ -38,7 +38,7 @@ fn main() {
                 .long("check")
                 .value_name("TYPE")
                 .possible_values(&["all", "normal", "transient"])
-                .help("Sets the leak check type (overwrites env settings)")
+                .help("Sets leak check type (overwrites env settings)")
                 .takes_value(true),
         )
         .arg(
@@ -46,21 +46,21 @@ fn main() {
                 .long("solver")
                 .value_name("SOLVER")
                 .possible_values(&["z3", "cvc4", "yices2"])
-                .help("Sets the solver to use (overwrites env settings)")
+                .help("Sets solver to use (overwrites env settings)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("function")
                 .long("func")
                 .value_name("NAME|ID")
-                .help("Sets the name/id of the function to be checked")
+                .help("Sets name/id of the function to be checked")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("debug")
                 .short("d")
                 .long("debug")
-                .help("Enables the debug mode"),
+                .help("Enables debug mode"),
         )
         .arg(
             Arg::with_name("skip_solving")
@@ -71,21 +71,21 @@ fn main() {
             Arg::with_name("cfg_file")
                 .long("cfg")
                 .value_name("FILE")
-                .help("Prints the CFG into the file")
+                .help("Prints CFG into the file")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("transient_cfg_file")
                 .long("trans-cfg")
                 .value_name("FILE")
-                .help("Prints the CFG (with transient behavior) into the file")
+                .help("Prints CFG (with transient behavior) into the file")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("smt_file")
                 .long("smt")
                 .value_name("FILE")
-                .help("Prints the SMT-2 formula into the file")
+                .help("Prints SMT-2 formula into the file")
                 .takes_value(true),
         )
         .arg(
