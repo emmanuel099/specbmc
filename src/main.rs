@@ -82,6 +82,13 @@ fn main() {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("mir_file")
+                .long("mir")
+                .value_name("FILE")
+                .help("Prints MIR program into the file (DOT)")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("lir_file")
                 .long("lir")
                 .value_name("FILE")
@@ -253,6 +260,10 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
 
     println!("{} Translating into MIR", style("[5/9]").bold().dim());
     let mir_program = mir::Program::from(&hir_program)?;
+
+    if let Some(path) = arguments.value_of("mir_file") {
+        mir_program.block_graph().render_to_file(Path::new(path))?;
+    }
 
     println!("{} Translating into LIR", style("[6/9]").bold().dim());
     let mut lir_program = lir::Program::from(&mir_program)?;
