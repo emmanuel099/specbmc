@@ -8,7 +8,7 @@ use specbmc::environment;
 use specbmc::error::Result;
 use specbmc::loader;
 use specbmc::solver::*;
-use specbmc::util::{RenderGraph, Transform, Validate};
+use specbmc::util::{DumpToFile, RenderGraph, Transform, Validate};
 use specbmc::{hir, lir, mir};
 use std::path::Path;
 use std::process;
@@ -79,6 +79,13 @@ fn main() {
                 .long("trans-cfg")
                 .value_name("FILE")
                 .help("Prints CFG (with transient behavior) into the file")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("lir_file")
+                .long("lir")
+                .value_name("FILE")
+                .help("Prints LIR program into the file")
                 .takes_value(true),
         )
         .arg(
@@ -253,6 +260,10 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
 
     println!("{} Optimizing LIR", style("[7/9]").bold().dim());
     lir_optimize(&env, &mut lir_program)?;
+
+    if let Some(path) = arguments.value_of("lir_file") {
+        lir_program.dump_to_file(Path::new(path))?;
+    }
 
     let mut solver = create_solver(&env)?;
     if let Some(path) = arguments.value_of("smt_file") {
