@@ -29,7 +29,7 @@ fn main() {
                 .long("opt")
                 .value_name("LEVEL")
                 .possible_values(&["none", "basic", "full"])
-                .help("Sets optimization level (overwrites env settings)")
+                .help("Sets optimization level (overwrites environment)")
                 .takes_value(true),
         )
         .arg(
@@ -38,7 +38,7 @@ fn main() {
                 .long("check")
                 .value_name("TYPE")
                 .possible_values(&["all", "normal", "transient"])
-                .help("Sets leak check type (overwrites env settings)")
+                .help("Sets leak check type (overwrites environment)")
                 .takes_value(true),
         )
         .arg(
@@ -46,7 +46,7 @@ fn main() {
                 .long("solver")
                 .value_name("SOLVER")
                 .possible_values(&["z3", "cvc4", "yices2"])
-                .help("Sets solver to use (overwrites env settings)")
+                .help("Sets solver to use (overwrites environment)")
                 .takes_value(true),
         )
         .arg(
