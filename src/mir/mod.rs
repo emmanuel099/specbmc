@@ -6,6 +6,7 @@ mod edge;
 mod node;
 mod operation;
 mod program;
+mod translation;
 
 pub use self::block::Block;
 pub use self::block_graph::BlockGraph;

@@ -2,11 +2,14 @@ use crate::error::Result;
 use crate::expr;
 use crate::hir;
 use crate::mir;
+use crate::util::TranslateInto;
 
-pub fn translate_program(program: &hir::Program) -> Result<mir::Program> {
-    let block_graph = translate_control_flow_graph(program.control_flow_graph())?;
+impl TranslateInto<mir::Program> for hir::Program {
+    fn translate_into(&self) -> Result<mir::Program> {
+        let block_graph = translate_control_flow_graph(self.control_flow_graph())?;
 
-    Ok(mir::Program::new(block_graph))
+        Ok(mir::Program::new(block_graph))
+    }
 }
 
 fn translate_control_flow_graph(cfg: &hir::ControlFlowGraph) -> Result<mir::BlockGraph> {

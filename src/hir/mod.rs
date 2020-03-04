@@ -10,6 +10,7 @@ mod operation;
 mod phi_node;
 mod program;
 pub mod transformation;
+mod translation;
 
 pub use self::block::Block;
 pub use self::control_flow_graph::ControlFlowGraph;

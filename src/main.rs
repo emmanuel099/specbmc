@@ -8,9 +8,8 @@ use specbmc::environment;
 use specbmc::error::Result;
 use specbmc::loader;
 use specbmc::solver::*;
-use specbmc::translator;
 use specbmc::util::{RenderGraph, Transform, Validate};
-use specbmc::{hir, lir};
+use specbmc::{hir, lir, mir};
 use std::path::Path;
 use std::process;
 
@@ -245,11 +244,11 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
             .render_to_file(Path::new(path))?;
     }
 
-    println!("{} Translating HIR to MIR", style("[5/9]").bold().dim());
-    let mir_program = translator::hir_to_mir::translate_program(&hir_program)?;
+    println!("{} Translating into MIR", style("[5/9]").bold().dim());
+    let mir_program = mir::Program::from(&hir_program)?;
 
-    println!("{} Translating MIR to LIR", style("[6/9]").bold().dim());
-    let mut lir_program = translator::mir_to_lir::translate_program(&mir_program)?;
+    println!("{} Translating into LIR", style("[6/9]").bold().dim());
+    let mut lir_program = lir::Program::from(&mir_program)?;
     lir_program.validate()?;
 
     println!("{} Optimizing LIR", style("[7/9]").bold().dim());

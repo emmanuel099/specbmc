@@ -15,6 +15,10 @@ pub trait Transform<T> {
     fn transform(&self, program: &mut T) -> Result<()>;
 }
 
+pub trait TranslateInto<T> {
+    fn translate_into(&self) -> Result<T>;
+}
+
 pub trait RenderGraph {
     fn render_to_str(&self) -> String;
 

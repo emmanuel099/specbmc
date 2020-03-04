@@ -2,18 +2,21 @@ use crate::error::Result;
 use crate::expr;
 use crate::lir;
 use crate::mir;
+use crate::util::TranslateInto;
 use std::collections::BTreeSet;
 
-pub fn translate_program(mir_program: &mir::Program) -> Result<lir::Program> {
-    let mut lir_program = lir::Program::new();
+impl TranslateInto<lir::Program> for mir::Program {
+    fn translate_into(&self) -> Result<lir::Program> {
+        let mut program = lir::Program::new();
 
-    for composition in required_compositions(mir_program) {
-        translate_program_composition(&mut lir_program, mir_program, composition)?;
+        for composition in required_compositions(self) {
+            translate_program_composition(&mut program, self, composition)?;
+        }
+
+        add_self_composition_constraints(&mut program, self)?;
+
+        Ok(program)
     }
-
-    add_self_composition_constraints(&mut lir_program, mir_program)?;
-
-    Ok(lir_program)
 }
 
 fn translate_program_composition(
