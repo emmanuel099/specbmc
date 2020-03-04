@@ -71,28 +71,28 @@ fn main() {
             Arg::with_name("cfg_file")
                 .long("cfg")
                 .value_name("FILE")
-                .help("Prints CFG into the file")
+                .help("Prints CFG into the file (DOT)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("transient_cfg_file")
                 .long("trans-cfg")
                 .value_name("FILE")
-                .help("Prints CFG (with transient behavior) into the file")
+                .help("Prints CFG (with transient behavior) into the file (DOT)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("lir_file")
                 .long("lir")
                 .value_name("FILE")
-                .help("Prints LIR program into the file")
+                .help("Prints LIR program into the file (plain text)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("smt_file")
                 .long("smt")
                 .value_name("FILE")
-                .help("Prints SMT-2 formula into the file")
+                .help("Prints SMT-2 formula into the file (plain text)")
                 .takes_value(true),
         )
         .arg(
