@@ -245,6 +245,92 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
             }
             _ => None,
         },
+        (BitVector::UGe, [lhs, rhs]) => {
+            if lhs == rhs {
+                // a >=u a -> true
+                Some(Boolean::constant(true))
+            } else {
+                match (lhs.operator(), rhs.operator()) {
+                    (_, Operator::BitVector(BitVector::Constant(c))) => {
+                        if c.is_zero() {
+                            // a >=u 0 -> true
+                            Some(Boolean::constant(true))
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
+                }
+            }
+        }
+        (BitVector::UGt, [lhs, rhs]) => {
+            if lhs == rhs {
+                // a >u a -> false
+                Some(Boolean::constant(false))
+            } else {
+                match (lhs.operator(), rhs.operator()) {
+                    (Operator::BitVector(BitVector::Constant(c)), _) => {
+                        if c.is_zero() {
+                            // 0 >u a -> false
+                            Some(Boolean::constant(false))
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
+                }
+            }
+        }
+        (BitVector::ULe, [lhs, rhs]) => {
+            if lhs == rhs {
+                // a <=u a -> true
+                Some(Boolean::constant(true))
+            } else {
+                match (lhs.operator(), rhs.operator()) {
+                    (Operator::BitVector(BitVector::Constant(c)), _) => {
+                        if c.is_zero() {
+                            // 0 <=u a -> true
+                            Some(Boolean::constant(true))
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
+                }
+            }
+        }
+        (BitVector::ULt, [lhs, rhs]) => {
+            if lhs == rhs {
+                // a <u a -> false
+                Some(Boolean::constant(false))
+            } else {
+                match (lhs.operator(), rhs.operator()) {
+                    (_, Operator::BitVector(BitVector::Constant(c))) => {
+                        if c.is_zero() {
+                            // a <u 0 -> false
+                            Some(Boolean::constant(false))
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
+                }
+            }
+        }
+        (BitVector::SGe, [lhs, rhs]) | (BitVector::SLe, [lhs, rhs]) => {
+            if lhs == rhs {
+                Some(Boolean::constant(true))
+            } else {
+                None
+            }
+        }
+        (BitVector::SGt, [lhs, rhs]) | (BitVector::SLt, [lhs, rhs]) => {
+            if lhs == rhs {
+                Some(Boolean::constant(false))
+            } else {
+                None
+            }
+        }
         _ => None,
     }
 }
