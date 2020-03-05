@@ -1,4 +1,6 @@
-use crate::environment::{Environment, PredictorStrategy, SPECULATION_WINDOW_SIZE, WORD_SIZE};
+use crate::environment::{
+    Environment, PredictorStrategy, TransientEncodingStrategy, SPECULATION_WINDOW_SIZE, WORD_SIZE,
+};
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Expression, Predictor, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Instruction, Operation, Program};
@@ -10,6 +12,7 @@ pub struct TransientExecution {
     spectre_pht: bool,
     spectre_stl: bool,
     predictor_strategy: PredictorStrategy,
+    transient_encoding_strategy: TransientEncodingStrategy,
 }
 
 impl TransientExecution {
@@ -18,6 +21,7 @@ impl TransientExecution {
             spectre_pht: false,
             spectre_stl: false,
             predictor_strategy: PredictorStrategy::default(),
+            transient_encoding_strategy: TransientEncodingStrategy::default(),
         }
     }
 
@@ -26,6 +30,7 @@ impl TransientExecution {
             spectre_pht: env.analysis().spectre_pht(),
             spectre_stl: env.analysis().spectre_stl(),
             predictor_strategy: env.analysis().predictor_strategy(),
+            transient_encoding_strategy: env.analysis().transient_encoding_strategy(),
         }
     }
 
@@ -48,6 +53,15 @@ impl TransientExecution {
     /// Set the predictor strategy.
     pub fn with_predictor_strategy(&mut self, strategy: PredictorStrategy) -> &mut Self {
         self.predictor_strategy = strategy;
+        self
+    }
+
+    /// Set the transient encoding strategy.
+    pub fn with_transient_encoding_strategy(
+        &mut self,
+        strategy: TransientEncodingStrategy,
+    ) -> &mut Self {
+        self.transient_encoding_strategy = strategy;
         self
     }
 
@@ -162,20 +176,16 @@ impl TransientExecution {
 
         Ok((transient_cfg, transient_entry_points))
     }
-}
 
-impl Transform<Program> for TransientExecution {
-    fn description(&self) -> &'static str {
-        "Add transient execution behavior"
-    }
-
-    fn transform(&self, program: &mut Program) -> Result<()> {
+    /// All transient behavior is encoded into a single transient graph
+    fn encode_unified(&self, program: &mut Program) -> Result<ControlFlowGraph> {
         let (mut cfg, transient_start_rollback_points) =
             self.build_default_cfg(program.control_flow_graph())?;
 
         let (transient_cfg, transient_entry_points) =
             self.build_transient_cfg(program.control_flow_graph())?;
 
+        // Add single copy
         let block_map = cfg.insert(&transient_cfg)?;
 
         // Wire the default and transient CFG together.
@@ -195,8 +205,44 @@ impl Transform<Program> for TransientExecution {
                 .unwrap();
         }
 
-        cfg.remove_unreachable_blocks()?;
+        Ok(cfg)
+    }
 
+    /// One transient graph for each (speculating) instruction
+    fn encode_several(&self, program: &mut Program) -> Result<ControlFlowGraph> {
+        let (mut cfg, transient_start_rollback_points) =
+            self.build_default_cfg(program.control_flow_graph())?;
+
+        let (transient_cfg, transient_entry_points) =
+            self.build_transient_cfg(program.control_flow_graph())?;
+
+        for (inst_addr, (start, rollback)) in transient_start_rollback_points {
+            let block_map = cfg.insert(&transient_cfg)?;
+            // TODO reduce the size of the inserted graph (depth limit)
+
+            let transient_entry = block_map[transient_entry_points.get(&inst_addr).unwrap()];
+            let transient_resolve = block_map[&transient_cfg.exit().unwrap()];
+
+            cfg.unconditional_edge(start, transient_entry).unwrap();
+            cfg.unconditional_edge(transient_resolve, rollback).unwrap();
+        }
+
+        Ok(cfg)
+    }
+}
+
+impl Transform<Program> for TransientExecution {
+    fn description(&self) -> &'static str {
+        "Add transient execution behavior"
+    }
+
+    fn transform(&self, program: &mut Program) -> Result<()> {
+        let mut cfg = match self.transient_encoding_strategy {
+            TransientEncodingStrategy::Unified => self.encode_unified(program)?,
+            TransientEncodingStrategy::Several => self.encode_several(program)?,
+        };
+
+        cfg.remove_unreachable_blocks()?;
         program.set_control_flow_graph(cfg);
 
         Ok(())

@@ -72,6 +72,20 @@ impl Default for PredictorStrategy {
     }
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
+pub enum TransientEncodingStrategy {
+    #[serde(rename = "unified")]
+    Unified, // all transient behavior is encoded into a single transient graph
+    #[serde(rename = "several")]
+    Several, // one transient graph for each (speculating) instruction
+}
+
+impl Default for TransientEncodingStrategy {
+    fn default() -> Self {
+        Self::Unified
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Analysis {
     #[serde(default = "enabled")]
@@ -82,6 +96,8 @@ pub struct Analysis {
     check: Check,
     #[serde(default)]
     predictor_strategy: PredictorStrategy,
+    #[serde(default, rename = "transient_encoding")]
+    transient_encoding_strategy: TransientEncodingStrategy,
 }
 
 impl Analysis {
@@ -100,6 +116,10 @@ impl Analysis {
     pub fn predictor_strategy(&self) -> PredictorStrategy {
         self.predictor_strategy
     }
+
+    pub fn transient_encoding_strategy(&self) -> TransientEncodingStrategy {
+        self.transient_encoding_strategy
+    }
 }
 
 impl Default for Analysis {
@@ -109,6 +129,7 @@ impl Default for Analysis {
             spectre_stl: false,
             check: Check::default(),
             predictor_strategy: PredictorStrategy::default(),
+            transient_encoding_strategy: TransientEncodingStrategy::default(),
         }
     }
 }
