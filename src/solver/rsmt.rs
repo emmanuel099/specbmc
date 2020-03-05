@@ -253,6 +253,9 @@ impl Expr2Smt<()> for expr::BitVector {
             Self::SLe => write!(w, "bvsle")?,
             Self::SGt => write!(w, "bvsgt")?,
             Self::SGe => write!(w, "bvsge")?,
+            Self::ToBoolean | Self::FromBoolean(_) => {
+                panic!("ToBoolean/FromBoolean should have been lowered")
+            }
         };
         Ok(())
     }

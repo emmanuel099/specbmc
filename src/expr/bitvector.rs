@@ -8,6 +8,8 @@ use std::fmt;
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum BitVector {
     Constant(Value),
+    ToBoolean,
+    FromBoolean(usize),
     Concat,
     Extract(usize, usize),
     Truncate(usize),
@@ -92,6 +94,8 @@ impl fmt::Display for BitVector {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
             Self::Constant(value) => format!("{}", value),
+            Self::ToBoolean => "bv2bool".to_owned(),
+            Self::FromBoolean(i) => format!("(bool2bv {})", i),
             Self::Concat => "bvconcat".to_owned(),
             Self::Extract(i, j) => format!("(bvextract {} {})", i, j),
             Self::Truncate(i) => format!("(bvtrunc {})", i),
@@ -189,18 +193,22 @@ impl BitVector {
 
     pub fn to_boolean(expr: Expression) -> Result<Expression> {
         expr.sort().expect_bit_vector()?;
-        let width = expr.sort().unwrap_bit_vector();
 
-        let zero = Self::constant_u64(0, width);
-        Expression::unequal(expr, zero)
+        Ok(Expression::new(
+            BitVector::ToBoolean.into(),
+            vec![expr],
+            Sort::boolean(),
+        ))
     }
 
     pub fn from_boolean(bits: usize, expr: Expression) -> Result<Expression> {
         expr.sort().expect_boolean()?;
 
-        let zero = Self::constant_u64(0, bits);
-        let one = Self::constant_u64(1, bits);
-        Expression::ite(expr, one, zero)
+        Ok(Expression::new(
+            BitVector::FromBoolean(bits).into(),
+            vec![expr],
+            Sort::bit_vector(bits),
+        ))
     }
 
     bv_unary!(not, Self::Not);

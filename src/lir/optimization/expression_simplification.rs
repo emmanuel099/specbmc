@@ -248,31 +248,3 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
         _ => None,
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn simplify_bitvec_from_boolean_true_should_give_1() {
-        // GIVEN
-        let mut expr = BitVector::from_boolean(32, Boolean::constant(true)).unwrap();
-
-        // WHEN
-        expr.simplify();
-
-        // THEN
-        assert_eq!(expr, BitVector::constant_u64(1, 32));
-    }
-
-    #[test]
-    fn simplify_bitvec_from_boolean_false_should_give_0() {
-        // GIVEN
-        let mut expr = BitVector::from_boolean(32, Boolean::constant(false)).unwrap();
-
-        // WHEN
-        expr.simplify();
-
-        // THEN
-        assert_eq!(expr, BitVector::constant_u64(0, 32));
-    }
-}
