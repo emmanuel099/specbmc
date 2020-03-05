@@ -212,6 +212,25 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
             }
             _ => None,
         },
+        (BitVector::Sub, [lhs, rhs]) => match (lhs.operator(), rhs.operator()) {
+            (_, Operator::BitVector(BitVector::Constant(c))) => {
+                if c.is_zero() {
+                    // a - 0 -> a
+                    Some(lhs.clone())
+                } else {
+                    None
+                }
+            }
+            (Operator::BitVector(BitVector::Constant(c)), _) => {
+                if c.is_zero() {
+                    // 0 - a -> -a
+                    BitVector::neg(rhs.clone()).ok()
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        },
         (BitVector::Mul, [lhs, rhs]) => match (lhs.operator(), rhs.operator()) {
             (_, Operator::BitVector(BitVector::Constant(c))) => {
                 if c.is_one() {
