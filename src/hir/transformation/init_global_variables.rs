@@ -143,6 +143,10 @@ impl InitGlobalVariables {
 }
 
 impl Transform<Program> for InitGlobalVariables {
+    fn name(&self) -> &'static str {
+        "InitGlobalVariables"
+    }
+
     fn description(&self) -> &'static str {
         "Set up initial state"
     }

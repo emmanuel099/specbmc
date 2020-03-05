@@ -102,6 +102,10 @@ impl InstructionEffects {
 }
 
 impl Transform<Program> for InstructionEffects {
+    fn name(&self) -> &'static str {
+        "InstructionEffects"
+    }
+
     fn description(&self) -> &'static str {
         "Add instruction effects"
     }

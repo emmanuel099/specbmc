@@ -12,6 +12,10 @@ impl LowerToSMT {
 }
 
 impl Transform<Program> for LowerToSMT {
+    fn name(&self) -> &'static str {
+        "LowerToSMT"
+    }
+
     fn description(&self) -> &'static str {
         "Lowering expressions to SMT"
     }

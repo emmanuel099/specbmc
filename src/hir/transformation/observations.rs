@@ -63,6 +63,10 @@ impl Observations {
 }
 
 impl Transform<Program> for Observations {
+    fn name(&self) -> &'static str {
+        "Observations"
+    }
+
     fn description(&self) -> &'static str {
         "Add observations"
     }

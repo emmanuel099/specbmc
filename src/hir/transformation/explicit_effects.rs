@@ -12,6 +12,10 @@ impl ExplicitEffects {
 }
 
 impl Transform<Program> for ExplicitEffects {
+    fn name(&self) -> &'static str {
+        "ExplicitEffects"
+    }
+
     fn description(&self) -> &'static str {
         "Make instruction effects explicit"
     }

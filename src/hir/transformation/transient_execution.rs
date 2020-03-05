@@ -232,6 +232,10 @@ impl TransientExecution {
 }
 
 impl Transform<Program> for TransientExecution {
+    fn name(&self) -> &'static str {
+        "TransientExecution"
+    }
+
     fn description(&self) -> &'static str {
         "Add transient execution behavior"
     }

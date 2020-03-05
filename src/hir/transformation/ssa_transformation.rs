@@ -17,6 +17,10 @@ impl SSATransformation {
 }
 
 impl Transform<Program> for SSATransformation {
+    fn name(&self) -> &'static str {
+        "SSATransformation"
+    }
+
     fn description(&self) -> &'static str {
         "Transform into static single assignment form"
     }

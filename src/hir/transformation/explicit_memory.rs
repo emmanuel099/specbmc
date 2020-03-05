@@ -12,6 +12,10 @@ impl ExplicitMemory {
 }
 
 impl Transform<Program> for ExplicitMemory {
+    fn name(&self) -> &'static str {
+        "ExplicitMemory"
+    }
+
     fn description(&self) -> &'static str {
         "Make memory accesses explicit"
     }

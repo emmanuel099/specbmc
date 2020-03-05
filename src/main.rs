@@ -205,8 +205,14 @@ fn hir_transformations(env: &environment::Environment, program: &mut hir::Progra
                 .dim(),
             transformation.description(),
         );
+
         transformation.transform(program)?;
-        Term::stdout().clear_line()?;
+
+        if env.debug() {
+            program
+                .control_flow_graph()
+                .render_to_file(Path::new(&format!("dbg_hir_{}.dot", transformation.name())))?;
+        }
     }
 
     Ok(())

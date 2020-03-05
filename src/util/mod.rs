@@ -9,6 +9,9 @@ pub trait Validate {
 }
 
 pub trait Transform<T> {
+    /// Name of the transformation.
+    fn name(&self) -> &'static str;
+
     /// Concise description of the transformation.
     fn description(&self) -> &'static str;
 
