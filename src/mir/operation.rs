@@ -9,23 +9,23 @@ pub enum Operation {
         var: Variable,
         expr: Expression,
     },
-    /// Assert that the condition is true.
+    /// Assert that the condition is true in each composition.
     Assert {
         condition: Expression,
     },
-    /// Assume that the condition is true.
+    /// Assume that the condition is true in each composition.
     Assume {
         condition: Expression,
     },
-    /// Assert equality of `expr` in self-compositions.
-    SelfCompAssertEqual {
-        compositions: Vec<usize>,
-        expr: Expression,
+    /// Assert that the condition is true.
+    /// The condition may refer to variables from different compositions.
+    HyperAssert {
+        condition: Expression,
     },
-    /// Assume equality of `expr` in self-compositions.
-    SelfCompAssumeEqual {
-        compositions: Vec<usize>,
-        expr: Expression,
+    /// Assume that the condition is true.
+    /// The condition may refer to variables from different compositions.
+    HyperAssume {
+        condition: Expression,
     },
 }
 
@@ -39,27 +39,67 @@ impl Operation {
     /// Create a new `Operation::Assert`.
     pub fn assert(condition: Expression) -> Result<Self> {
         condition.sort().expect_boolean()?;
+
+        if condition
+            .variables()
+            .iter()
+            .any(|variable| variable.composition().is_some())
+        {
+            return Err(
+                "Condition variables must not refer to a composition, use hyper_assert instead."
+                    .into(),
+            );
+        }
+
         Ok(Self::Assert { condition })
     }
 
     /// Create a new `Operation::Assume`.
     pub fn assume(condition: Expression) -> Result<Self> {
         condition.sort().expect_boolean()?;
+
+        if condition
+            .variables()
+            .iter()
+            .any(|variable| variable.composition().is_some())
+        {
+            return Err(
+                "Condition variables must not refer to a composition, use hyper_assume instead."
+                    .into(),
+            );
+        }
+
         Ok(Self::Assume { condition })
     }
 
-    /// Create a new `Operation::SelfCompAssertEqual`.
-    ///
-    /// Asserts that `expr` is equal in all self-compositions given by `compositions`.
-    pub fn assert_equal_in_self_composition(compositions: Vec<usize>, expr: Expression) -> Self {
-        Self::SelfCompAssertEqual { compositions, expr }
+    /// Create a new `Operation::HyperAssert`.
+    pub fn hyper_assert(condition: Expression) -> Result<Self> {
+        condition.sort().expect_boolean()?;
+
+        if condition
+            .variables()
+            .iter()
+            .any(|variable| variable.composition().is_none())
+        {
+            return Err("All condition variables must refer to a composition.".into());
+        }
+
+        Ok(Self::HyperAssert { condition })
     }
 
-    /// Create a new `Operation::SelfCompAssumeEqual`.
-    ///
-    /// Assumes that `expr` is equal in all self-compositions given by `compositions`.
-    pub fn assume_equal_in_self_composition(compositions: Vec<usize>, expr: Expression) -> Self {
-        Self::SelfCompAssumeEqual { compositions, expr }
+    /// Create a new `Operation::HyperAssume`.
+    pub fn hyper_assume(condition: Expression) -> Result<Self> {
+        condition.sort().expect_boolean()?;
+
+        if condition
+            .variables()
+            .iter()
+            .any(|variable| variable.composition().is_none())
+        {
+            return Err("All condition variables must refer to a composition.".into());
+        }
+
+        Ok(Self::HyperAssume { condition })
     }
 }
 
@@ -69,12 +109,8 @@ impl fmt::Display for Operation {
             Self::Let { var, expr } => write!(f, "{} = {}", var, expr),
             Self::Assert { condition } => write!(f, "assert {}", condition),
             Self::Assume { condition } => write!(f, "assume {}", condition),
-            Self::SelfCompAssertEqual { compositions, expr } => {
-                write!(f, "sc-assert-eq {} @ {:?}", expr, compositions)
-            }
-            Self::SelfCompAssumeEqual { compositions, expr } => {
-                write!(f, "sc-assume-eq {} @ {:?}", expr, compositions)
-            }
+            Self::HyperAssert { condition } => write!(f, "hyper-assert {}", condition),
+            Self::HyperAssume { condition } => write!(f, "hyper-assume {}", condition),
         }
     }
 }

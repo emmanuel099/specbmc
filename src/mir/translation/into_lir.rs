@@ -3,13 +3,12 @@ use crate::expr;
 use crate::lir;
 use crate::mir;
 use crate::util::TranslateInto;
-use std::collections::BTreeSet;
 
 impl TranslateInto<lir::Program> for mir::Program {
     fn translate_into(&self) -> Result<lir::Program> {
         let mut program = lir::Program::new();
 
-        for composition in required_compositions(self) {
+        for composition in 1..=self.self_compositions() {
             translate_program_composition(&mut program, self, composition)?;
         }
 
@@ -78,35 +77,6 @@ fn translate_block(
     Ok(())
 }
 
-/// Determines the required compositions for the given `program`.
-///
-/// For each returned value a copy should be created.
-fn required_compositions(program: &mir::Program) -> BTreeSet<usize> {
-    let mut result: BTreeSet<usize> = BTreeSet::new();
-
-    for block in program.block_graph().blocks() {
-        for node in block.nodes() {
-            match node.operation() {
-                mir::Operation::SelfCompAssertEqual { compositions, .. }
-                | mir::Operation::SelfCompAssumeEqual { compositions, .. } => {
-                    compositions.iter().for_each(|composition| {
-                        result.insert(*composition);
-                    });
-                }
-                _ => (),
-            }
-        }
-    }
-
-    if result.is_empty() {
-        // If program doesn't contain any self-composition operators,
-        // require only a single LIR program.
-        result.insert(1);
-    }
-
-    result
-}
-
 fn add_self_composition_constraints(
     lir_program: &mut lir::Program,
     mir_program: &mir::Program,
@@ -116,18 +86,18 @@ fn add_self_composition_constraints(
     for block in mir_program.block_graph().blocks() {
         for node in block.nodes() {
             match node.operation() {
-                mir::Operation::SelfCompAssertEqual { compositions, expr } => {
-                    lir_program.append_assert(self_composition_equality_constraint(
-                        &block.execution_condition_variable(),
-                        compositions,
-                        expr,
+                mir::Operation::HyperAssert { condition } => {
+                    let compositions = involved_compositions(condition)?;
+                    lir_program.append_assert(expr::Boolean::imply(
+                        hyper_execution_condition(&block, &compositions)?, // only if executed
+                        condition.clone(),
                     )?)?;
                 }
-                mir::Operation::SelfCompAssumeEqual { compositions, expr } => {
-                    lir_program.append_assume(self_composition_equality_constraint(
-                        &block.execution_condition_variable(),
-                        compositions,
-                        expr,
+                mir::Operation::HyperAssume { condition } => {
+                    let compositions = involved_compositions(condition)?;
+                    lir_program.append_assume(expr::Boolean::imply(
+                        hyper_execution_condition(&block, &compositions)?, // only if executed
+                        condition.clone(),
                     )?)?;
                 }
                 _ => (),
@@ -138,139 +108,35 @@ fn add_self_composition_constraints(
     Ok(())
 }
 
-/// Create self-composition equality constraint,
-/// requiring that `expr` is equal in all compositions.
-///
-/// Example:
-///   - Suppose `exec_cond` = 'c', `compositions` = [1,2] and `expr` = 'x'
-///   - This will give the constraint `(=> (and c@1 c@2) (= x@1 x@2))`
-fn self_composition_equality_constraint(
-    exec_cond: &expr::Variable,
+/// Lifts the execution condition of the block to multiple compositions.
+/// The resulting execution condition is true only if the block is executed in all compositions.
+fn hyper_execution_condition(
+    block: &mir::Block,
     compositions: &[usize],
-    expr: &expr::Expression,
 ) -> Result<expr::Expression> {
-    expr::Boolean::imply(
-        expr::Boolean::conjunction(
-            &compositions
-                .iter()
-                .map(|i| exec_cond.self_compose(*i).into())
-                .collect::<Vec<expr::Expression>>(),
-        )?, // only if executed in all compositions
-        expr::Expression::all_equal(
-            &compositions
-                .iter()
-                .map(|i| expr.self_compose(*i))
-                .collect::<Vec<expr::Expression>>(),
-        )?,
+    let exec_cond_var = block.execution_condition_variable();
+
+    expr::Boolean::conjunction(
+        &compositions
+            .iter()
+            .map(|i| exec_cond_var.self_compose(*i).into())
+            .collect::<Vec<expr::Expression>>(),
     )
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// Determines the involved compositions for the given `Expression`.
+/// For example: An expression `(= x@1 x@2)` will give `[1, 2]`.
+fn involved_compositions(expr: &expr::Expression) -> Result<Vec<usize>> {
+    let mut compositions = Vec::new();
 
-    #[test]
-    fn test_self_composition_equality_constraint() {
-        // GIVEN
-        let exec_cond = expr::Boolean::variable("x");
-        let compositions = vec![1, 4];
-        let expr: expr::Expression = expr::Boolean::variable("y").into();
-
-        // WHEN
-        let constraint =
-            self_composition_equality_constraint(&exec_cond, &compositions, &expr).unwrap();
-
-        // THEN
-        assert_eq!(
-            constraint,
-            expr::Boolean::imply(
-                expr::Boolean::and(
-                    {
-                        let mut var = expr::Boolean::variable("x");
-                        var.set_composition(Some(1));
-                        var.into()
-                    },
-                    {
-                        let mut var = expr::Boolean::variable("x");
-                        var.set_composition(Some(4));
-                        var.into()
-                    }
-                )
-                .unwrap(),
-                expr::Expression::equal(
-                    {
-                        let mut var = expr::Boolean::variable("y");
-                        var.set_composition(Some(1));
-                        var.into()
-                    },
-                    {
-                        let mut var = expr::Boolean::variable("y");
-                        var.set_composition(Some(4));
-                        var.into()
-                    }
-                )
-                .unwrap()
-            )
-            .unwrap()
-        );
+    for variable in expr.variables() {
+        let composition = variable
+            .composition()
+            .ok_or("Expected variable composition, but was none")?;
+        compositions.push(composition);
     }
 
-    #[test]
-    fn test_required_compositions_should_give_1_for_program_without_self_comp_ops() {
-        // GIVEN
-        let mir_program = {
-            let mut block1 = mir::Block::new(1);
-            block1.add_node(mir::Node::assert(expr::Boolean::constant(true)).unwrap());
-            block1.add_node(
-                mir::Node::assign(expr::Boolean::variable("x"), expr::Boolean::constant(true))
-                    .unwrap(),
-            );
-
-            let mut block2 = mir::Block::new(2);
-            block2.add_node(mir::Node::assume(expr::Boolean::constant(true)).unwrap());
-
-            let mut block_graph = mir::BlockGraph::new();
-            block_graph.add_block(block1).unwrap();
-            block_graph.add_block(block2).unwrap();
-
-            mir::Program::new(block_graph)
-        };
-
-        // WHEN
-        let compositions = required_compositions(&mir_program);
-
-        // THEN
-        assert_eq!(compositions, vec![1].into_iter().collect());
-    }
-
-    #[test]
-    fn test_required_compositions_should_give_2_3_4_for_program_with_self_comp_ops_using_comp_2_3_and_4(
-    ) {
-        // GIVEN
-        let mir_program = {
-            let mut block1 = mir::Block::new(1);
-            block1.add_node(mir::Node::assert_equal_in_self_composition(
-                vec![2, 3],
-                expr::Boolean::variable("x").into(),
-            ));
-
-            let mut block2 = mir::Block::new(2);
-            block2.add_node(mir::Node::assume_equal_in_self_composition(
-                vec![3, 4],
-                expr::Boolean::variable("x").into(),
-            ));
-
-            let mut block_graph = mir::BlockGraph::new();
-            block_graph.add_block(block1).unwrap();
-            block_graph.add_block(block2).unwrap();
-
-            mir::Program::new(block_graph)
-        };
-
-        // WHEN
-        let compositions = required_compositions(&mir_program);
-
-        // THEN
-        assert_eq!(compositions, vec![2, 3, 4].into_iter().collect());
-    }
+    compositions.sort();
+    compositions.dedup();
+    Ok(compositions)
 }

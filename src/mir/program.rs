@@ -6,11 +6,15 @@ use std::fmt;
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Program {
     block_graph: BlockGraph,
+    self_compositions: usize, // The number of required self-compositions
 }
 
 impl Program {
-    pub fn new(block_graph: BlockGraph) -> Self {
-        Self { block_graph }
+    pub fn new(block_graph: BlockGraph, self_compositions: usize) -> Self {
+        Self {
+            block_graph,
+            self_compositions,
+        }
     }
 
     pub fn from<Src: TranslateInto<Self>>(src: &Src) -> Result<Self> {
@@ -23,6 +27,10 @@ impl Program {
 
     pub fn block_graph_mut(&mut self) -> &mut BlockGraph {
         &mut self.block_graph
+    }
+
+    pub fn self_compositions(&self) -> usize {
+        self.self_compositions
     }
 }
 

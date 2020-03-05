@@ -4,11 +4,13 @@ use crate::hir;
 use crate::mir;
 use crate::util::TranslateInto;
 
+const NUMBER_OF_SELF_COMPOSITIONS: usize = 2;
+
 impl TranslateInto<mir::Program> for hir::Program {
     fn translate_into(&self) -> Result<mir::Program> {
         let block_graph = translate_control_flow_graph(self.control_flow_graph())?;
 
-        Ok(mir::Program::new(block_graph))
+        Ok(mir::Program::new(block_graph, NUMBER_OF_SELF_COMPOSITIONS))
     }
 }
 
@@ -117,22 +119,12 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
         hir::Operation::Assume { condition } => {
             nodes.push(mir::Node::assume(condition.clone())?);
         }
-        hir::Operation::Observable { exprs } => {
-            for expr in exprs {
-                nodes.push(mir::Node::assert_equal_in_self_composition(
-                    vec![1, 2],
-                    expr.clone(),
-                ));
-            }
-        }
-        hir::Operation::Indistinguishable { exprs } => {
-            for expr in exprs {
-                nodes.push(mir::Node::assume_equal_in_self_composition(
-                    vec![1, 2],
-                    expr.clone(),
-                ));
-            }
-        }
+        hir::Operation::Observable { exprs } => nodes.push(mir::Node::hyper_assert(
+            equal_under_self_composition(exprs),
+        )?),
+        hir::Operation::Indistinguishable { exprs } => nodes.push(mir::Node::hyper_assume(
+            equal_under_self_composition(exprs),
+        )?),
         hir::Operation::Store { .. } => {
             panic!("Unexpected store operation, should have been made explicit")
         }
@@ -147,4 +139,14 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
     }
 
     Ok(nodes)
+}
+
+fn equal_under_self_composition(exprs: &Vec<expr::Expression>) -> expr::Expression {
+    expr::Boolean::conjunction(
+        &exprs
+            .iter()
+            .map(|e| expr::Expression::equal(e.self_compose(1), e.self_compose(2)).unwrap())
+            .collect::<Vec<expr::Expression>>(),
+    )
+    .unwrap()
 }

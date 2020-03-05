@@ -29,18 +29,12 @@ impl Node {
         Ok(Self::new(Operation::assume(condition)?))
     }
 
-    pub fn assert_equal_in_self_composition(compositions: Vec<usize>, expr: Expression) -> Self {
-        Self::new(Operation::assert_equal_in_self_composition(
-            compositions,
-            expr,
-        ))
+    pub fn hyper_assert(condition: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::hyper_assert(condition)?))
     }
 
-    pub fn assume_equal_in_self_composition(compositions: Vec<usize>, expr: Expression) -> Self {
-        Self::new(Operation::assume_equal_in_self_composition(
-            compositions,
-            expr,
-        ))
+    pub fn hyper_assume(condition: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::hyper_assume(condition)?))
     }
 
     pub fn operation(&self) -> &Operation {
