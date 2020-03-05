@@ -4,7 +4,7 @@ use crate::expr;
 use crate::lir;
 use crate::solver::{AssertionCheck, CheckResult, DumpFormula};
 use rsmt2::print::{Expr2Smt, Sort2Smt, Sym2Smt};
-use rsmt2::{SmtRes, Solver};
+use rsmt2::{Logic, SmtRes, Solver};
 use std::convert::TryInto;
 use std::fs::File;
 use std::path::Path;
@@ -35,7 +35,7 @@ impl DumpFormula for RSMTSolver {
 
 impl AssertionCheck for RSMTSolver {
     fn encode_program(&mut self, program: &lir::Program) -> Result<()> {
-        self.solver.set_custom_logic("QF_AUFBV")?;
+        self.solver.set_logic(Logic::QF_AUFBV)?;
 
         let access_widths = vec![8, 16, 32, 64, 128, 256, 512];
 
