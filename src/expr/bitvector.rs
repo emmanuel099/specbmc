@@ -175,11 +175,7 @@ impl BitVector {
 
     pub fn constant(value: Value) -> Expression {
         let bits = value.bits();
-        Expression::new(
-            BitVector::Constant(value).into(),
-            vec![],
-            Sort::bit_vector(bits),
-        )
+        Expression::new(Self::Constant(value).into(), vec![], Sort::bit_vector(bits))
     }
 
     pub fn constant_u64(value: u64, bits: usize) -> Expression {
@@ -207,36 +203,36 @@ impl BitVector {
         Expression::ite(expr, one, zero)
     }
 
-    bv_unary!(not, BitVector::Not);
-    bv_unary!(neg, BitVector::Neg);
+    bv_unary!(not, Self::Not);
+    bv_unary!(neg, Self::Neg);
 
-    bv_arith!(and, BitVector::And);
-    bv_arith!(or, BitVector::Or);
-    bv_arith!(mul, BitVector::Mul);
-    bv_arith!(add, BitVector::Add);
-    bv_arith!(udiv, BitVector::UDiv);
-    bv_arith!(urem, BitVector::URem);
-    bv_arith!(shl, BitVector::Shl);
-    bv_arith!(lshr, BitVector::LShr);
-    bv_arith!(nand, BitVector::Nand);
-    bv_arith!(nor, BitVector::Nor);
-    bv_arith!(xor, BitVector::Xor);
-    bv_arith!(xnor, BitVector::Xnor);
-    bv_arith!(sub, BitVector::Sub);
-    bv_arith!(sdiv, BitVector::SDiv);
-    bv_arith!(srem, BitVector::SRem);
-    bv_arith!(smod, BitVector::SMod);
-    bv_arith!(umod, BitVector::UMod);
-    bv_arith!(ashr, BitVector::AShr);
+    bv_arith!(and, Self::And);
+    bv_arith!(or, Self::Or);
+    bv_arith!(mul, Self::Mul);
+    bv_arith!(add, Self::Add);
+    bv_arith!(udiv, Self::UDiv);
+    bv_arith!(urem, Self::URem);
+    bv_arith!(shl, Self::Shl);
+    bv_arith!(lshr, Self::LShr);
+    bv_arith!(nand, Self::Nand);
+    bv_arith!(nor, Self::Nor);
+    bv_arith!(xor, Self::Xor);
+    bv_arith!(xnor, Self::Xnor);
+    bv_arith!(sub, Self::Sub);
+    bv_arith!(sdiv, Self::SDiv);
+    bv_arith!(srem, Self::SRem);
+    bv_arith!(smod, Self::SMod);
+    bv_arith!(umod, Self::UMod);
+    bv_arith!(ashr, Self::AShr);
 
-    bv_comp!(ult, BitVector::ULt);
-    bv_comp!(ule, BitVector::ULe);
-    bv_comp!(ugt, BitVector::UGt);
-    bv_comp!(uge, BitVector::UGe);
-    bv_comp!(slt, BitVector::SLt);
-    bv_comp!(sle, BitVector::SLe);
-    bv_comp!(sgt, BitVector::SGt);
-    bv_comp!(sge, BitVector::SGe);
+    bv_comp!(ult, Self::ULt);
+    bv_comp!(ule, Self::ULe);
+    bv_comp!(ugt, Self::UGt);
+    bv_comp!(uge, Self::UGe);
+    bv_comp!(slt, Self::SLt);
+    bv_comp!(sle, Self::SLe);
+    bv_comp!(sgt, Self::SGt);
+    bv_comp!(sge, Self::SGe);
 
     /// Extend the bit-vector given by `expr` with `n` additional zero-bits.
     ///
@@ -246,7 +242,7 @@ impl BitVector {
         let width = expr.sort().unwrap_bit_vector();
 
         Ok(Expression::new(
-            BitVector::ZeroExtend(n).into(),
+            Self::ZeroExtend(n).into(),
             vec![expr],
             Sort::bit_vector(width + n),
         ))
@@ -269,7 +265,7 @@ impl BitVector {
         let width = expr.sort().unwrap_bit_vector();
 
         Ok(Expression::new(
-            BitVector::SignExtend(n).into(),
+            Self::SignExtend(n).into(),
             vec![expr],
             Sort::bit_vector(width + n),
         ))
@@ -288,7 +284,7 @@ impl BitVector {
         expr.sort().expect_bit_vector()?;
 
         Ok(Expression::new(
-            BitVector::Extract(highest_bit, lowest_bit).into(),
+            Self::Extract(highest_bit, lowest_bit).into(),
             vec![expr],
             Sort::bit_vector(highest_bit - lowest_bit + 1),
         ))
@@ -298,7 +294,7 @@ impl BitVector {
         expr.sort().expect_bit_vector()?;
 
         Ok(Expression::new(
-            BitVector::Truncate(bits).into(),
+            Self::Truncate(bits).into(),
             vec![expr],
             Sort::bit_vector(bits),
         ))
@@ -319,7 +315,7 @@ impl BitVector {
             .sum();
 
         Ok(Expression::new(
-            BitVector::Concat.into(),
+            Self::Concat.into(),
             exprs.to_vec(),
             Sort::bit_vector(result_width),
         ))
@@ -330,7 +326,7 @@ impl BitVector {
         let width = expr.sort().unwrap_bit_vector();
 
         Ok(Expression::new(
-            BitVector::Repeat(n).into(),
+            Self::Repeat(n).into(),
             vec![expr],
             Sort::bit_vector(width * n),
         ))
@@ -341,7 +337,7 @@ impl BitVector {
 
         let result_sort = expr.sort().clone();
         Ok(Expression::new(
-            BitVector::RotateLeft(n).into(),
+            Self::RotateLeft(n).into(),
             vec![expr],
             result_sort,
         ))
@@ -352,7 +348,7 @@ impl BitVector {
 
         let result_sort = expr.sort().clone();
         Ok(Expression::new(
-            BitVector::RotateRight(n).into(),
+            Self::RotateRight(n).into(),
             vec![expr],
             result_sort,
         ))

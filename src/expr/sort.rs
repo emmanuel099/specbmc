@@ -29,11 +29,11 @@ impl Sort {
         Self::BitVector(width)
     }
 
-    pub fn word() -> Sort {
+    pub fn word() -> Self {
         Self::bit_vector(environment::WORD_SIZE)
     }
 
-    pub fn array(range: &Sort, domain: &Sort) -> Self {
+    pub fn array(range: &Self, domain: &Self) -> Self {
         Self::Array {
             range: Box::new(range.clone()),
             domain: Box::new(domain.clone()),
@@ -62,70 +62,70 @@ impl Sort {
 
     pub fn is_boolean(&self) -> bool {
         match self {
-            Sort::Boolean => true,
+            Self::Boolean => true,
             _ => false,
         }
     }
 
     pub fn is_integer(&self) -> bool {
         match self {
-            Sort::Integer => true,
+            Self::Integer => true,
             _ => false,
         }
     }
 
     pub fn is_bit_vector(&self) -> bool {
         match self {
-            Sort::BitVector(..) => true,
+            Self::BitVector(..) => true,
             _ => false,
         }
     }
 
     pub fn is_word(&self) -> bool {
         match self {
-            Sort::BitVector(environment::WORD_SIZE) => true,
+            Self::BitVector(environment::WORD_SIZE) => true,
             _ => false,
         }
     }
 
     pub fn is_array(&self) -> bool {
         match self {
-            Sort::Array { .. } => true,
+            Self::Array { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_memory(&self) -> bool {
         match self {
-            Sort::Memory => true,
+            Self::Memory => true,
             _ => false,
         }
     }
 
     pub fn is_cache(&self) -> bool {
         match self {
-            Sort::Cache => true,
+            Self::Cache => true,
             _ => false,
         }
     }
 
     pub fn is_predictor(&self) -> bool {
         match self {
-            Sort::Predictor => true,
+            Self::Predictor => true,
             _ => false,
         }
     }
 
     pub fn is_branch_target_buffer(&self) -> bool {
         match self {
-            Sort::BranchTargetBuffer => true,
+            Self::BranchTargetBuffer => true,
             _ => false,
         }
     }
 
     pub fn is_pattern_history_table(&self) -> bool {
         match self {
-            Sort::PatternHistoryTable => true,
+            Self::PatternHistoryTable => true,
             _ => false,
         }
     }
@@ -210,7 +210,7 @@ impl Sort {
         }
     }
 
-    pub fn expect_sort(&self, sort: &Sort) -> Result<()> {
+    pub fn expect_sort(&self, sort: &Self) -> Result<()> {
         if self == sort {
             Ok(())
         } else {
@@ -220,14 +220,14 @@ impl Sort {
 
     pub fn unwrap_bit_vector(&self) -> usize {
         match self {
-            Sort::BitVector(width) => *width,
+            Self::BitVector(width) => *width,
             _ => panic!("Expected BitVec"),
         }
     }
 
-    pub fn unwrap_array(&self) -> (&Sort, &Sort) {
+    pub fn unwrap_array(&self) -> (&Self, &Self) {
         match self {
-            Sort::Array { range, domain } => (range, domain),
+            Self::Array { range, domain } => (range, domain),
             _ => panic!("Expected Array"),
         }
     }
@@ -235,7 +235,7 @@ impl Sort {
     /// Returns whether this `Sort` survives a transient-execution rollback or not.
     pub fn is_rollback_persistent(&self) -> bool {
         match self {
-            Sort::Cache | Sort::BranchTargetBuffer | Sort::PatternHistoryTable => true,
+            Self::Cache | Self::BranchTargetBuffer | Self::PatternHistoryTable => true,
             _ => false,
         }
     }
@@ -244,15 +244,15 @@ impl Sort {
 impl fmt::Display for Sort {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Sort::Boolean => write!(f, "Boolean"),
-            Sort::Integer => write!(f, "Integer"),
-            Sort::BitVector(width) => write!(f, "BitVec<{}>", width),
-            Sort::Array { range, domain } => write!(f, "Array<{}, {}>", range, domain),
-            Sort::Memory => write!(f, "Memory"),
-            Sort::Predictor => write!(f, "Predictor"),
-            Sort::Cache => write!(f, "Cache"),
-            Sort::BranchTargetBuffer => write!(f, "BranchTargetBuffer"),
-            Sort::PatternHistoryTable => write!(f, "PatternHistoryTable"),
+            Self::Boolean => write!(f, "Boolean"),
+            Self::Integer => write!(f, "Integer"),
+            Self::BitVector(width) => write!(f, "BitVec<{}>", width),
+            Self::Array { range, domain } => write!(f, "Array<{}, {}>", range, domain),
+            Self::Memory => write!(f, "Memory"),
+            Self::Predictor => write!(f, "Predictor"),
+            Self::Cache => write!(f, "Cache"),
+            Self::BranchTargetBuffer => write!(f, "BranchTargetBuffer"),
+            Self::PatternHistoryTable => write!(f, "PatternHistoryTable"),
         }
     }
 }

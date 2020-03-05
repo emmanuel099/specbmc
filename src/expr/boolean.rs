@@ -17,9 +17,9 @@ pub enum Boolean {
 impl From<bool> for Boolean {
     fn from(value: bool) -> Self {
         if value {
-            Boolean::True
+            Self::True
         } else {
-            Boolean::False
+            Self::False
         }
     }
 }
@@ -62,6 +62,27 @@ impl fmt::Display for Boolean {
     }
 }
 
+macro_rules! boolean_unary {
+    ( $name:ident, $op:expr ) => {
+        pub fn $name(expr: Expression) -> Result<Expression> {
+            expr.sort().expect_boolean()?;
+
+            Ok(Expression::new($op.into(), vec![expr], Sort::boolean()))
+        }
+    };
+}
+
+macro_rules! boolean_binary {
+    ( $name:ident, $op:expr ) => {
+        pub fn $name(lhs: Expression, rhs: Expression) -> Result<Expression> {
+            lhs.sort().expect_boolean()?;
+            rhs.sort().expect_boolean()?;
+
+            Ok(Expression::new($op.into(), vec![lhs, rhs], Sort::boolean()))
+        }
+    };
+}
+
 impl Boolean {
     pub fn variable(name: &str) -> Variable {
         Variable::new(name, Sort::boolean())
@@ -71,37 +92,12 @@ impl Boolean {
         Expression::new(Self::from(value).into(), vec![], Sort::boolean())
     }
 
-    pub fn not(expr: Expression) -> Result<Expression> {
-        expr.sort().expect_boolean()?;
+    boolean_unary!(not, Self::Not);
 
-        Ok(Expression::new(
-            Boolean::Not.into(),
-            vec![expr],
-            Sort::boolean(),
-        ))
-    }
-
-    pub fn imply(lhs: Expression, rhs: Expression) -> Result<Expression> {
-        lhs.sort().expect_boolean()?;
-        rhs.sort().expect_boolean()?;
-
-        Ok(Expression::new(
-            Boolean::Imply.into(),
-            vec![lhs, rhs],
-            Sort::boolean(),
-        ))
-    }
-
-    pub fn and(lhs: Expression, rhs: Expression) -> Result<Expression> {
-        lhs.sort().expect_boolean()?;
-        rhs.sort().expect_boolean()?;
-
-        Ok(Expression::new(
-            Boolean::And.into(),
-            vec![lhs, rhs],
-            Sort::boolean(),
-        ))
-    }
+    boolean_binary!(imply, Self::Imply);
+    boolean_binary!(and, Self::And);
+    boolean_binary!(or, Self::Or);
+    boolean_binary!(xor, Self::Xor);
 
     pub fn conjunction(formulas: &[Expression]) -> Result<Expression> {
         if formulas.is_empty() {
@@ -113,19 +109,8 @@ impl Boolean {
         }
 
         Ok(Expression::new(
-            Boolean::And.into(),
+            Self::And.into(),
             formulas.to_vec(),
-            Sort::boolean(),
-        ))
-    }
-
-    pub fn or(lhs: Expression, rhs: Expression) -> Result<Expression> {
-        lhs.sort().expect_boolean()?;
-        rhs.sort().expect_boolean()?;
-
-        Ok(Expression::new(
-            Boolean::Or.into(),
-            vec![lhs, rhs],
             Sort::boolean(),
         ))
     }
@@ -140,19 +125,8 @@ impl Boolean {
         }
 
         Ok(Expression::new(
-            Boolean::Or.into(),
+            Self::Or.into(),
             formulas.to_vec(),
-            Sort::boolean(),
-        ))
-    }
-
-    pub fn xor(lhs: Expression, rhs: Expression) -> Result<Expression> {
-        lhs.sort().expect_boolean()?;
-        rhs.sort().expect_boolean()?;
-
-        Ok(Expression::new(
-            Boolean::Xor.into(),
-            vec![lhs, rhs],
             Sort::boolean(),
         ))
     }
