@@ -2,101 +2,107 @@ use crate::environment;
 use crate::error::Result;
 use crate::expr;
 use crate::lir;
-use crate::solver::{AssertionCheck, CheckResult, DumpFormula};
+use crate::solver::{AssertionCheck, CheckResult, DumpFormula, Model};
+use num_bigint::BigUint;
+use rsmt2::parse::*;
 use rsmt2::print::{Expr2Smt, Sort2Smt, Sym2Smt};
-use rsmt2::{Logic, SmtRes, Solver};
+use rsmt2::{Logic, SmtConf, SmtRes, Solver};
+use std::cell::RefCell;
 use std::convert::TryInto;
 use std::fs::File;
 use std::path::Path;
+use std::rc::Rc;
+use std::str::FromStr;
 
 pub struct RSMTSolver {
-    solver: rsmt2::Solver<Parser>,
+    solver: Rc<RefCell<rsmt2::Solver<Parser>>>,
 }
 
 impl RSMTSolver {
     pub fn new_from_env(env: &environment::Environment) -> Result<Self> {
-        let parser = Parser::new();
-        let solver = match env.solver() {
-            environment::Solver::Z3 => Solver::default_z3(parser)?,
-            environment::Solver::CVC4 => Solver::default_cvc4(parser)?,
-            environment::Solver::Yices2 => Solver::default_yices_2(parser)?,
+        let mut conf = match env.solver() {
+            environment::Solver::Z3 => SmtConf::z3(),
+            environment::Solver::CVC4 => SmtConf::cvc4(),
+            environment::Solver::Yices2 => SmtConf::yices_2(),
         };
+
+        // Activate model production
+        conf.models();
+
+        let parser = Parser::new();
+        let solver = Rc::new(RefCell::new(Solver::new(conf, parser)?));
 
         Ok(Self { solver })
     }
 }
 
 impl DumpFormula for RSMTSolver {
-    fn dump_formula_to_file(&mut self, path: &Path) -> Result<()> {
+    fn dump_formula_to_file(&self, path: &Path) -> Result<()> {
+        let mut solver = self.solver.borrow_mut();
         let file = File::create(Path::new(path))?;
-        Ok(self.solver.tee(file)?)
+        Ok(solver.tee(file)?)
     }
 }
 
 impl AssertionCheck for RSMTSolver {
     fn encode_program(&mut self, program: &lir::Program) -> Result<()> {
-        self.solver.set_logic(Logic::QF_AUFBV)?;
+        let mut solver = self.solver.borrow_mut();
+
+        solver.set_logic(Logic::QF_AUFBV)?;
 
         let access_widths = vec![8, 16, 32, 64, 128, 256, 512];
 
-        define_predictor(&mut self.solver)?;
-        define_memory(&mut self.solver, &access_widths)?;
-        define_cache(&mut self.solver, &access_widths)?;
-        define_btb(&mut self.solver)?;
-        define_pht(&mut self.solver)?;
+        define_predictor(&mut solver)?;
+        define_memory(&mut solver, &access_widths)?;
+        define_cache(&mut solver, &access_widths)?;
+        define_btb(&mut solver)?;
+        define_pht(&mut solver)?;
 
         let mut assertions: Vec<expr::Expression> = Vec::new();
 
         // Declare let variables first to avoid ordering problems because of top-down parsing ...
         for node in program.nodes() {
             if let lir::Node::Let { var, .. } = node {
-                declare_variable(&mut self.solver, var)?;
+                declare_variable(&mut solver, var)?;
             }
         }
 
         for node in program.nodes() {
             match node {
-                lir::Node::Comment(text) => self.solver.comment(&text)?,
+                lir::Node::Comment(text) => solver.comment(&text)?,
                 lir::Node::Let { var, expr } => {
                     if !expr.is_nondet() {
                         let assignment = expr::Expression::equal(var.clone().into(), expr.clone())?;
-                        self.solver.assert(&assignment)?
+                        solver.assert(&assignment)?
                     }
                 }
                 lir::Node::Assert { condition } => {
                     let name = format!("_assertion{}", assertions.len());
                     let assertion = expr::Variable::new(name, expr::Sort::boolean());
-                    define_variable(&mut self.solver, &assertion, &condition)?;
+                    define_variable(&mut solver, &assertion, &condition)?;
                     assertions.push(assertion.into())
                 }
-                lir::Node::Assume { condition } => self.solver.assert(&condition)?,
+                lir::Node::Assume { condition } => solver.assert(&condition)?,
             }
         }
 
-        self.solver
-            .assert(&expr::Boolean::not(expr::Boolean::conjunction(
-                &assertions,
-            )?)?)?;
+        solver.assert(&expr::Boolean::not(expr::Boolean::conjunction(
+            &assertions,
+        )?)?)?;
 
         Ok(())
     }
 
     fn check_assertions(&mut self) -> Result<CheckResult> {
-        let is_sat = self.solver.check_sat()?;
+        let mut solver = self.solver.borrow_mut();
+
+        let is_sat = solver.check_sat()?;
         if is_sat {
-            Ok(CheckResult::AssertionViolated)
+            let model = Box::new(RSMTModel::new(Rc::clone(&self.solver)));
+            Ok(CheckResult::AssertionViolated { model })
         } else {
             Ok(CheckResult::AssertionsHold)
         }
-    }
-}
-
-#[derive(Clone, Copy)]
-struct Parser;
-
-impl Parser {
-    pub fn new() -> Self {
-        Self {}
     }
 }
 
@@ -547,4 +553,116 @@ fn define_pht<T>(solver: &mut Solver<T>) -> Result<()> {
     )?;
 
     Ok(())
+}
+
+struct RSMTModel {
+    solver: Rc<RefCell<rsmt2::Solver<Parser>>>,
+}
+
+impl RSMTModel {
+    pub fn new(solver: Rc<RefCell<rsmt2::Solver<Parser>>>) -> Self {
+        Self { solver }
+    }
+}
+
+impl Model for RSMTModel {
+    fn get_interpretation(&self, variable: &expr::Variable) -> Option<expr::Expression> {
+        let mut solver = self.solver.borrow_mut();
+
+        let var_expr: expr::Expression = variable.clone().into();
+        if let Ok(result) = solver.get_values(&[var_expr]) {
+            result.first().and_then(|(_, value)| Some(value.clone()))
+        } else {
+            None
+        }
+    }
+
+    fn evaluate(&self, expr: &expr::Expression) -> Option<expr::Expression> {
+        let mut solver = self.solver.borrow_mut();
+
+        if let Ok(result) = solver.get_values(&[expr]) {
+            result.first().and_then(|(_, value)| Some(value.clone()))
+        } else {
+            None
+        }
+    }
+}
+
+mod parser {
+    use super::*;
+    use nom::{
+        branch::alt,
+        bytes::complete::{tag, take_while1},
+        character::complete::{digit1, hex_digit1},
+        combinator::{all_consuming, map, map_res, value},
+        sequence::preceded,
+        IResult,
+    };
+
+    fn bin_digit1(input: &str) -> IResult<&str, &str> {
+        take_while1(|c| c == '0' || c == '1')(input)
+    }
+
+    fn boolean_literal(input: &str) -> IResult<&str, expr::Expression> {
+        alt((
+            value(expr::Boolean::constant(false), tag("false")),
+            value(expr::Boolean::constant(true), tag("true")),
+        ))(input)
+    }
+
+    fn int_literal(input: &str) -> IResult<&str, expr::Expression> {
+        map(map_res(digit1, FromStr::from_str), expr::Integer::constant)(input)
+    }
+
+    fn bitvec_literal_hex(input: &str) -> IResult<&str, expr::Expression> {
+        let from_str = |s: &str| {
+            expr::BitVector::constant_big_uint(BigUint::parse_bytes(s.as_bytes(), 16).unwrap())
+        };
+        map(preceded(tag("#x"), hex_digit1), from_str)(input)
+    }
+
+    fn bitvec_literal_binary(input: &str) -> IResult<&str, expr::Expression> {
+        let from_str = |s: &str| {
+            expr::BitVector::constant_big_uint(BigUint::parse_bytes(s.as_bytes(), 2).unwrap())
+        };
+        map(preceded(tag("#b"), bin_digit1), from_str)(input)
+    }
+
+    fn bitvec_literal(input: &str) -> IResult<&str, expr::Expression> {
+        alt((bitvec_literal_hex, bitvec_literal_binary))(input)
+    }
+
+    fn literal(input: &str) -> IResult<&str, expr::Expression> {
+        alt((boolean_literal, bitvec_literal, int_literal))(input)
+    }
+
+    pub(super) fn parse_literal(input: &str) -> SmtRes<expr::Expression> {
+        match all_consuming(literal)(input) {
+            Ok((_, lit)) => Ok(lit),
+            Err(_) => Err("Failed to parse literal!".into()),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Parser;
+
+impl Parser {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl<'a> ValueParser<expr::Expression, &'a str> for Parser {
+    fn parse_value(self, input: &'a str) -> SmtRes<expr::Expression> {
+        //println!("ValueParser::parse_value: {}", input);
+        parser::parse_literal(input)
+    }
+}
+
+impl<'a> ExprParser<String, (), &'a str> for Parser {
+    fn parse_expr(self, input: &'a str, _: ()) -> SmtRes<String> {
+        //println!("ExprParser::parse_expr: {}", input);
+        Ok(input.into())
+    }
 }

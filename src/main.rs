@@ -326,7 +326,7 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
         CheckResult::AssertionsHold => {
             println!("{}", "Program is safe.".bold().green());
         }
-        CheckResult::AssertionViolated => {
+        CheckResult::AssertionViolated { .. } => {
             println!("{}", "Leak detected!".bold().red());
             process::exit(1);
         }
