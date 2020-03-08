@@ -265,6 +265,8 @@ impl ControlFlowGraph {
     ///
     /// When a `Block` as only one successor, and that successor has only one predecessor, we
     /// merge both into one `Block`.
+    ///
+    /// Keeps the entry and exit blocks intact.
     pub fn merge(&mut self) -> Result<()> {
         use std::collections::HashSet;
 
@@ -275,6 +277,11 @@ impl ControlFlowGraph {
             for block in self.blocks() {
                 // If we are already merging this block this iteration, skip it
                 if blocks_being_merged.contains(&block.index()) {
+                    continue;
+                }
+
+                // Do not merge the entry block
+                if self.entry == Some(block.index()) {
                     continue;
                 }
 
@@ -296,6 +303,11 @@ impl ControlFlowGraph {
                     Some(successor) => successor.tail(),
                     None => bail!("successor not found"),
                 };
+
+                // Do not merge the exit block
+                if self.exit == Some(successor) {
+                    continue;
+                }
 
                 // If this successor is already being merged, skip it
                 if blocks_being_merged.contains(&successor) {
