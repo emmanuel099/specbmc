@@ -1,11 +1,9 @@
 use crate::error::Result;
-use crate::expr::{Expression, Sort, Variable};
-use std::convert::TryFrom;
+use crate::expr::{Constant, Expression, Sort, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Integer {
-    Constant(u64),
     Lt,
     Gt,
     Lte,
@@ -19,27 +17,9 @@ pub enum Integer {
     Neg,
 }
 
-impl From<u64> for Integer {
-    fn from(value: u64) -> Self {
-        Self::Constant(value)
-    }
-}
-
-impl TryFrom<&Integer> for u64 {
-    type Error = &'static str;
-
-    fn try_from(i: &Integer) -> std::result::Result<u64, Self::Error> {
-        match i {
-            Integer::Constant(value) => Ok(*value),
-            _ => Err("not a constant"),
-        }
-    }
-}
-
 impl fmt::Display for Integer {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Self::Constant(value) => write!(f, "{}", value),
             Self::Lt => write!(f, "<"),
             Self::Gt => write!(f, ">"),
             Self::Lte => write!(f, "<="),
@@ -93,7 +73,7 @@ impl Integer {
     }
 
     pub fn constant(value: u64) -> Expression {
-        Expression::new(Self::from(value).into(), vec![], Sort::integer())
+        Expression::constant(Constant::integer(value), Sort::integer())
     }
 
     int_arith_unary!(abs, Self::Abs);
@@ -109,11 +89,4 @@ impl Integer {
     int_comp!(gt, Self::Gt);
     int_comp!(lte, Self::Lte);
     int_comp!(gte, Self::Gte);
-
-    pub fn is_constant(&self) -> bool {
-        match self {
-            Self::Constant(_) => true,
-            _ => false,
-        }
-    }
 }

@@ -1,14 +1,14 @@
 use crate::environment::Environment;
 use crate::error::Result;
-use crate::expr::{Expression, Variable};
+use crate::expr::{Constant, Expression, Variable};
 use crate::lir::Program;
 use std::path::Path;
 
 mod rsmt;
 
 pub trait Model {
-    fn get_interpretation(&self, variable: &Variable) -> Option<Expression>;
-    fn evaluate(&self, expr: &Expression) -> Option<Expression>;
+    fn get_interpretation(&self, variable: &Variable) -> Option<Constant>;
+    fn evaluate(&self, expr: &Expression) -> Option<Constant>;
 }
 
 pub enum CheckResult {

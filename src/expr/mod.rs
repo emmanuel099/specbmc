@@ -6,6 +6,7 @@ mod arch;
 mod array;
 mod bitvector;
 mod boolean;
+mod constant;
 mod integer;
 mod sort;
 mod variable;
@@ -19,6 +20,7 @@ pub use self::array::Array;
 pub use self::bitvector::BitVector;
 pub use self::bitvector::Value as BitVectorValue;
 pub use self::boolean::Boolean;
+pub use self::constant::Constant;
 pub use self::integer::Integer;
 pub use self::sort::Sort;
 pub use self::variable::Variable;
@@ -26,6 +28,7 @@ pub use self::variable::Variable;
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Operator {
     Variable(Variable),
+    Constant(Constant),
     Ite,
     Equal,
     Nondet, // Nondeterministic value
@@ -65,6 +68,7 @@ impl fmt::Display for Operator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Variable(v) => v.fmt(f),
+            Self::Constant(c) => c.fmt(f),
             Self::Ite => write!(f, "ite"),
             Self::Equal => write!(f, "="),
             Self::Nondet => write!(f, "nondet()"),
@@ -116,6 +120,10 @@ impl Expression {
     pub fn variable(variable: Variable) -> Expression {
         let result_sort = variable.sort().clone();
         Expression::new(Operator::Variable(variable), vec![], result_sort)
+    }
+
+    pub fn constant(constant: Constant, sort: Sort) -> Expression {
+        Expression::new(Operator::Constant(constant), vec![], sort)
     }
 
     pub fn ite(cond: Expression, then: Expression, else_: Expression) -> Result<Expression> {
@@ -196,9 +204,7 @@ impl Expression {
 
     pub fn is_constant(&self) -> bool {
         match &self.operator {
-            Operator::Boolean(op) => op.is_constant(),
-            Operator::Integer(op) => op.is_constant(),
-            Operator::BitVector(op) => op.is_constant(),
+            Operator::Constant(_) => true,
             _ => false,
         }
     }
@@ -234,8 +240,7 @@ impl TryFrom<&Expression> for bool {
             return Err("cannot convert");
         }
         match e.operator() {
-            Operator::Boolean(op) => bool::try_from(op),
-            Operator::BitVector(op) => bool::try_from(op),
+            Operator::Constant(c) => bool::try_from(c),
             _ => Err("cannot convert"),
         }
     }
@@ -249,8 +254,7 @@ impl TryFrom<&Expression> for u64 {
             return Err("cannot convert");
         }
         match e.operator() {
-            Operator::Integer(op) => u64::try_from(op),
-            Operator::BitVector(op) => u64::try_from(op),
+            Operator::Constant(c) => u64::try_from(c),
             _ => Err("cannot convert"),
         }
     }
@@ -264,8 +268,7 @@ impl TryFrom<&Expression> for BitVectorValue {
             return Err("cannot convert");
         }
         match e.operator() {
-            Operator::Boolean(op) => BitVectorValue::try_from(op),
-            Operator::BitVector(op) => BitVectorValue::try_from(op),
+            Operator::Constant(c) => BitVectorValue::try_from(c),
             _ => Err("cannot convert"),
         }
     }

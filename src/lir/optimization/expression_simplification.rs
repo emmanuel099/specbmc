@@ -70,10 +70,10 @@ impl Simplify for Expression {
 fn simplified_expression(expr: &Expression) -> Option<Expression> {
     match (expr.operator(), expr.operands()) {
         (Operator::Equal, [lhs, rhs]) => match (lhs.operator(), rhs.operator()) {
-            (_, Operator::Boolean(Boolean::True)) => Some(lhs.clone()), // b = true -> b
-            (Operator::Boolean(Boolean::True), _) => Some(rhs.clone()), // true = b -> b
-            (_, Operator::Boolean(Boolean::False)) => Boolean::not(lhs.clone()).ok(), // b = false -> not b
-            (Operator::Boolean(Boolean::False), _) => Boolean::not(rhs.clone()).ok(), // false = b -> not b
+            (_, Operator::Constant(Constant::Boolean(true))) => Some(lhs.clone()), // b = true -> b
+            (Operator::Constant(Constant::Boolean(true)), _) => Some(rhs.clone()), // true = b -> b
+            (_, Operator::Constant(Constant::Boolean(false))) => Boolean::not(lhs.clone()).ok(), // b = false -> not b
+            (Operator::Constant(Constant::Boolean(false)), _) => Boolean::not(rhs.clone()).ok(), // false = b -> not b
             _ => {
                 if lhs == rhs {
                     // a = a -> true
@@ -84,8 +84,8 @@ fn simplified_expression(expr: &Expression) -> Option<Expression> {
             }
         },
         (Operator::Ite, [cond, then, r#else]) => match cond.operator() {
-            Operator::Boolean(Boolean::True) => Some(then.clone()), // (ite true a b) -> a
-            Operator::Boolean(Boolean::False) => Some(r#else.clone()), // (ite false a b) -> b
+            Operator::Constant(Constant::Boolean(true)) => Some(then.clone()), // (ite true a b) -> a
+            Operator::Constant(Constant::Boolean(false)) => Some(r#else.clone()), // (ite false a b) -> b
             _ => {
                 if then == r#else {
                     // (ite c a a) -> a
@@ -138,8 +138,8 @@ fn simplified_boolean_expression(op: &Boolean, operands: &[Expression]) -> Optio
             }
         }
         (Boolean::Not, [operand]) => match operand.operator() {
-            Operator::Boolean(Boolean::False) => Some(Boolean::constant(true)), // not false -> true
-            Operator::Boolean(Boolean::True) => Some(Boolean::constant(false)), // not true -> false
+            Operator::Constant(Constant::Boolean(false)) => Some(Boolean::constant(true)), // not false -> true
+            Operator::Constant(Constant::Boolean(true)) => Some(Boolean::constant(false)), // not true -> false
             Operator::Boolean(Boolean::Not) => Some(operand.operands()[0].clone()), // not not a -> a
             _ => None,
         },
@@ -164,8 +164,8 @@ fn simplified_boolean_expression(op: &Boolean, operands: &[Expression]) -> Optio
 fn simplified_integer_expression(op: &Integer, operands: &[Expression]) -> Option<Expression> {
     match (op, operands) {
         (Integer::Sub, [lhs, rhs]) => match (lhs.operator(), rhs.operator()) {
-            (_, Operator::Integer(Integer::Constant(0))) => Some(lhs.clone()), // a - 0 -> a
-            (Operator::Integer(Integer::Constant(0)), _) => Integer::neg(rhs.clone()).ok(), // 0 - a -> -a
+            (_, Operator::Constant(Constant::Integer(0))) => Some(lhs.clone()), // a - 0 -> a
+            (Operator::Constant(Constant::Integer(0)), _) => Integer::neg(rhs.clone()).ok(), // 0 - a -> -a
             _ => {
                 if lhs == rhs {
                     // a - a -> 0
@@ -176,15 +176,15 @@ fn simplified_integer_expression(op: &Integer, operands: &[Expression]) -> Optio
             }
         },
         (Integer::Add, [lhs, rhs]) => match (lhs.operator(), rhs.operator()) {
-            (_, Operator::Integer(Integer::Constant(0))) => Some(lhs.clone()), // a + 0 -> a
-            (Operator::Integer(Integer::Constant(0)), _) => Some(rhs.clone()), // 0 + a -> a
+            (_, Operator::Constant(Constant::Integer(0))) => Some(lhs.clone()), // a + 0 -> a
+            (Operator::Constant(Constant::Integer(0)), _) => Some(rhs.clone()), // 0 + a -> a
             _ => None,
         },
         (Integer::Mul, [lhs, rhs]) => match (lhs.operator(), rhs.operator()) {
-            (_, Operator::Integer(Integer::Constant(0))) => Some(Integer::constant(0)), // a * 0 -> 0
-            (Operator::Integer(Integer::Constant(0)), _) => Some(Integer::constant(0)), // 0 * a -> 0
-            (_, Operator::Integer(Integer::Constant(1))) => Some(lhs.clone()), // a * 1 -> a
-            (Operator::Integer(Integer::Constant(1)), _) => Some(rhs.clone()), // 1 * a -> a
+            (_, Operator::Constant(Constant::Integer(0))) => Some(Integer::constant(0)), // a * 0 -> 0
+            (Operator::Constant(Constant::Integer(0)), _) => Some(Integer::constant(0)), // 0 * a -> 0
+            (_, Operator::Constant(Constant::Integer(1))) => Some(lhs.clone()), // a * 1 -> a
+            (Operator::Constant(Constant::Integer(1)), _) => Some(rhs.clone()), // 1 * a -> a
             _ => None,
         },
         _ => None,
@@ -194,7 +194,7 @@ fn simplified_integer_expression(op: &Integer, operands: &[Expression]) -> Optio
 fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Option<Expression> {
     match (op, operands) {
         (BitVector::Add, [lhs, rhs]) => match (lhs.operator(), rhs.operator()) {
-            (_, Operator::BitVector(BitVector::Constant(c))) => {
+            (_, Operator::Constant(Constant::BitVector(c))) => {
                 if c.is_zero() {
                     // a + 0 -> a
                     Some(lhs.clone())
@@ -202,7 +202,7 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
                     None
                 }
             }
-            (Operator::BitVector(BitVector::Constant(c)), _) => {
+            (Operator::Constant(Constant::BitVector(c)), _) => {
                 if c.is_zero() {
                     // 0 + a -> a
                     Some(rhs.clone())
@@ -213,7 +213,7 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
             _ => None,
         },
         (BitVector::Sub, [lhs, rhs]) => match (lhs.operator(), rhs.operator()) {
-            (_, Operator::BitVector(BitVector::Constant(c))) => {
+            (_, Operator::Constant(Constant::BitVector(c))) => {
                 if c.is_zero() {
                     // a - 0 -> a
                     Some(lhs.clone())
@@ -221,7 +221,7 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
                     None
                 }
             }
-            (Operator::BitVector(BitVector::Constant(c)), _) => {
+            (Operator::Constant(Constant::BitVector(c)), _) => {
                 if c.is_zero() {
                     // 0 - a -> -a
                     BitVector::neg(rhs.clone()).ok()
@@ -232,7 +232,7 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
             _ => None,
         },
         (BitVector::Mul, [lhs, rhs]) => match (lhs.operator(), rhs.operator()) {
-            (_, Operator::BitVector(BitVector::Constant(c))) => {
+            (_, Operator::Constant(Constant::BitVector(c))) => {
                 if c.is_one() {
                     // a * 1 -> a
                     Some(lhs.clone())
@@ -240,7 +240,7 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
                     None
                 }
             }
-            (Operator::BitVector(BitVector::Constant(c)), _) => {
+            (Operator::Constant(Constant::BitVector(c)), _) => {
                 if c.is_one() {
                     // 1 * a -> a
                     Some(rhs.clone())
@@ -270,7 +270,7 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
                 Some(Boolean::constant(true))
             } else {
                 match (lhs.operator(), rhs.operator()) {
-                    (_, Operator::BitVector(BitVector::Constant(c))) => {
+                    (_, Operator::Constant(Constant::BitVector(c))) => {
                         if c.is_zero() {
                             // a >=u 0 -> true
                             Some(Boolean::constant(true))
@@ -288,7 +288,7 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
                 Some(Boolean::constant(false))
             } else {
                 match (lhs.operator(), rhs.operator()) {
-                    (Operator::BitVector(BitVector::Constant(c)), _) => {
+                    (Operator::Constant(Constant::BitVector(c)), _) => {
                         if c.is_zero() {
                             // 0 >u a -> false
                             Some(Boolean::constant(false))
@@ -306,7 +306,7 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
                 Some(Boolean::constant(true))
             } else {
                 match (lhs.operator(), rhs.operator()) {
-                    (Operator::BitVector(BitVector::Constant(c)), _) => {
+                    (Operator::Constant(Constant::BitVector(c)), _) => {
                         if c.is_zero() {
                             // 0 <=u a -> true
                             Some(Boolean::constant(true))
@@ -324,7 +324,7 @@ fn simplified_bitvec_expression(op: &BitVector, operands: &[Expression]) -> Opti
                 Some(Boolean::constant(false))
             } else {
                 match (lhs.operator(), rhs.operator()) {
-                    (_, Operator::BitVector(BitVector::Constant(c))) => {
+                    (_, Operator::Constant(Constant::BitVector(c))) => {
                         if c.is_zero() {
                             // a <u 0 -> false
                             Some(Boolean::constant(false))

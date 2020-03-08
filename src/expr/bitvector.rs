@@ -1,13 +1,11 @@
 use crate::error::Result;
-use crate::expr::{Expression, Sort, Variable};
+use crate::expr::{Constant, Expression, Sort, Variable};
 pub use falcon::il::Constant as Value;
 use num_bigint::BigUint;
-use std::convert::TryFrom;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum BitVector {
-    Constant(Value),
     ToBoolean,
     FromBoolean(usize),
     Concat,
@@ -49,51 +47,9 @@ pub enum BitVector {
     SGe,
 }
 
-impl From<Value> for BitVector {
-    fn from(value: Value) -> Self {
-        Self::Constant(value)
-    }
-}
-
-impl TryFrom<&BitVector> for bool {
-    type Error = &'static str;
-
-    fn try_from(b: &BitVector) -> std::result::Result<bool, Self::Error> {
-        match b {
-            BitVector::Constant(value) => Ok(!value.is_zero()),
-            _ => Err("not a constant"),
-        }
-    }
-}
-
-impl TryFrom<&BitVector> for u64 {
-    type Error = &'static str;
-
-    fn try_from(b: &BitVector) -> std::result::Result<u64, Self::Error> {
-        match b {
-            BitVector::Constant(value) => {
-                value.value_u64().ok_or_else(|| "failed to convert to u64")
-            }
-            _ => Err("not a constant"),
-        }
-    }
-}
-
-impl TryFrom<&BitVector> for Value {
-    type Error = &'static str;
-
-    fn try_from(b: &BitVector) -> std::result::Result<Value, Self::Error> {
-        match b {
-            BitVector::Constant(value) => Ok(value.clone()),
-            _ => Err("not a constant"),
-        }
-    }
-}
-
 impl fmt::Display for BitVector {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s = match self {
-            Self::Constant(value) => format!("{}", value),
             Self::ToBoolean => "bv2bool".to_owned(),
             Self::FromBoolean(i) => format!("(bool2bv {})", i),
             Self::Concat => "bvconcat".to_owned(),
@@ -179,7 +135,7 @@ impl BitVector {
 
     pub fn constant(value: Value) -> Expression {
         let bits = value.bits();
-        Expression::new(Self::Constant(value).into(), vec![], Sort::bit_vector(bits))
+        Expression::constant(Constant::bit_vector(value), Sort::bit_vector(bits))
     }
 
     pub fn constant_u64(value: u64, bits: usize) -> Expression {
@@ -360,12 +316,5 @@ impl BitVector {
             vec![expr],
             result_sort,
         ))
-    }
-
-    pub fn is_constant(&self) -> bool {
-        match self {
-            Self::Constant(_) => true,
-            _ => false,
-        }
     }
 }

@@ -149,6 +149,7 @@ impl Expr2Smt<()> for expr::Operator {
     {
         match self {
             Self::Variable(v) => v.sym_to_smt2(w, i),
+            Self::Constant(c) => c.expr_to_smt2(w, i),
             Self::Ite => {
                 write!(w, "ite")?;
                 Ok(())
@@ -175,14 +176,28 @@ impl Expr2Smt<()> for expr::Operator {
     }
 }
 
+impl Expr2Smt<()> for expr::Constant {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+    where
+        Writer: ::std::io::Write,
+    {
+        match self {
+            Self::Boolean(true) => write!(w, "true")?,
+            Self::Boolean(false) => write!(w, "false")?,
+            Self::Integer(value) => write!(w, "{}", value)?,
+            Self::BitVector(bv) => write!(w, "(_ bv{} {})", bv.value(), bv.bits())?,
+            Self::Array(_) => unimplemented!(),
+        };
+        Ok(())
+    }
+}
+
 impl Expr2Smt<()> for expr::Boolean {
     fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
         match self {
-            Self::True => write!(w, "true")?,
-            Self::False => write!(w, "false")?,
             Self::Not => write!(w, "not")?,
             Self::Imply => write!(w, "=>")?,
             Self::And => write!(w, "and")?,
@@ -199,7 +214,6 @@ impl Expr2Smt<()> for expr::Integer {
         Writer: ::std::io::Write,
     {
         match self {
-            Self::Constant(value) => write!(w, "{}", value)?,
             Self::Lt => write!(w, "<")?,
             Self::Gt => write!(w, ">")?,
             Self::Lte => write!(w, "<=")?,
@@ -221,7 +235,6 @@ impl Expr2Smt<()> for expr::BitVector {
         Writer: ::std::io::Write,
     {
         match self {
-            Self::Constant(bv) => write!(w, "(_ bv{} {})", bv.value(), bv.bits())?,
             Self::Concat => write!(w, "concat")?,
             Self::Extract(i, j) => write!(w, "(_ extract {} {})", i, j)?,
             Self::Truncate(i) => write!(w, "(_ extract {} 0)", i - 1)?,
@@ -566,7 +579,7 @@ impl RSMTModel {
 }
 
 impl Model for RSMTModel {
-    fn get_interpretation(&self, variable: &expr::Variable) -> Option<expr::Expression> {
+    fn get_interpretation(&self, variable: &expr::Variable) -> Option<expr::Constant> {
         let mut solver = self.solver.borrow_mut();
 
         let var_expr: expr::Expression = variable.clone().into();
@@ -577,7 +590,7 @@ impl Model for RSMTModel {
         }
     }
 
-    fn evaluate(&self, expr: &expr::Expression) -> Option<expr::Expression> {
+    fn evaluate(&self, expr: &expr::Expression) -> Option<expr::Constant> {
         let mut solver = self.solver.borrow_mut();
 
         if let Ok(result) = solver.get_values(&[expr]) {
@@ -603,40 +616,40 @@ mod parser {
         take_while1(|c| c == '0' || c == '1')(input)
     }
 
-    fn boolean_literal(input: &str) -> IResult<&str, expr::Expression> {
+    fn boolean_literal(input: &str) -> IResult<&str, expr::Constant> {
         alt((
-            value(expr::Boolean::constant(false), tag("false")),
-            value(expr::Boolean::constant(true), tag("true")),
+            value(expr::Constant::boolean(false), tag("false")),
+            value(expr::Constant::boolean(true), tag("true")),
         ))(input)
     }
 
-    fn int_literal(input: &str) -> IResult<&str, expr::Expression> {
-        map(map_res(digit1, FromStr::from_str), expr::Integer::constant)(input)
+    fn int_literal(input: &str) -> IResult<&str, expr::Constant> {
+        map(map_res(digit1, FromStr::from_str), expr::Constant::integer)(input)
     }
 
-    fn bitvec_literal_hex(input: &str) -> IResult<&str, expr::Expression> {
+    fn bitvec_literal_hex(input: &str) -> IResult<&str, expr::Constant> {
         let from_str = |s: &str| {
-            expr::BitVector::constant_big_uint(BigUint::parse_bytes(s.as_bytes(), 16).unwrap())
+            expr::Constant::bit_vector_big_uint(BigUint::parse_bytes(s.as_bytes(), 16).unwrap())
         };
         map(preceded(tag("#x"), hex_digit1), from_str)(input)
     }
 
-    fn bitvec_literal_binary(input: &str) -> IResult<&str, expr::Expression> {
+    fn bitvec_literal_binary(input: &str) -> IResult<&str, expr::Constant> {
         let from_str = |s: &str| {
-            expr::BitVector::constant_big_uint(BigUint::parse_bytes(s.as_bytes(), 2).unwrap())
+            expr::Constant::bit_vector_big_uint(BigUint::parse_bytes(s.as_bytes(), 2).unwrap())
         };
         map(preceded(tag("#b"), bin_digit1), from_str)(input)
     }
 
-    fn bitvec_literal(input: &str) -> IResult<&str, expr::Expression> {
+    fn bitvec_literal(input: &str) -> IResult<&str, expr::Constant> {
         alt((bitvec_literal_hex, bitvec_literal_binary))(input)
     }
 
-    fn literal(input: &str) -> IResult<&str, expr::Expression> {
+    fn literal(input: &str) -> IResult<&str, expr::Constant> {
         alt((boolean_literal, bitvec_literal, int_literal))(input)
     }
 
-    pub(super) fn parse_literal(input: &str) -> SmtRes<expr::Expression> {
+    pub(super) fn parse_literal(input: &str) -> SmtRes<expr::Constant> {
         match all_consuming(literal)(input) {
             Ok((_, lit)) => Ok(lit),
             Err(_) => Err("Failed to parse literal!".into()),
@@ -653,8 +666,8 @@ impl Parser {
     }
 }
 
-impl<'a> ValueParser<expr::Expression, &'a str> for Parser {
-    fn parse_value(self, input: &'a str) -> SmtRes<expr::Expression> {
+impl<'a> ValueParser<expr::Constant, &'a str> for Parser {
+    fn parse_value(self, input: &'a str) -> SmtRes<expr::Constant> {
         //println!("ValueParser::parse_value: {}", input);
         parser::parse_literal(input)
     }
