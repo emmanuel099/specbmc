@@ -246,7 +246,7 @@ impl Transform<Program> for TransientExecution {
             TransientEncodingStrategy::Several => self.encode_several(program)?,
         };
 
-        cfg.remove_unreachable_blocks()?;
+        cfg.simplify()?;
         program.set_control_flow_graph(cfg);
 
         Ok(())
@@ -471,6 +471,10 @@ fn append_spec_win_decrease_to_all_blocks(cfg: &mut ControlFlowGraph) -> Result<
         }
 
         let count = block.instruction_count_by_address();
+        if count == 0 {
+            continue; // Avoid adding useless decrease by zero instructions
+        }
+
         block.assign(
             spec_win(),
             BitVector::sub(
