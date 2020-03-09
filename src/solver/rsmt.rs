@@ -606,9 +606,9 @@ mod parser {
     use nom::{
         branch::alt,
         bytes::complete::{tag, take_while1},
-        character::complete::{digit1, hex_digit1},
+        character::complete::{char, digit1, hex_digit1},
         combinator::{all_consuming, map, map_res, value},
-        sequence::preceded,
+        sequence::{preceded, tuple},
         IResult,
     };
 
@@ -641,8 +641,25 @@ mod parser {
         map(preceded(tag("#b"), bin_digit1), from_str)(input)
     }
 
+    fn bitvec_literal_smt(input: &str) -> IResult<&str, expr::Constant> {
+        // (_ bv42 64)
+        map(
+            tuple((tag("(_ bv"), digit1, char(' '), digit1, char(')'))),
+            |(_, value, _, _, _)| {
+                let value: &str = value;
+                expr::Constant::bit_vector_big_uint(
+                    BigUint::parse_bytes(value.as_bytes(), 10).unwrap(),
+                )
+            },
+        )(input)
+    }
+
     fn bitvec_literal(input: &str) -> IResult<&str, expr::Constant> {
-        alt((bitvec_literal_hex, bitvec_literal_binary))(input)
+        alt((
+            bitvec_literal_hex,
+            bitvec_literal_binary,
+            bitvec_literal_smt,
+        ))(input)
     }
 
     fn literal(input: &str) -> IResult<&str, expr::Constant> {
