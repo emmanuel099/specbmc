@@ -8,6 +8,7 @@ use rsmt2::parse::*;
 use rsmt2::print::{Expr2Smt, Sort2Smt, Sym2Smt};
 use rsmt2::{Logic, SmtConf, SmtRes, Solver};
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::fs::File;
 use std::path::Path;
@@ -606,11 +607,53 @@ mod parser {
     use nom::{
         branch::alt,
         bytes::complete::{tag, take_while1},
-        character::complete::{char, digit1, hex_digit1},
+        character::complete::{char, digit1, hex_digit1, multispace1},
         combinator::{all_consuming, map, map_res, value},
-        sequence::{preceded, tuple},
+        sequence::{preceded, terminated, tuple},
         IResult,
     };
+
+    fn bit_vec_sort(input: &str) -> IResult<&str, expr::Sort> {
+        map(
+            tuple((
+                tag("(_"),
+                multispace1,
+                tag("BitVec"),
+                multispace1,
+                map_res(digit1, FromStr::from_str),
+                char(')'),
+            )),
+            |(_, _, _, _, bits, _)| expr::Sort::bit_vector(bits),
+        )(input)
+    }
+
+    fn array_sort(input: &str) -> IResult<&str, expr::Sort> {
+        map(
+            tuple((
+                tag("(Array"),
+                multispace1,
+                sort,
+                multispace1,
+                sort,
+                char(')'),
+            )),
+            |(_, _, range, _, domain, _)| expr::Sort::array(&range, &domain),
+        )(input)
+    }
+
+    fn sort(input: &str) -> IResult<&str, expr::Sort> {
+        alt((
+            value(expr::Sort::Boolean, tag("Bool")),
+            value(expr::Sort::Integer, tag("Int")),
+            value(expr::Sort::Memory, tag("Memory")),
+            value(expr::Sort::Predictor, tag("Predictor")),
+            value(expr::Sort::Cache, tag("Cache")),
+            value(expr::Sort::BranchTargetBuffer, tag("BranchTargetBuffer")),
+            value(expr::Sort::PatternHistoryTable, tag("PatternHistoryTable")),
+            bit_vec_sort,
+            array_sort,
+        ))(input)
+    }
 
     fn bin_digit1(input: &str) -> IResult<&str, &str> {
         take_while1(|c| c == '0' || c == '1')(input)
@@ -662,8 +705,49 @@ mod parser {
         ))(input)
     }
 
+    fn as_const(input: &str) -> IResult<&str, expr::Sort> {
+        // (as const (Array (_ BitVec 64) (_ BitVec 8)))
+        preceded(tag("(as const "), terminated(sort, char(')')))(input)
+    }
+
+    fn array_init(input: &str) -> IResult<&str, BTreeMap<expr::Constant, expr::Constant>> {
+        // ((as const (Array (_ BitVec 64) (_ BitVec 8))) (_ bv0 8))
+        map(
+            tuple((char('('), as_const, multispace1, literal, char(')'))),
+            |(_, sort, _, value, _)| BTreeMap::new(),
+        )(input)
+    }
+
+    fn array_store(input: &str) -> IResult<&str, BTreeMap<expr::Constant, expr::Constant>> {
+        // (store mem addr value)
+        map(
+            tuple((
+                tag("(store"),
+                multispace1,
+                array_nested,
+                multispace1,
+                literal,
+                multispace1,
+                literal,
+                char(')'),
+            )),
+            |(_, _, mut arr, _, addr, _, value, _)| {
+                arr.insert(addr, value);
+                arr
+            },
+        )(input)
+    }
+
+    fn array_nested(input: &str) -> IResult<&str, BTreeMap<expr::Constant, expr::Constant>> {
+        alt((array_init, array_store))(input)
+    }
+
+    fn array_literal(input: &str) -> IResult<&str, expr::Constant> {
+        map(array_nested, expr::Constant::array)(input)
+    }
+
     fn literal(input: &str) -> IResult<&str, expr::Constant> {
-        alt((boolean_literal, bitvec_literal, int_literal))(input)
+        alt((boolean_literal, bitvec_literal, int_literal, array_literal))(input)
     }
 
     pub(super) fn parse_literal(input: &str) -> SmtRes<expr::Constant> {
