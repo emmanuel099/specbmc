@@ -149,6 +149,7 @@ impl Instruction {
         self.operations
             .iter()
             .flat_map(Operation::variables_read)
+            .chain(self.effects.iter().flat_map(Effect::variables))
             .collect()
     }
 
@@ -157,6 +158,7 @@ impl Instruction {
         self.operations
             .iter_mut()
             .flat_map(Operation::variables_read_mut)
+            .chain(self.effects.iter_mut().flat_map(Effect::variables_mut))
             .collect()
     }
 }

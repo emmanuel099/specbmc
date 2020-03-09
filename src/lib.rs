@@ -12,6 +12,7 @@ extern crate rsmt2;
 extern crate serde;
 extern crate serde_yaml;
 
+pub mod cex;
 pub mod environment;
 pub mod expr;
 pub mod hir;

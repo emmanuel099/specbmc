@@ -1,4 +1,4 @@
-use crate::expr::Expression;
+use crate::expr::{Expression, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -49,6 +49,56 @@ impl Effect {
         Self::Conditional {
             condition,
             effect: Box::new(self),
+        }
+    }
+
+    /// Get each `Variable` read by this `Effect`.
+    pub fn variables(&self) -> Vec<&Variable> {
+        match self {
+            Self::Conditional { condition, effect } => condition
+                .variables()
+                .into_iter()
+                .chain(effect.variables().into_iter())
+                .collect(),
+            Self::CacheFetch { address, .. } => address.variables(),
+            Self::BranchTarget { location, target } => location
+                .variables()
+                .into_iter()
+                .chain(target.variables().into_iter())
+                .collect(),
+            Self::BranchCondition {
+                location,
+                condition,
+            } => location
+                .variables()
+                .into_iter()
+                .chain(condition.variables().into_iter())
+                .collect(),
+        }
+    }
+
+    /// Get a mutable reference to each `Variable` read by this `Effect`.
+    pub fn variables_mut(&mut self) -> Vec<&mut Variable> {
+        match self {
+            Self::Conditional { condition, effect } => condition
+                .variables_mut()
+                .into_iter()
+                .chain(effect.variables_mut().into_iter())
+                .collect(),
+            Self::CacheFetch { address, .. } => address.variables_mut(),
+            Self::BranchTarget { location, target } => location
+                .variables_mut()
+                .into_iter()
+                .chain(target.variables_mut().into_iter())
+                .collect(),
+            Self::BranchCondition {
+                location,
+                condition,
+            } => location
+                .variables_mut()
+                .into_iter()
+                .chain(condition.variables_mut().into_iter())
+                .collect(),
         }
     }
 }
