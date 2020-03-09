@@ -1,6 +1,5 @@
 use crate::error::Result;
-use crate::expr::ArrayValue;
-pub use falcon::il::Constant as BitVectorValue;
+use crate::expr::{ArrayValue, BitVectorValue};
 use num_bigint::BigUint;
 use std::convert::TryFrom;
 use std::fmt;

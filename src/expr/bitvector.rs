@@ -1,6 +1,6 @@
 use crate::error::Result;
 use crate::expr::{Constant, Expression, Sort, Variable};
-pub use falcon::il::Constant as Value;
+pub use falcon::il::Constant as BitVectorValue;
 use num_bigint::BigUint;
 use std::fmt;
 
@@ -133,18 +133,18 @@ impl BitVector {
         Variable::new(name, Sort::bit_vector(bits))
     }
 
-    pub fn constant(value: Value) -> Expression {
+    pub fn constant(value: BitVectorValue) -> Expression {
         let bits = value.bits();
         Expression::constant(Constant::bit_vector(value), Sort::bit_vector(bits))
     }
 
     pub fn constant_u64(value: u64, bits: usize) -> Expression {
-        Self::constant(Value::new(value, bits))
+        Self::constant(BitVectorValue::new(value, bits))
     }
 
     pub fn constant_big_uint(value: BigUint) -> Expression {
         let bits = value.bits();
-        Self::constant(Value::new_big(value, bits))
+        Self::constant(BitVectorValue::new_big(value, bits))
     }
 
     pub fn to_boolean(expr: Expression) -> Result<Expression> {
