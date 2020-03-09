@@ -1,7 +1,7 @@
 use crate::error::Result;
+use crate::expr::ArrayValue;
 pub use falcon::il::Constant as BitVectorValue;
 use num_bigint::BigUint;
-use std::collections::BTreeMap;
 use std::convert::TryFrom;
 use std::fmt;
 
@@ -10,7 +10,7 @@ pub enum Constant {
     Boolean(bool),
     Integer(u64),
     BitVector(BitVectorValue),
-    Array(BTreeMap<Constant, Constant>),
+    Array(Box<ArrayValue>),
 }
 
 impl Constant {
@@ -35,8 +35,8 @@ impl Constant {
         Self::bit_vector(BitVectorValue::new_big(value, bits))
     }
 
-    pub fn array(value: BTreeMap<Constant, Constant>) -> Self {
-        Self::Array(value)
+    pub fn array(value: ArrayValue) -> Self {
+        Self::Array(Box::new(value))
     }
 
     pub fn is_boolean(&self) -> bool {
@@ -120,7 +120,7 @@ impl Constant {
         }
     }
 
-    pub fn unwrap_array(&self) -> &BTreeMap<Constant, Constant> {
+    pub fn unwrap_array(&self) -> &ArrayValue {
         match self {
             Self::Array(v) => v,
             _ => panic!("Expected Array"),
@@ -134,7 +134,7 @@ impl fmt::Display for Constant {
             Self::Boolean(v) => write!(f, "{}", v),
             Self::Integer(v) => write!(f, "{}", v),
             Self::BitVector(v) => write!(f, "{}", v),
-            Self::Array(v) => write!(f, "{:?}", v), // TODO
+            Self::Array(v) => write!(f, "{}", v),
         }
     }
 }

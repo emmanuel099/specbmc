@@ -8,7 +8,6 @@ use rsmt2::parse::*;
 use rsmt2::print::{Expr2Smt, Sort2Smt, Sym2Smt};
 use rsmt2::{Logic, SmtConf, SmtRes, Solver};
 use std::cell::RefCell;
-use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::fs::File;
 use std::path::Path;
@@ -710,15 +709,15 @@ mod parser {
         preceded(tag("(as const "), terminated(sort, char(')')))(input)
     }
 
-    fn array_init(input: &str) -> IResult<&str, BTreeMap<expr::Constant, expr::Constant>> {
+    fn array_init(input: &str) -> IResult<&str, expr::ArrayValue> {
         // ((as const (Array (_ BitVec 64) (_ BitVec 8))) (_ bv0 8))
         map(
             tuple((char('('), as_const, multispace1, literal, char(')'))),
-            |(_, sort, _, value, _)| BTreeMap::new(),
+            |(_, _, _, value, _)| expr::ArrayValue::new(Some(value)),
         )(input)
     }
 
-    fn array_store(input: &str) -> IResult<&str, BTreeMap<expr::Constant, expr::Constant>> {
+    fn array_store(input: &str) -> IResult<&str, expr::ArrayValue> {
         // (store mem addr value)
         map(
             tuple((
@@ -732,13 +731,13 @@ mod parser {
                 char(')'),
             )),
             |(_, _, mut arr, _, addr, _, value, _)| {
-                arr.insert(addr, value);
+                arr.store(addr, value);
                 arr
             },
         )(input)
     }
 
-    fn array_nested(input: &str) -> IResult<&str, BTreeMap<expr::Constant, expr::Constant>> {
+    fn array_nested(input: &str) -> IResult<&str, expr::ArrayValue> {
         alt((array_init, array_store))(input)
     }
 

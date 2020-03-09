@@ -16,7 +16,7 @@ pub use self::arch::Cache;
 pub use self::arch::Memory;
 pub use self::arch::PatternHistoryTable;
 pub use self::arch::Predictor;
-pub use self::array::Array;
+pub use self::array::{Array, ArrayValue};
 pub use self::bitvector::BitVector;
 pub use self::bitvector::Value as BitVectorValue;
 pub use self::boolean::Boolean;

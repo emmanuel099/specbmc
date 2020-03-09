@@ -1,5 +1,6 @@
 use crate::error::Result;
-use crate::expr::Expression;
+use crate::expr::{Constant, Expression};
+use std::collections::BTreeMap;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -43,5 +44,43 @@ impl Array {
             vec![arr, index, value],
             result_sort,
         ))
+    }
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+pub struct ArrayValue {
+    elements: BTreeMap<Constant, Constant>,
+    default: Option<Constant>,
+}
+
+impl ArrayValue {
+    pub fn new(default: Option<Constant>) -> Self {
+        Self {
+            elements: BTreeMap::new(),
+            default,
+        }
+    }
+
+    pub fn select(&self, index: &Constant) -> Option<&Constant> {
+        self.elements.get(index).or(self.default.as_ref())
+    }
+
+    pub fn store(&mut self, index: Constant, value: Constant) {
+        self.elements.insert(index, value);
+    }
+}
+
+impl fmt::Display for ArrayValue {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[")?;
+        for (index, value) in &self.elements {
+            write!(f, "{} ↦ {}, ", index, value)?;
+        }
+        if let Some(value) = &self.default {
+            write!(f, "… ↦ {}", value)?;
+        } else {
+            write!(f, "… ↦ ?")?;
+        }
+        write!(f, "]")
     }
 }
