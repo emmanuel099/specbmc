@@ -186,7 +186,7 @@ impl Expr2Smt<()> for expr::Constant {
             Self::Boolean(false) => write!(w, "false")?,
             Self::Integer(value) => write!(w, "{}", value)?,
             Self::BitVector(bv) => write!(w, "(_ bv{} {})", bv.value(), bv.bits())?,
-            Self::Array(_) => unimplemented!(),
+            _ => unimplemented!(),
         };
         Ok(())
     }
@@ -580,14 +580,7 @@ impl RSMTModel {
 
 impl Model for RSMTModel {
     fn get_interpretation(&self, variable: &expr::Variable) -> Option<expr::Constant> {
-        let mut solver = self.solver.borrow_mut();
-
-        let var_expr: expr::Expression = variable.clone().into();
-        if let Ok(result) = solver.get_values(&[var_expr]) {
-            result.first().and_then(|(_, value)| Some(value.clone()))
-        } else {
-            None
-        }
+        self.evaluate(&variable.clone().into())
     }
 
     fn evaluate(&self, expr: &expr::Expression) -> Option<expr::Constant> {
