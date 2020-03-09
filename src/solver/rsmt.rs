@@ -587,11 +587,41 @@ impl Model for RSMTModel {
         let mut solver = self.solver.borrow_mut();
 
         if let Ok(result) = solver.get_values(&[expr]) {
-            result.first().and_then(|(_, value)| Some(value.clone()))
+            if let Some((_, value)) = result.first() {
+                if value.is_array() && expr.sort().is_cache() {
+                    array_to_cache(value.unwrap_array()).ok()
+                } else {
+                    Some(value.clone())
+                }
+            } else {
+                None
+            }
         } else {
             None
         }
     }
+}
+
+fn array_to_cache(array: &expr::ArrayValue) -> Result<expr::Constant> {
+    let default_is_cached: bool = if let Some(value) = array.default_value() {
+        value.try_into()?
+    } else {
+        true
+    };
+
+    let mut cache = if default_is_cached {
+        expr::CacheValue::new_full()
+    } else {
+        expr::CacheValue::new_empty()
+    };
+    for (address, is_cached) in array.entries() {
+        if is_cached.try_into()? {
+            cache.fetch(address.try_into()?);
+        } else {
+            cache.evict(address.try_into()?);
+        }
+    }
+    Ok(expr::Constant::cache(cache))
 }
 
 mod parser {

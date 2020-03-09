@@ -49,34 +49,42 @@ impl Array {
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct ArrayValue {
-    elements: BTreeMap<Constant, Constant>,
-    default: Option<Constant>,
+    entries: BTreeMap<Constant, Constant>,
+    default_value: Option<Constant>,
 }
 
 impl ArrayValue {
-    pub fn new(default: Option<Constant>) -> Self {
+    pub fn new(default_value: Option<Constant>) -> Self {
         Self {
-            elements: BTreeMap::new(),
-            default,
+            entries: BTreeMap::new(),
+            default_value,
         }
     }
 
+    pub fn entries(&self) -> &BTreeMap<Constant, Constant> {
+        &self.entries
+    }
+
+    pub fn default_value(&self) -> Option<&Constant> {
+        self.default_value.as_ref()
+    }
+
     pub fn select(&self, index: &Constant) -> Option<&Constant> {
-        self.elements.get(index).or(self.default.as_ref())
+        self.entries.get(index).or(self.default_value.as_ref())
     }
 
     pub fn store(&mut self, index: Constant, value: Constant) {
-        self.elements.insert(index, value);
+        self.entries.insert(index, value);
     }
 }
 
 impl fmt::Display for ArrayValue {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[")?;
-        for (index, value) in &self.elements {
+        for (index, value) in &self.entries {
             write!(f, "{} ↦ {}, ", index, value)?;
         }
-        if let Some(value) = &self.default {
+        if let Some(value) = &self.default_value {
             write!(f, "… ↦ {}", value)?;
         } else {
             write!(f, "… ↦ ?")?;

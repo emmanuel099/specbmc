@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{ArrayValue, BitVectorValue};
+use crate::expr::{ArrayValue, BitVectorValue, CacheValue};
 use num_bigint::BigUint;
 use std::convert::TryFrom;
 use std::fmt;
@@ -10,6 +10,8 @@ pub enum Constant {
     Integer(u64),
     BitVector(BitVectorValue),
     Array(Box<ArrayValue>),
+    // Arch
+    Cache(Box<CacheValue>),
 }
 
 impl Constant {
@@ -38,6 +40,10 @@ impl Constant {
         Self::Array(Box::new(value))
     }
 
+    pub fn cache(value: CacheValue) -> Self {
+        Self::Cache(Box::new(value))
+    }
+
     pub fn is_boolean(&self) -> bool {
         match self {
             Self::Boolean(_) => true,
@@ -62,6 +68,13 @@ impl Constant {
     pub fn is_array(&self) -> bool {
         match self {
             Self::Array(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_cache(&self) -> bool {
+        match self {
+            Self::Cache(_) => true,
             _ => false,
         }
     }
@@ -98,6 +111,14 @@ impl Constant {
         }
     }
 
+    pub fn expect_cache(&self) -> Result<()> {
+        if self.is_cache() {
+            Ok(())
+        } else {
+            Err("Expected Cache".into())
+        }
+    }
+
     pub fn unwrap_boolean(&self) -> bool {
         match self {
             Self::Boolean(v) => *v,
@@ -125,6 +146,13 @@ impl Constant {
             _ => panic!("Expected Array"),
         }
     }
+
+    pub fn unwrap_cache(&self) -> &CacheValue {
+        match self {
+            Self::Cache(v) => v,
+            _ => panic!("Expected Cache"),
+        }
+    }
 }
 
 impl fmt::Display for Constant {
@@ -134,6 +162,7 @@ impl fmt::Display for Constant {
             Self::Integer(v) => write!(f, "{}", v),
             Self::BitVector(v) => write!(f, "{}", v),
             Self::Array(v) => write!(f, "{}", v),
+            Self::Cache(v) => write!(f, "{}", v),
         }
     }
 }
