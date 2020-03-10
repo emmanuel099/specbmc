@@ -4,6 +4,10 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
+mod compact_iterator;
+
+pub use compact_iterator::CompactIterator;
+
 pub trait Validate {
     fn validate(&self) -> Result<()>;
 }
