@@ -127,6 +127,11 @@ impl Expr2Smt<()> for expr::Expression {
     where
         Writer: ::std::io::Write,
     {
+        if let Some(lowered_expr) = lower_to_smt(self) {
+            // Self has been lowered, encode the lowered expression instead.
+            return lowered_expr.expr_to_smt2(w, i);
+        }
+
         if self.operands().is_empty() {
             self.operator().expr_to_smt2(w, i)
         } else {
@@ -139,6 +144,38 @@ impl Expr2Smt<()> for expr::Expression {
             write!(w, ")")?;
             Ok(())
         }
+    }
+}
+
+/// Lowers the given expression to an SMT-encodable expression.
+///
+/// Some expressions need to be re-written (lowered) before they can be encoded,
+/// such as `bool2bv`.
+///
+/// Returns Some(Expression) if given expression has been re-written or None if given expression is already encodable.
+fn lower_to_smt(expr: &expr::Expression) -> Option<expr::Expression> {
+    match expr.operator() {
+        expr::Operator::BitVector(op) => lower_to_smt_bitvec(op, expr.operands()),
+        _ => None,
+    }
+}
+
+fn lower_to_smt_bitvec(
+    op: &expr::BitVector,
+    operands: &[expr::Expression],
+) -> Option<expr::Expression> {
+    match (op, operands) {
+        (expr::BitVector::ToBoolean, [expr]) => {
+            let width = expr.sort().unwrap_bit_vector();
+            let zero = expr::BitVector::constant_u64(0, width);
+            expr::Expression::unequal(expr.clone(), zero).ok()
+        }
+        (expr::BitVector::FromBoolean(bits), [expr]) => {
+            let zero = expr::BitVector::constant_u64(0, *bits);
+            let one = expr::BitVector::constant_u64(1, *bits);
+            expr::Expression::ite(expr.clone(), one, zero).ok()
+        }
+        _ => None,
     }
 }
 

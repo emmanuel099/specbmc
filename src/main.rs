@@ -232,30 +232,6 @@ fn lir_optimize(env: &environment::Environment, program: &mut lir::Program) -> R
     Ok(())
 }
 
-fn lir_transformations(program: &mut lir::Program) -> Result<()> {
-    use lir::transformation::*;
-
-    let transformations = {
-        let mut steps: Vec<Box<dyn Transform<lir::Program>>> = Vec::new();
-        steps.push(Box::new(LowerToSMT::new()));
-        steps
-    };
-
-    for (idx, transformation) in transformations.iter().enumerate() {
-        println!(
-            "-> {} {}",
-            style(format!("[{}/{}]", idx + 1, transformations.len()))
-                .bold()
-                .dim(),
-            transformation.description(),
-        );
-        transformation.transform(program)?;
-        Term::stdout().clear_line()?;
-    }
-
-    Ok(())
-}
-
 fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
     let input_file = arguments.value_of("input_file").unwrap();
 
@@ -305,9 +281,6 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
     if let Some(path) = arguments.value_of("lir_file") {
         lir_program.dump_to_file(Path::new(path))?;
     }
-
-    println!("{} Transforming LIR ...", style("[4/9]").bold().dim());
-    lir_transformations(&mut lir_program)?;
 
     let mut solver = create_solver(&env)?;
     if let Some(path) = arguments.value_of("smt_file") {
