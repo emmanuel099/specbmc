@@ -588,8 +588,12 @@ impl Model for RSMTModel {
 
         if let Ok(result) = solver.get_values(&[expr]) {
             if let Some((_, value)) = result.first() {
-                if value.is_array() && expr.sort().is_cache() {
-                    array_to_cache(value.unwrap_array()).ok()
+                if value.is_array() {
+                    match expr.sort() {
+                        expr::Sort::Cache => array_to_cache(value.unwrap_array()).ok(),
+                        expr::Sort::Memory => array_to_memory(value.unwrap_array()).ok(),
+                        _ => Some(value.clone()),
+                    }
                 } else {
                     Some(value.clone())
                 }
@@ -622,6 +626,20 @@ fn array_to_cache(array: &expr::ArrayValue) -> Result<expr::Constant> {
         }
     }
     Ok(expr::Constant::cache(cache))
+}
+
+fn array_to_memory(array: &expr::ArrayValue) -> Result<expr::Constant> {
+    let default_value: u8 = if let Some(value) = array.default_value() {
+        value.try_into()?
+    } else {
+        0x00
+    };
+
+    let mut memory = expr::MemoryValue::new(default_value);
+    for (address, value) in array.entries() {
+        memory.store(address.try_into()?, value.try_into()?)
+    }
+    Ok(expr::Constant::memory(memory))
 }
 
 mod parser {

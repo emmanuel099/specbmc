@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{ArrayValue, BitVectorValue, CacheValue};
+use crate::expr::{ArrayValue, BitVectorValue, CacheValue, MemoryValue};
 use num_bigint::BigUint;
 use std::convert::TryFrom;
 use std::fmt;
@@ -12,6 +12,7 @@ pub enum Constant {
     Array(Box<ArrayValue>),
     // Arch
     Cache(Box<CacheValue>),
+    Memory(Box<MemoryValue>),
 }
 
 impl Constant {
@@ -42,6 +43,10 @@ impl Constant {
 
     pub fn cache(value: CacheValue) -> Self {
         Self::Cache(Box::new(value))
+    }
+
+    pub fn memory(value: MemoryValue) -> Self {
+        Self::Memory(Box::new(value))
     }
 
     pub fn is_boolean(&self) -> bool {
@@ -75,6 +80,13 @@ impl Constant {
     pub fn is_cache(&self) -> bool {
         match self {
             Self::Cache(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_memory(&self) -> bool {
+        match self {
+            Self::Memory(_) => true,
             _ => false,
         }
     }
@@ -119,6 +131,14 @@ impl Constant {
         }
     }
 
+    pub fn expect_memory(&self) -> Result<()> {
+        if self.is_memory() {
+            Ok(())
+        } else {
+            Err("Expected Memory".into())
+        }
+    }
+
     pub fn unwrap_boolean(&self) -> bool {
         match self {
             Self::Boolean(v) => *v,
@@ -153,6 +173,13 @@ impl Constant {
             _ => panic!("Expected Cache"),
         }
     }
+
+    pub fn unwrap_memory(&self) -> &MemoryValue {
+        match self {
+            Self::Memory(v) => v,
+            _ => panic!("Expected Memory"),
+        }
+    }
 }
 
 impl fmt::Display for Constant {
@@ -163,6 +190,7 @@ impl fmt::Display for Constant {
             Self::BitVector(v) => write!(f, "{}", v),
             Self::Array(v) => write!(f, "{}", v),
             Self::Cache(v) => write!(f, "{}", v),
+            Self::Memory(v) => write!(f, "{}", v),
         }
     }
 }
@@ -200,6 +228,35 @@ impl TryFrom<&Constant> for bool {
             Constant::Integer(v) => Ok(*v != 0),
             Constant::BitVector(v) => Ok(!v.is_zero()),
             _ => Err("Cannot convert constant to bool"),
+        }
+    }
+}
+
+impl TryFrom<&Constant> for u8 {
+    type Error = &'static str;
+
+    fn try_from(c: &Constant) -> std::result::Result<u8, Self::Error> {
+        match c {
+            Constant::Boolean(true) => Ok(1),
+            Constant::Boolean(false) => Ok(0),
+            Constant::Integer(v) => {
+                if *v < 256 {
+                    Ok(*v as u8)
+                } else {
+                    Err("Does not fit into u8")
+                }
+            }
+            Constant::BitVector(v) => match v.value_u64() {
+                Some(value) => {
+                    if value < 256 {
+                        Ok(value as u8)
+                    } else {
+                        Err("Does not fit into u8")
+                    }
+                }
+                None => Err("Cannot convert constant to u8"),
+            },
+            _ => Err("Cannot convert constant to u8"),
         }
     }
 }
