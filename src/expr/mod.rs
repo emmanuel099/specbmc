@@ -11,11 +11,7 @@ mod integer;
 mod sort;
 mod variable;
 
-pub use self::arch::BranchTargetBuffer;
-pub use self::arch::Memory;
-pub use self::arch::PatternHistoryTable;
-pub use self::arch::Predictor;
-pub use self::arch::{Cache, CacheValue};
+pub use self::arch::*;
 pub use self::array::{Array, ArrayValue};
 pub use self::bitvector::{BitVector, BitVectorValue};
 pub use self::boolean::Boolean;
