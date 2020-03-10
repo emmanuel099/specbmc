@@ -1,5 +1,6 @@
 use crate::error::Result;
 use crate::expr::{Expression, Sort, Variable};
+use crate::util::CompactIterator;
 use std::collections::BTreeSet;
 use std::fmt;
 
@@ -86,11 +87,17 @@ impl fmt::Display for CacheValue {
             write!(f, "⊤ ∖ ")?;
         }
         write!(f, "{{")?;
-        if let Some(addr) = self.addresses.iter().next() {
-            write!(f, "0x{:X}", addr)?;
-        }
-        for addr in self.addresses.iter().skip(1) {
-            write!(f, ", 0x{:X}", addr)?;
+        let mut is_first = true;
+        for (addr_start, addr_end) in self.addresses.iter().compact(|(a, b)| a + 1 == *b) {
+            if !is_first {
+                write!(f, ", ")?;
+            }
+            if addr_start == addr_end {
+                write!(f, "0x{:X}", addr_start)?;
+            } else {
+                write!(f, "0x{:X}…0x{:X}", addr_start, addr_end)?;
+            }
+            is_first = false;
         }
         write!(f, "}}")
     }
