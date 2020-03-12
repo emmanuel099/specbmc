@@ -4,14 +4,18 @@ use std::fmt;
 mod annotated_block;
 mod annotated_edge;
 mod annotated_instruction;
+mod cex_builder;
 mod control_flow_graph;
 mod counter_example;
+mod effect;
 
 pub use self::annotated_block::AnnotatedBlock;
 pub use self::annotated_edge::AnnotatedEdge;
 pub use self::annotated_instruction::AnnotatedInstruction;
+pub use self::cex_builder::build_counter_example;
 pub use self::control_flow_graph::ControlFlowGraph;
 pub use self::counter_example::CounterExample;
+pub use self::effect::Effect;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Composition {

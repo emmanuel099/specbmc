@@ -1,6 +1,6 @@
-use crate::cex::AnnotatedElement;
+use crate::cex::{AnnotatedElement, Effect};
 use crate::expr::{Constant, Variable};
-use crate::hir::{Effect, Instruction};
+use crate::hir::Instruction;
 use std::fmt;
 
 #[derive(Clone, Debug)]
@@ -8,7 +8,6 @@ pub struct Annotation {
     /// Variable assignments produced by the underlying instruction.
     assignments: Vec<(Variable, Constant)>,
     /// Effects produced by the underlying instruction.
-    /// The effects' expressions should be evaluated to constants.
     effects: Vec<Effect>,
 }
 

@@ -9,7 +9,7 @@ use specbmc::error::Result;
 use specbmc::loader;
 use specbmc::solver::*;
 use specbmc::util::{DumpToFile, RenderGraph, Transform, Validate};
-use specbmc::{hir, lir, mir};
+use specbmc::{cex, hir, lir, mir};
 use std::path::Path;
 use std::process;
 
@@ -299,8 +299,14 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
         CheckResult::AssertionsHold => {
             println!("{}", "Program is safe.".bold().green());
         }
-        CheckResult::AssertionViolated { .. } => {
+        CheckResult::AssertionViolated { model } => {
             println!("{}", "Leak detected!".bold().red());
+
+            let counter_example = cex::build_counter_example(&hir_program, &model)?;
+            counter_example
+                .control_flow_graph()
+                .render_to_file(Path::new("cex.dot"))?;
+
             process::exit(1);
         }
     }
