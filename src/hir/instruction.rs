@@ -64,8 +64,8 @@ impl Instruction {
     }
 
     /// Create a new `Observable` instruction.
-    pub fn observable(exprs: Vec<Expression>) -> Self {
-        Self::new(Operation::observable(exprs))
+    pub fn observable(variables: Vec<Variable>) -> Self {
+        Self::new(Operation::observable(variables))
     }
 
     /// Create a new `Indistinguishable` instruction.

@@ -45,17 +45,17 @@ impl Observations {
         self
     }
 
-    fn observable_variables(&self) -> Vec<expr::Expression> {
+    fn observable_variables(&self) -> Vec<expr::Variable> {
         let mut variables = Vec::new();
 
         if self.cache_available {
-            variables.push(expr::Cache::variable().into());
+            variables.push(expr::Cache::variable());
         }
         if self.btb_available {
-            variables.push(expr::BranchTargetBuffer::variable().into());
+            variables.push(expr::BranchTargetBuffer::variable());
         }
         if self.pht_available {
-            variables.push(expr::PatternHistoryTable::variable().into());
+            variables.push(expr::PatternHistoryTable::variable());
         }
 
         variables

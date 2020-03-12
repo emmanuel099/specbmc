@@ -113,14 +113,12 @@ fn add_trace_info(
 
             for operation in inst.operations() {
                 match operation {
-                    hir::Operation::Observable { exprs } => {
-                        for expr in exprs {
-                            for var in expr.variables() {
-                                if let Some(value) = eval_var(var, model, composition) {
-                                    annotated_inst
-                                        .annotation_mut(composition)
-                                        .add_assignment(var.clone(), value);
-                                }
+                    hir::Operation::Observable { variables } => {
+                        for var in variables {
+                            if let Some(value) = eval_var(var, model, composition) {
+                                annotated_inst
+                                    .annotation_mut(composition)
+                                    .add_assignment(var.clone(), value);
                             }
                         }
                     }
