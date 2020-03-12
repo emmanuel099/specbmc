@@ -38,7 +38,7 @@ fn extract_trace(
         for edge in cfg.edges_out(*last)? {
             match edge.condition() {
                 Some(expr) => {
-                    let executed = eval_expr(expr, model, composition);
+                    let executed = expr.evaluate(model, composition);
                     match executed {
                         Some(Constant::Boolean(true)) => {
                             trace.push(edge.tail());
@@ -104,7 +104,7 @@ fn add_trace_info(
                 });
 
             for var in inst.variables_written() {
-                if let Some(value) = eval_var(var, model, composition) {
+                if let Some(value) = var.evaluate(model, composition) {
                     annotated_inst
                         .annotation_mut(composition)
                         .add_assignment(var.clone(), value);
@@ -115,7 +115,7 @@ fn add_trace_info(
                 match operation {
                     hir::Operation::Observable { variables } => {
                         for var in variables {
-                            if let Some(value) = eval_var(var, model, composition) {
+                            if let Some(value) = var.evaluate(model, composition) {
                                 annotated_inst
                                     .annotation_mut(composition)
                                     .add_assignment(var.clone(), value);
@@ -136,26 +136,6 @@ fn add_trace_info(
     Ok(())
 }
 
-fn eval_var(var: &Variable, model: &Box<dyn Model>, composition: Composition) -> Option<Constant> {
-    if var.sort().is_predictor() {
-        // FIXME
-        return None;
-    }
-    model.get_interpretation(&var.self_compose(composition.number()))
-}
-
-fn eval_expr(
-    expr: &Expression,
-    model: &Box<dyn Model>,
-    composition: Composition,
-) -> Option<Constant> {
-    if expr.sort().is_predictor() {
-        // FIXME
-        return None;
-    }
-    model.evaluate(&expr.self_compose(composition.number()))
-}
-
 fn eval_effect(
     effect: &hir::Effect,
     model: &Box<dyn Model>,
@@ -163,21 +143,21 @@ fn eval_effect(
 ) -> Option<Effect> {
     match effect {
         hir::Effect::Conditional { condition, effect } => {
-            match eval_expr(condition, model, composition) {
+            match condition.evaluate(model, composition) {
                 Some(Constant::Boolean(true)) => eval_effect(effect, model, composition),
                 _ => None,
             }
         }
         hir::Effect::CacheFetch { address, bit_width } => {
-            match eval_expr(address, model, composition) {
+            match address.evaluate(model, composition) {
                 Some(address) => Some(Effect::cache_fetch(address, *bit_width)),
                 _ => None,
             }
         }
         hir::Effect::BranchTarget { location, target } => {
             match (
-                eval_expr(location, model, composition),
-                eval_expr(target, model, composition),
+                location.evaluate(model, composition),
+                target.evaluate(model, composition),
             ) {
                 (Some(location), Some(target)) => Some(Effect::branch_target(location, target)),
                 _ => None,
@@ -188,8 +168,8 @@ fn eval_effect(
             condition,
         } => {
             match (
-                eval_expr(location, model, composition),
-                eval_expr(condition, model, composition),
+                location.evaluate(model, composition),
+                condition.evaluate(model, composition),
             ) {
                 (Some(location), Some(condition)) => {
                     Some(Effect::branch_condition(location, condition))
@@ -197,5 +177,29 @@ fn eval_effect(
                 _ => None,
             }
         }
+    }
+}
+
+trait Evaluate {
+    fn evaluate(&self, model: &Box<dyn Model>, composition: Composition) -> Option<Constant>;
+}
+
+impl Evaluate for Variable {
+    fn evaluate(&self, model: &Box<dyn Model>, composition: Composition) -> Option<Constant> {
+        if self.sort().is_predictor() {
+            // FIXME
+            return None;
+        }
+        model.get_interpretation(&self.self_compose(composition.number()))
+    }
+}
+
+impl Evaluate for Expression {
+    fn evaluate(&self, model: &Box<dyn Model>, composition: Composition) -> Option<Constant> {
+        if self.sort().is_predictor() {
+            // FIXME
+            return None;
+        }
+        model.evaluate(&self.self_compose(composition.number()))
     }
 }
