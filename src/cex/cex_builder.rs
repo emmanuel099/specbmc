@@ -10,14 +10,14 @@ pub fn build_counter_example(
     program: &hir::Program,
     model: &Box<dyn Model>,
 ) -> Result<CounterExample> {
+    let mut cex = create_cex_from(program)?;
+
     let cfg = program.control_flow_graph();
 
-    let trace_a = extract_trace(cfg, model, Composition::A)?;
-    let trace_b = extract_trace(cfg, model, Composition::B)?;
-
-    let mut cex = create_cex_from(program)?;
-    add_trace_info(&mut cex, model, &trace_a, Composition::A)?;
-    add_trace_info(&mut cex, model, &trace_b, Composition::B)?;
+    for &composition in &[Composition::A, Composition::B] {
+        let trace = extract_trace(cfg, model, composition)?;
+        add_trace_info(&mut cex, model, &trace, composition)?;
+    }
 
     Ok(cex)
 }
