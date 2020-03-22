@@ -428,7 +428,7 @@ impl ControlFlowGraph {
     /// Removes all unreachable blocks from the control flow graph.
     pub fn remove_unreachable_blocks(&mut self) -> Result<()> {
         let entry = self.entry.ok_or("CFG entry must be set")?;
-        self.graph.remove_unreachable_vertices(entry);
+        self.graph.remove_unreachable_vertices(entry)?;
         Ok(())
     }
 
