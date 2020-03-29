@@ -98,6 +98,8 @@ pub struct Analysis {
     predictor_strategy: PredictorStrategy,
     #[serde(default, rename = "transient_encoding")]
     transient_encoding_strategy: TransientEncodingStrategy,
+    #[serde(default)]
+    unwind: usize,
 }
 
 impl Analysis {
@@ -120,6 +122,10 @@ impl Analysis {
     pub fn transient_encoding_strategy(&self) -> TransientEncodingStrategy {
         self.transient_encoding_strategy
     }
+
+    pub fn unwind(&self) -> usize {
+        self.unwind
+    }
 }
 
 impl Default for Analysis {
@@ -130,6 +136,7 @@ impl Default for Analysis {
             check: Check::default(),
             predictor_strategy: PredictorStrategy::default(),
             transient_encoding_strategy: TransientEncodingStrategy::default(),
+            unwind: 0,
         }
     }
 }
@@ -299,6 +306,7 @@ pub struct EnvironmentBuilder {
     check: Option<Check>,
     solver: Option<Solver>,
     debug: Option<bool>,
+    unwind: Option<usize>,
 }
 
 impl EnvironmentBuilder {
@@ -327,6 +335,11 @@ impl EnvironmentBuilder {
         self
     }
 
+    pub fn unwind(&mut self, unwind: usize) -> &mut Self {
+        self.unwind = Some(unwind);
+        self
+    }
+
     pub fn build(&mut self) -> Result<Environment> {
         let mut env = match &self.file_path {
             Some(path) => {
@@ -348,6 +361,9 @@ impl EnvironmentBuilder {
         }
         if let Some(debug) = self.debug {
             env.debug = debug;
+        }
+        if let Some(unwind) = self.unwind {
+            env.analysis.unwind = unwind;
         }
 
         Ok(env)

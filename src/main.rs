@@ -14,6 +14,14 @@ use std::path::Path;
 use std::process;
 
 fn main() {
+    fn is_positive_number(s: String) -> std::result::Result<(), String> {
+        if s.parse::<usize>().is_ok() {
+            Ok(())
+        } else {
+            Err(format!("{} isn't a positive number", s))
+        }
+    }
+
     let arguments = app_from_crate!()
         .arg(
             Arg::with_name("environment_file")
@@ -54,6 +62,14 @@ fn main() {
                 .long("func")
                 .value_name("NAME|ID")
                 .help("Sets name/id of the function to be checked")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("unwind")
+                .short("k")
+                .long("unwind")
+                .help("Unwind loops k times")
+                .validator(is_positive_number)
                 .takes_value(true),
         )
         .arg(
@@ -168,6 +184,10 @@ fn build_environment(arguments: &ArgMatches) -> Result<environment::Environment>
             "yices2" => Solver::Yices2,
             _ => panic!("unknown solver"),
         });
+    }
+
+    if let Some(unwind) = arguments.value_of("unwind") {
+        env_builder.unwind(unwind.parse::<usize>().unwrap());
     }
 
     if arguments.is_present("debug") {
