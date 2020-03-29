@@ -1,6 +1,6 @@
 #[macro_use]
 extern crate clap;
-use clap::{Arg, ArgMatches};
+use clap::Arg;
 use colored::*;
 use console::style;
 use console::Term;
@@ -14,6 +14,33 @@ use std::path::Path;
 use std::process;
 
 fn main() {
+    let arguments = parse_arguments();
+    if let Err(e) = spec_bmc(&arguments) {
+        println!("{}", style(e).bold().red());
+        process::exit(-1);
+    }
+}
+
+struct Arguments {
+    environment_file: Option<String>,
+    optimization_level: Option<environment::OptimizationLevel>,
+    check: Option<environment::Check>,
+    solver: Option<environment::Solver>,
+    function: Option<String>,
+    unwind: Option<usize>,
+    debug: bool,
+    skip_solving: bool,
+    cfg_file: Option<String>,
+    transient_cfg_file: Option<String>,
+    mir_file: Option<String>,
+    lir_file: Option<String>,
+    smt_file: Option<String>,
+    input_file: String,
+}
+
+fn parse_arguments() -> Arguments {
+    use environment::*;
+
     fn is_positive_number(s: String) -> std::result::Result<(), String> {
         if s.parse::<usize>().is_ok() {
             Ok(())
@@ -22,7 +49,7 @@ fn main() {
         }
     }
 
-    let arguments = app_from_crate!()
+    let matches = app_from_crate!()
         .arg(
             Arg::with_name("environment_file")
                 .short("e")
@@ -127,18 +154,55 @@ fn main() {
         )
         .get_matches();
 
-    if let Err(e) = spec_bmc(&arguments) {
-        println!("{}", style(e).bold().red());
-        process::exit(-1);
-    }
+    let parse_optimization_level = |level: &str| match level {
+        "none" => OptimizationLevel::Disabled,
+        "basic" => OptimizationLevel::Basic,
+        "full" => OptimizationLevel::Full,
+        _ => panic!("unknown optimization level"),
+    };
+
+    let parse_check = |check: &str| match check {
+        "all" => Check::AllLeaks,
+        "normal" => Check::OnlyNormalExecutionLeaks,
+        "transient" => Check::OnlyTransientExecutionLeaks,
+        _ => panic!("unknown check type"),
+    };
+
+    let parse_solver = |solver: &str| match solver {
+        "z3" => Solver::Z3,
+        "cvc4" => Solver::CVC4,
+        "yices2" => Solver::Yices2,
+        _ => panic!("unknown solver"),
+    };
+
+    return Arguments {
+        environment_file: matches.value_of("environment_file").map(String::from),
+        optimization_level: matches
+            .value_of("optimization_level")
+            .map(parse_optimization_level),
+        check: matches.value_of("check").map(parse_check),
+        solver: matches.value_of("solver").map(parse_solver),
+        function: matches.value_of("function").map(String::from),
+        unwind: matches
+            .value_of("unwind")
+            .map(|v| v.parse::<usize>().unwrap()),
+        debug: matches.is_present("debug"),
+        skip_solving: matches.is_present("skip_solving"),
+        cfg_file: matches.value_of("cfg_file").map(String::from),
+        transient_cfg_file: matches.value_of("transient_cfg_file").map(String::from),
+        mir_file: matches.value_of("mir_file").map(String::from),
+        lir_file: matches.value_of("lir_file").map(String::from),
+        smt_file: matches.value_of("smt_file").map(String::from),
+        input_file: matches.value_of("input_file").map(String::from).unwrap(),
+    };
 }
 
-fn build_environment(arguments: &ArgMatches) -> Result<environment::Environment> {
+fn build_environment(arguments: &Arguments) -> Result<environment::Environment> {
     use environment::*;
 
     let mut env_builder = EnvironmentBuilder::default();
 
-    if let Some(file_path) = arguments.value_of("environment_file") {
+    if let Some(file_path) = &arguments.environment_file {
         // Load given environment file
         let env_file = Path::new(file_path);
         if !env_file.is_file() {
@@ -147,7 +211,7 @@ fn build_environment(arguments: &ArgMatches) -> Result<environment::Environment>
         env_builder.from_file(Path::new(env_file));
     } else {
         // Try to find a environment file for the current input
-        let input_file = Path::new(arguments.value_of("input_file").unwrap());
+        let input_file = Path::new(&arguments.input_file);
         let env_file = input_file.with_extension("yaml");
         if env_file.is_file() {
             // Environment file exists, use it
@@ -159,38 +223,23 @@ fn build_environment(arguments: &ArgMatches) -> Result<environment::Environment>
         }
     }
 
-    if let Some(level) = arguments.value_of("optimization_level") {
-        env_builder.optimization_level(match level {
-            "none" => OptimizationLevel::Disabled,
-            "basic" => OptimizationLevel::Basic,
-            "full" => OptimizationLevel::Full,
-            _ => panic!("unknown optimization level"),
-        });
+    if let Some(level) = arguments.optimization_level {
+        env_builder.optimization_level(level);
     }
 
-    if let Some(check) = arguments.value_of("check") {
-        env_builder.check(match check {
-            "all" => Check::AllLeaks,
-            "normal" => Check::OnlyNormalExecutionLeaks,
-            "transient" => Check::OnlyTransientExecutionLeaks,
-            _ => panic!("unknown check type"),
-        });
+    if let Some(check) = arguments.check {
+        env_builder.check(check);
     }
 
-    if let Some(solver) = arguments.value_of("solver") {
-        env_builder.solver(match solver {
-            "z3" => Solver::Z3,
-            "cvc4" => Solver::CVC4,
-            "yices2" => Solver::Yices2,
-            _ => panic!("unknown solver"),
-        });
+    if let Some(solver) = arguments.solver {
+        env_builder.solver(solver);
     }
 
-    if let Some(unwind) = arguments.value_of("unwind") {
-        env_builder.unwind(unwind.parse::<usize>().unwrap());
+    if let Some(unwind) = arguments.unwind {
+        env_builder.unwind(unwind);
     }
 
-    if arguments.is_present("debug") {
+    if arguments.debug {
         env_builder.debug(true);
     }
 
@@ -252,8 +301,8 @@ fn lir_optimize(env: &environment::Environment, program: &mut lir::Program) -> R
     Ok(())
 }
 
-fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
-    let input_file = arguments.value_of("input_file").unwrap();
+fn spec_bmc(arguments: &Arguments) -> Result<()> {
+    let input_file = &arguments.input_file;
 
     let env = build_environment(arguments)?;
 
@@ -267,9 +316,9 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
         input_file.yellow()
     );
     let mut hir_program =
-        loader::load_program(Path::new(input_file), arguments.value_of("function"))?;
+        loader::load_program(Path::new(input_file), arguments.function.as_deref())?;
 
-    if let Some(path) = arguments.value_of("cfg_file") {
+    if let Some(path) = &arguments.cfg_file {
         hir_program
             .control_flow_graph()
             .render_to_file(Path::new(path))?;
@@ -278,7 +327,7 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
     println!("{} Transforming HIR ...", style("[4/9]").bold().dim());
     hir_transformations(&env, &mut hir_program)?;
 
-    if let Some(path) = arguments.value_of("transient_cfg_file") {
+    if let Some(path) = &arguments.transient_cfg_file {
         hir_program
             .control_flow_graph()
             .render_to_file(Path::new(path))?;
@@ -287,7 +336,7 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
     println!("{} Translating into MIR", style("[5/9]").bold().dim());
     let mir_program = mir::Program::from(&hir_program)?;
 
-    if let Some(path) = arguments.value_of("mir_file") {
+    if let Some(path) = &arguments.mir_file {
         mir_program.block_graph().render_to_file(Path::new(path))?;
     }
 
@@ -298,19 +347,19 @@ fn spec_bmc(arguments: &ArgMatches) -> Result<()> {
     println!("{} Optimizing LIR", style("[7/9]").bold().dim());
     lir_optimize(&env, &mut lir_program)?;
 
-    if let Some(path) = arguments.value_of("lir_file") {
+    if let Some(path) = &arguments.lir_file {
         lir_program.dump_to_file(Path::new(path))?;
     }
 
     let mut solver = create_solver(&env)?;
-    if let Some(path) = arguments.value_of("smt_file") {
+    if let Some(path) = &arguments.smt_file {
         solver.dump_formula_to_file(Path::new(path))?
     }
 
     println!("{} Encoding LIR", style("[8/9]").bold().dim());
     solver.encode_program(&lir_program)?;
 
-    if arguments.is_present("skip_solving") {
+    if arguments.skip_solving {
         return Ok(());
     }
 
