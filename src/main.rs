@@ -251,6 +251,7 @@ fn hir_transformations(env: &environment::Environment, program: &mut hir::Progra
 
     let transformations = {
         let mut steps: Vec<Box<dyn Transform<hir::Program>>> = Vec::new();
+        steps.push(Box::new(LoopUnwinding::new_from_env(env)));
         steps.push(Box::new(InstructionEffects::new_from_env(env)));
         if env.analysis().check() != environment::Check::OnlyNormalExecutionLeaks {
             steps.push(Box::new(TransientExecution::new_from_env(env)));

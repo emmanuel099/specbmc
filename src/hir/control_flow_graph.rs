@@ -6,7 +6,7 @@ use crate::hir::{Block, Edge};
 use crate::util::RenderGraph;
 use falcon::graph;
 use std::cmp;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 /// A directed graph of types `Block` and `Edge`.
@@ -188,6 +188,15 @@ impl ControlFlowGraph {
         let next_index = self.next_index;
         self.next_index += 1;
         let block = Block::new(next_index);
+        self.graph.insert_vertex(block)?;
+        Ok(self.graph.vertex_mut(next_index).unwrap())
+    }
+
+    /// Clones an existing basic block, adds it to the graph, and returns it
+    pub fn duplicate_block(&mut self, index: usize) -> Result<&mut Block> {
+        let next_index = self.next_index;
+        self.next_index += 1;
+        let block = self.block(index)?.clone_new_index(next_index);
         self.graph.insert_vertex(block)?;
         Ok(self.graph.vertex_mut(next_index).unwrap())
     }
@@ -437,6 +446,50 @@ impl ControlFlowGraph {
         self.remove_unreachable_blocks()?;
         self.merge()?;
         Ok(())
+    }
+
+    pub fn rewire_edge(
+        &mut self,
+        head: usize,
+        tail: usize,
+        new_head: usize,
+        new_tail: usize,
+    ) -> Result<()> {
+        let edge = self.edge(head, tail)?;
+        let new_edge = Edge::new(new_head, new_tail, edge.condition().cloned());
+        self.remove_edge(head, tail)?;
+        self.graph.insert_edge(new_edge)?;
+        Ok(())
+    }
+
+    /// Duplicates the blocks with the given indices, including their outgoing edges,
+    /// and returns the mapping from the old to the new block indices for the duplicated blocks.
+    pub fn duplicate_blocks(
+        &mut self,
+        block_indices: &BTreeSet<usize>,
+    ) -> Result<BTreeMap<usize, usize>> {
+        let mut block_map: BTreeMap<usize, usize> = BTreeMap::new();
+
+        for &index in block_indices {
+            let duplicated_block = self.duplicate_block(index)?;
+            block_map.insert(index, duplicated_block.index());
+        }
+
+        let mut new_edges: Vec<Edge> = Vec::new();
+
+        for &index in block_indices {
+            for edge in self.edges_out(index)? {
+                let new_head = block_map.get(&edge.head()).cloned().unwrap_or(edge.head());
+                let new_tail = block_map.get(&edge.tail()).cloned().unwrap_or(edge.tail());
+                new_edges.push(Edge::new(new_head, new_tail, edge.condition().cloned()));
+            }
+        }
+
+        for edge in new_edges {
+            self.graph.insert_edge(edge)?;
+        }
+
+        Ok(block_map)
     }
 }
 
