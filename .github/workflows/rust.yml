@@ -14,7 +14,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Install capstone
-      run: sudo apt install -y libcapstone-dev
+      run: sudo apt update; sudo apt install -y libcapstone-dev
     - name: Build
       run: cargo build --verbose
     - name: Run tests
