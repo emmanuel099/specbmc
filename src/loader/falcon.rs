@@ -90,6 +90,8 @@ fn translate_control_flow_graph(src_cfg: &il::ControlFlowGraph) -> Result<hir::C
     }
     cfg.set_exit(exit)?;
 
+    cfg.simplify()?;
+
     Ok(cfg)
 }
 
