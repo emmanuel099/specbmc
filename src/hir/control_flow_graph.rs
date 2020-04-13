@@ -89,6 +89,13 @@ impl ControlFlowGraph {
         self.graph.vertices_mut()
     }
 
+    /// Removes an `Block` by its index.
+    pub fn remove_block(&mut self, index: usize) -> Result<Block> {
+        let block = self.block(index)?.clone();
+        self.graph.remove_vertex(index)?;
+        Ok(block)
+    }
+
     /// Get an `Edge` by its head and tail `Block` indices.
     pub fn edge(&self, head: usize, tail: usize) -> Result<&Edge> {
         Ok(self.graph.edge(head, tail)?)
