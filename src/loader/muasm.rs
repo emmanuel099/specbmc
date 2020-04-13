@@ -111,13 +111,10 @@ fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::Program> {
         };
     }
 
-    cfg.set_entry(0)?;
-    cfg.merge()?;
-
     // Add a dedicated entry block.
     // This makes sure that the entry block has no predecessors.
     let entry = cfg.new_block()?.index();
-    cfg.unconditional_edge(entry, cfg.entry().unwrap())?;
+    cfg.unconditional_edge(entry, 0)?;
     cfg.set_entry(entry)?;
 
     // Add a dedicated exit block and connect all end blocks (= blocks without successor) to it.
@@ -133,6 +130,8 @@ fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::Program> {
         cfg.unconditional_edge(end_block, exit)?;
     }
     cfg.set_exit(exit)?;
+
+    cfg.simplify()?;
 
     Ok(hir::Program::new(cfg))
 }
