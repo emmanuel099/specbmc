@@ -1,7 +1,7 @@
 use crate::environment::Environment;
 use crate::error::*;
 use crate::expr::Boolean;
-use crate::hir::{ControlFlowGraph, Program};
+use crate::hir::{Block, ControlFlowGraph, Edge, Program};
 use crate::util::Transform;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -25,56 +25,129 @@ impl LoopUnwinding {
         self
     }
 
+    /// Removes all dead-end blocks
+    ///
+    /// Loop unwinding may leave behind blocks which are dead ends,
+    /// meaning that no path from the block to the CFG exit exists.
+    ///
+    /// All such blocks are removed and unwinding assumptions are added,
+    /// which make sure that the removed edges aren't taken.
+    fn remove_dead_end_blocks(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+        let exit = cfg.exit().ok_or("CFG exit must be set")?;
+
+        let mut queue: Vec<usize> = cfg
+            .graph()
+            .vertices_without_successors()
+            .into_iter()
+            .map(Block::index)
+            .filter(|&block_index| block_index != exit)
+            .collect();
+
+        // Repeatedly remove blocks (!= exit) without successors
+        while let Some(block_index) = queue.pop() {
+            assert!(block_index != exit);
+            assert!(cfg.successor_indices(block_index)?.is_empty());
+
+            let incoming_edges: Vec<Edge> =
+                cfg.edges_in(block_index)?.into_iter().cloned().collect();
+            cfg.remove_block(block_index)?;
+
+            for edge in incoming_edges {
+                let predecessor_index = edge.head();
+
+                // Add unwinding assumption
+                if let Some(condition) = edge.condition() {
+                    cfg.block_mut(predecessor_index)?
+                        .assume(Boolean::not(condition.clone())?)?;
+                }
+
+                if cfg.successor_indices(predecessor_index)?.is_empty() {
+                    queue.push(predecessor_index);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
     fn unwind_loop(
         &self,
         cfg: &mut ControlFlowGraph,
         loop_header: usize,
         loop_nodes: &BTreeSet<usize>,
     ) -> Result<BTreeSet<usize>> {
+        // Compute all loops nodes which have an outgoing edge (aka back edge) to the loop header
+        let back_nodes: Vec<usize> = cfg
+            .predecessor_indices(loop_header)?
+            .into_iter()
+            .filter(|node| loop_nodes.contains(node))
+            .collect();
+
+        if self.unwinding_bound == 0 {
+            // No unwinding, only delete back edges to get rid of the loop and we are done
+            for &back_node in &back_nodes {
+                let edge = cfg.remove_edge(back_node, loop_header)?;
+                if let Some(condition) = edge.condition() {
+                    cfg.block_mut(back_node)?
+                        .assume(Boolean::not(condition.clone())?)?;
+                }
+            }
+            return Ok(loop_nodes.clone());
+        }
+
         // Loop unwinding adds additional nodes, collect them
         let mut loop_nodes_unwound = loop_nodes.clone();
 
-        // Compute all back edges (edges from loop nodes to loop header) of this loop
-        let back_nodes = {
-            let mut nodes = Vec::new();
-            for predecessor in cfg.predecessor_indices(loop_header)? {
-                if loop_nodes.contains(&predecessor) {
-                    nodes.push(predecessor);
+        // First, create a copy for the last iteration.
+        // All back edges of the last iteration are removed (replaced by unwinding assumptions).
+        let last_loop_header = {
+            let new_block_indices = cfg.duplicate_blocks(loop_nodes)?;
+            let last_loop_header = new_block_indices[&loop_header];
+
+            // Remove back edges
+            for back_node in &back_nodes {
+                let back_node = new_block_indices[back_node];
+                let edge = cfg.remove_edge(back_node, last_loop_header)?;
+
+                // Add unwinding assumption
+                if let Some(condition) = edge.condition() {
+                    cfg.block_mut(back_node)?
+                        .assume(Boolean::not(condition.clone())?)?;
                 }
             }
-            nodes
+
+            // Collect the newly created nodes
+            for (_, &new_block_id) in &new_block_indices {
+                loop_nodes_unwound.insert(new_block_id);
+            }
+
+            last_loop_header
         };
 
-        // Add unwinding assumption
-        let unwinding_assumption = {
-            let block = cfg.new_block()?;
-            block.assume(Boolean::constant(false))?;
-            block.index()
-        };
-        loop_nodes_unwound.insert(unwinding_assumption);
+        // Then repeatedly duplicate the loop nodes for the remaining k-2 iterations.
+        // The back edges of iteration i are rewired to the iteration i+1.
+        let mut next_loop_header = last_loop_header;
+        for _ in 1..self.unwinding_bound {
+            let new_block_indices = cfg.duplicate_blocks(loop_nodes)?;
+            let current_loop_header = new_block_indices[&loop_header];
 
-        // Duplicate the loop nodes
-        let mut next_header = unwinding_assumption;
-        for _ in 1..=self.unwinding_bound {
-            let block_map = cfg.duplicate_blocks(loop_nodes)?;
-
-            let copy_header = block_map[&loop_header];
-
+            // Rewire the back edges of the current iteration to the loop header of the next iteration.
             for back_node in &back_nodes {
-                let copy_back_node = block_map[back_node];
-                cfg.rewire_edge(copy_back_node, copy_header, copy_back_node, next_header)?;
+                let back_node = new_block_indices[back_node];
+                cfg.rewire_edge(back_node, current_loop_header, back_node, next_loop_header)?;
             }
 
-            for (_, block_id) in &block_map {
-                loop_nodes_unwound.insert(*block_id);
+            // Collect the newly created nodes
+            for (_, &new_block_id) in &new_block_indices {
+                loop_nodes_unwound.insert(new_block_id);
             }
 
-            next_header = copy_header;
+            next_loop_header = current_loop_header;
         }
 
-        // Now break the loops
+        // Finally, rewire the first iteration to the second iteration to get rid of the loop.
         for back_node in &back_nodes {
-            cfg.rewire_edge(*back_node, loop_header, *back_node, next_header)?;
+            cfg.rewire_edge(*back_node, loop_header, *back_node, next_loop_header)?;
         }
 
         Ok(loop_nodes_unwound)
@@ -114,6 +187,7 @@ impl LoopUnwinding {
 
             let loop_nodes = &all_loop_nodes[&loop_header];
             let loop_nodes_unwound = self.unwind_loop(cfg, loop_header, loop_nodes)?;
+            assert!(loop_nodes_unwound.is_superset(loop_nodes));
 
             // Now push all newly created loop nodes to the parent loops
             for &parent_loop_id in &parent_loop_ids[&loop_header] {
@@ -125,6 +199,8 @@ impl LoopUnwinding {
 
             all_loop_nodes.insert(loop_header, loop_nodes_unwound);
         }
+
+        self.remove_dead_end_blocks(cfg)?;
 
         Ok(())
     }
@@ -148,39 +224,72 @@ impl Transform<Program> for LoopUnwinding {
 mod tests {
     use super::*;
 
-    use crate::expr::{Sort, Variable};
+    use crate::expr::{Expression, Sort, Variable};
     use crate::util::RenderGraph;
     use std::fs::File;
     use std::io::Write;
     use std::path::Path;
 
+    fn add_block_with_id(cfg: &mut ControlFlowGraph, id: &str) -> usize {
+        let block = cfg.new_block().unwrap();
+        block
+            .assign(Variable::new(id, Sort::boolean()), Boolean::constant(true))
+            .unwrap();
+        block.index()
+    }
+
+    fn add_block_with_id_and_assumption(
+        cfg: &mut ControlFlowGraph,
+        id: &str,
+        assumption: Expression,
+    ) -> usize {
+        let block = cfg.new_block().unwrap();
+        block
+            .assign(Variable::new(id, Sort::boolean()), Boolean::constant(true))
+            .unwrap();
+        block.assume(assumption).unwrap();
+        block.index()
+    }
+
+    fn debug_cfg(
+        test_name: &str,
+        given_cfg: &ControlFlowGraph,
+        unwound_cfg: &ControlFlowGraph,
+        expected_cfg: &ControlFlowGraph,
+    ) {
+        given_cfg
+            .render_to_file(Path::new(&format!("{}_given.dot", test_name)))
+            .unwrap();
+        unwound_cfg
+            .render_to_file(Path::new(&format!("{}_unwound.dot", test_name)))
+            .unwrap();
+        expected_cfg
+            .render_to_file(Path::new(&format!("{}_expected.dot", test_name)))
+            .unwrap();
+    }
+
     #[test]
     fn test_unwind_self_loop_zero_times() {
+        let l: Expression = Variable::new("L", Sort::boolean()).into();
+        let not_l = Boolean::not(l.clone()).unwrap();
+
         // Given: Self loop at block 0
-        let mut given_cfg = ControlFlowGraph::new();
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
 
-        let block0_index = {
-            let block = given_cfg.new_block().unwrap();
-            block.barrier();
-            block.index()
+            let block0_index = add_block_with_id(&mut cfg, "c0");
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+
+            cfg.conditional_edge(block0_index, block0_index, l.clone())
+                .unwrap(); // loop
+            cfg.conditional_edge(block0_index, block1_index, not_l.clone())
+                .unwrap();
+
+            cfg.set_entry(block0_index).unwrap();
+            cfg.set_exit(block1_index).unwrap();
+
+            cfg
         };
-
-        let block1_index = {
-            let block = given_cfg.new_block().unwrap();
-            block.index()
-        };
-
-        given_cfg
-            .unconditional_edge(block0_index, block0_index)
-            .unwrap(); // loop
-        given_cfg
-            .unconditional_edge(block0_index, block1_index)
-            .unwrap();
-
-        given_cfg.set_entry(block0_index).unwrap();
-        given_cfg.set_exit(block1_index).unwrap();
-
-        let given_cfg = given_cfg;
 
         // When: Unwind with k=0
         let mut unwound_cfg = given_cfg.clone();
@@ -191,68 +300,52 @@ mod tests {
 
         // Then:
         let expected_cfg = {
-            let mut cfg = given_cfg.clone();
+            let mut cfg = ControlFlowGraph::new();
 
-            // Unwinding assumption
-            let block2_index = {
-                let block = cfg.new_block().unwrap();
-                block.assume(Boolean::constant(false)).unwrap();
-                block.index()
-            };
+            let block0_index = add_block_with_id_and_assumption(&mut cfg, "c0", not_l.clone());
+            let block1_index = add_block_with_id(&mut cfg, "c1");
 
-            // Replace back-edge
-            cfg.rewire_edge(block0_index, block0_index, block0_index, block2_index)
+            cfg.conditional_edge(block0_index, block1_index, not_l.clone())
                 .unwrap();
+
+            cfg.set_entry(block0_index).unwrap();
+            cfg.set_exit(block1_index).unwrap();
 
             cfg
         };
 
-        /*given_cfg
-            .render_to_file(Path::new(
-                "loop_unwinding_test_unwind_self_loop_zero_times_given.dot",
-            ))
-            .unwrap();
-        unwound_cfg
-            .render_to_file(Path::new(
-                "loop_unwinding_test_unwind_self_loop_zero_times_unwound.dot",
-            ))
-            .unwrap();
-        expected_cfg
-            .render_to_file(Path::new(
-                "loop_unwinding_test_unwind_self_loop_zero_times_expected.dot",
-            ))
-            .unwrap();*/
+        /*debug_cfg(
+            "loop_unwinding_test_unwind_self_loop_zero_times",
+            &given_cfg,
+            &unwound_cfg,
+            &expected_cfg,
+        );*/
 
         assert_eq!(expected_cfg, unwound_cfg);
     }
 
     #[test]
     fn test_unwind_self_loop_three_times() {
+        let l: Expression = Variable::new("L", Sort::boolean()).into();
+        let not_l = Boolean::not(l.clone()).unwrap();
+
         // Given: Self loop at block 0
-        let mut given_cfg = ControlFlowGraph::new();
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
 
-        let block0_index = {
-            let block = given_cfg.new_block().unwrap();
-            block.barrier();
-            block.index()
+            let block0_index = add_block_with_id(&mut cfg, "c0");
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+
+            cfg.conditional_edge(block0_index, block0_index, l.clone())
+                .unwrap(); // loop
+            cfg.conditional_edge(block0_index, block1_index, not_l.clone())
+                .unwrap();
+
+            cfg.set_entry(block0_index).unwrap();
+            cfg.set_exit(block1_index).unwrap();
+
+            cfg
         };
-
-        let block1_index = {
-            let block = given_cfg.new_block().unwrap();
-            block.index()
-        };
-
-        given_cfg
-            .unconditional_edge(block0_index, block0_index)
-            .unwrap(); // loop
-        given_cfg
-            .unconditional_edge(block0_index, block1_index)
-            .unwrap();
-
-        given_cfg.set_entry(block0_index).unwrap();
-        given_cfg.set_exit(block1_index).unwrap();
-
-        let given_cfg = given_cfg;
 
         // When: Unwind with k=3
         let mut unwound_cfg = given_cfg.clone();
@@ -263,152 +356,79 @@ mod tests {
 
         // Then:
         let expected_cfg = {
-            let mut cfg = given_cfg.clone();
+            let mut cfg = ControlFlowGraph::new();
 
-            // Unwinding assumption
-            let block2_index = {
-                let block = cfg.new_block().unwrap();
-                block.assume(Boolean::constant(false)).unwrap();
-                block.index()
-            };
+            let block0_index = add_block_with_id(&mut cfg, "c0");
+            let block1_index = add_block_with_id(&mut cfg, "c1");
 
-            let block3_index = {
-                let block = cfg.new_block().unwrap();
-                block.barrier();
-                block.index()
-            };
+            // Duplicated blocks
+            let block2_index = add_block_with_id_and_assumption(&mut cfg, "c0", not_l.clone());
+            let block3_index = add_block_with_id(&mut cfg, "c0");
+            let block4_index = add_block_with_id(&mut cfg, "c0");
 
-            let block4_index = {
-                let block = cfg.new_block().unwrap();
-                block.barrier();
-                block.index()
-            };
-
-            let block5_index = {
-                let block = cfg.new_block().unwrap();
-                block.barrier();
-                block.index()
-            };
-
-            cfg.unconditional_edge(block3_index, block2_index).unwrap();
-            cfg.unconditional_edge(block3_index, block1_index).unwrap();
-
-            cfg.unconditional_edge(block4_index, block3_index).unwrap();
-            cfg.unconditional_edge(block4_index, block1_index).unwrap();
-
-            cfg.unconditional_edge(block5_index, block4_index).unwrap();
-            cfg.unconditional_edge(block5_index, block1_index).unwrap();
-
-            cfg.rewire_edge(block0_index, block0_index, block0_index, block5_index)
+            cfg.conditional_edge(block0_index, block4_index, l.clone())
                 .unwrap();
+            cfg.conditional_edge(block0_index, block1_index, not_l.clone())
+                .unwrap();
+            cfg.conditional_edge(block4_index, block3_index, l.clone())
+                .unwrap();
+            cfg.conditional_edge(block4_index, block1_index, not_l.clone())
+                .unwrap();
+            cfg.conditional_edge(block3_index, block2_index, l.clone())
+                .unwrap();
+            cfg.conditional_edge(block3_index, block1_index, not_l.clone())
+                .unwrap();
+            cfg.conditional_edge(block2_index, block1_index, not_l.clone())
+                .unwrap();
+
+            cfg.set_entry(block0_index).unwrap();
+            cfg.set_exit(block1_index).unwrap();
 
             cfg
         };
 
-        /*given_cfg
-            .render_to_file(Path::new(
-                "loop_unwinding_test_unwind_self_loop_three_times_given.dot",
-            ))
-            .unwrap();
-        unwound_cfg
-            .render_to_file(Path::new(
-                "loop_unwinding_test_unwind_self_loop_three_times_unwound.dot",
-            ))
-            .unwrap();
-        expected_cfg
-            .render_to_file(Path::new(
-                "loop_unwinding_test_unwind_self_loop_three_times_expected.dot",
-            ))
-            .unwrap();*/
+        /*debug_cfg(
+            "loop_unwinding_test_unwind_self_loop_three_times",
+            &given_cfg,
+            &unwound_cfg,
+            &expected_cfg,
+        );*/
 
         assert_eq!(expected_cfg, unwound_cfg);
     }
 
     #[test]
     fn test_unwind_nested_loop_one_time() {
+        let a: Expression = Variable::new("a", Sort::boolean()).into();
+        let not_a = Boolean::not(a.clone()).unwrap();
+
+        let b: Expression = Variable::new("b", Sort::boolean()).into();
+        let not_b = Boolean::not(b.clone()).unwrap();
+
         // Given: Self loop at block 1 and loop 0,1,2
-        let mut given_cfg = ControlFlowGraph::new();
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
 
-        let block0_index = {
-            let block = given_cfg.new_block().unwrap();
-            block
-                .assign(
-                    Variable::new("c0", Sort::boolean()),
-                    Boolean::constant(true),
-                )
+            let block0_index = add_block_with_id(&mut cfg, "c0");
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id(&mut cfg, "c2");
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+
+            cfg.unconditional_edge(block0_index, block1_index).unwrap();
+            cfg.conditional_edge(block1_index, block1_index, b.clone())
+                .unwrap(); // loop
+            cfg.conditional_edge(block1_index, block2_index, not_b.clone())
                 .unwrap();
-            block.index()
-        };
-
-        let block1_index = {
-            let block = given_cfg.new_block().unwrap();
-            block
-                .assign(
-                    Variable::new("c1", Sort::boolean()),
-                    Boolean::constant(true),
-                )
+            cfg.conditional_edge(block2_index, block0_index, a.clone())
+                .unwrap(); // loop
+            cfg.conditional_edge(block2_index, block3_index, not_a.clone())
                 .unwrap();
-            block.index()
+
+            cfg.set_entry(block0_index).unwrap();
+            cfg.set_exit(block3_index).unwrap();
+
+            cfg
         };
-
-        let block2_index = {
-            let block = given_cfg.new_block().unwrap();
-            block
-                .assign(
-                    Variable::new("c2", Sort::boolean()),
-                    Boolean::constant(true),
-                )
-                .unwrap();
-            block.index()
-        };
-
-        let block3_index = {
-            let block = given_cfg.new_block().unwrap();
-            block
-                .assign(
-                    Variable::new("c3", Sort::boolean()),
-                    Boolean::constant(true),
-                )
-                .unwrap();
-            block.index()
-        };
-
-        given_cfg
-            .unconditional_edge(block0_index, block1_index)
-            .unwrap();
-        given_cfg
-            .conditional_edge(
-                block1_index,
-                block1_index,
-                Variable::new("b", Sort::boolean()).into(),
-            )
-            .unwrap(); // loop
-        given_cfg
-            .conditional_edge(
-                block1_index,
-                block2_index,
-                Boolean::not(Variable::new("b", Sort::boolean()).into()).unwrap(),
-            )
-            .unwrap();
-        given_cfg
-            .conditional_edge(
-                block2_index,
-                block0_index,
-                Variable::new("a", Sort::boolean()).into(),
-            )
-            .unwrap(); // loop
-        given_cfg
-            .conditional_edge(
-                block2_index,
-                block3_index,
-                Boolean::not(Variable::new("a", Sort::boolean()).into()).unwrap(),
-            )
-            .unwrap();
-
-        given_cfg.set_entry(block0_index).unwrap();
-        given_cfg.set_exit(block3_index).unwrap();
-
-        let given_cfg = given_cfg;
 
         // When: Unwind with k=1
         let mut unwound_cfg = given_cfg.clone();
@@ -419,162 +439,442 @@ mod tests {
 
         // Then:
         let expected_cfg = {
-            let mut cfg = given_cfg.clone();
+            let mut cfg = ControlFlowGraph::new();
 
-            // Unwinding assumption (loop 1)
-            let block4_index = {
-                let block = cfg.new_block().unwrap();
-                block.assume(Boolean::constant(false)).unwrap();
-                block.index()
-            };
+            let block0_index = add_block_with_id(&mut cfg, "c0");
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id(&mut cfg, "c2");
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+            let block4_index = add_block_with_id_and_assumption(&mut cfg, "c1", not_b.clone());
+            let block5_index = add_block_with_id(&mut cfg, "c0");
+            let block6_index = add_block_with_id(&mut cfg, "c1");
+            let block7_index = add_block_with_id_and_assumption(&mut cfg, "c2", not_a.clone());
+            let block8_index = add_block_with_id_and_assumption(&mut cfg, "c1", not_b.clone());
 
-            let block5_index = {
-                let block = cfg.new_block().unwrap();
-                block
-                    .assign(
-                        Variable::new("c1", Sort::boolean()),
-                        Boolean::constant(true),
-                    )
-                    .unwrap();
-                block.index()
-            };
-
-            // Unwinding assumption (loop 0)
-            let block6_index = {
-                let block = cfg.new_block().unwrap();
-                block.assume(Boolean::constant(false)).unwrap();
-                block.index()
-            };
-
-            let block7_index = {
-                let block = cfg.new_block().unwrap();
-                block
-                    .assign(
-                        Variable::new("c0", Sort::boolean()),
-                        Boolean::constant(true),
-                    )
-                    .unwrap();
-                block.index()
-            };
-
-            let block8_index = {
-                let block = cfg.new_block().unwrap();
-                block
-                    .assign(
-                        Variable::new("c1", Sort::boolean()),
-                        Boolean::constant(true),
-                    )
-                    .unwrap();
-                block.index()
-            };
-
-            let block9_index = {
-                let block = cfg.new_block().unwrap();
-                block
-                    .assign(
-                        Variable::new("c2", Sort::boolean()),
-                        Boolean::constant(true),
-                    )
-                    .unwrap();
-                block.index()
-            };
-
-            // Unwinding assumption (loop 1)
-            let block10_index = {
-                let block = cfg.new_block().unwrap();
-                block.assume(Boolean::constant(false)).unwrap();
-                block.index()
-            };
-
-            let block11_index = {
-                let block = cfg.new_block().unwrap();
-                block
-                    .assign(
-                        Variable::new("c1", Sort::boolean()),
-                        Boolean::constant(true),
-                    )
-                    .unwrap();
-                block.index()
-            };
-
-            cfg.conditional_edge(
-                block5_index,
-                block4_index,
-                Variable::new("b", Sort::boolean()).into(),
-            )
-            .unwrap();
-            cfg.conditional_edge(
-                block5_index,
-                block2_index,
-                Boolean::not(Variable::new("b", Sort::boolean()).into()).unwrap(),
-            )
-            .unwrap();
-
-            cfg.rewire_edge(block1_index, block1_index, block1_index, block5_index)
+            cfg.unconditional_edge(block0_index, block1_index).unwrap();
+            cfg.conditional_edge(block1_index, block2_index, not_b.clone())
+                .unwrap();
+            cfg.conditional_edge(block1_index, block4_index, b.clone())
+                .unwrap();
+            cfg.conditional_edge(block2_index, block3_index, not_a.clone())
+                .unwrap();
+            cfg.conditional_edge(block2_index, block5_index, a.clone())
+                .unwrap();
+            cfg.conditional_edge(block4_index, block2_index, not_b.clone())
+                .unwrap();
+            cfg.unconditional_edge(block5_index, block6_index).unwrap();
+            cfg.conditional_edge(block6_index, block7_index, not_b.clone())
+                .unwrap();
+            cfg.conditional_edge(block6_index, block8_index, b.clone())
+                .unwrap();
+            cfg.conditional_edge(block7_index, block3_index, not_a.clone())
+                .unwrap();
+            cfg.conditional_edge(block8_index, block7_index, not_b.clone())
                 .unwrap();
 
-            cfg.conditional_edge(
-                block9_index,
-                block6_index,
-                Variable::new("a", Sort::boolean()).into(),
-            )
-            .unwrap();
-            cfg.conditional_edge(
-                block9_index,
-                block3_index,
-                Boolean::not(Variable::new("a", Sort::boolean()).into()).unwrap(),
-            )
-            .unwrap();
-
-            cfg.conditional_edge(
-                block11_index,
-                block10_index,
-                Variable::new("b", Sort::boolean()).into(),
-            )
-            .unwrap();
-            cfg.conditional_edge(
-                block11_index,
-                block9_index,
-                Boolean::not(Variable::new("b", Sort::boolean()).into()).unwrap(),
-            )
-            .unwrap();
-
-            cfg.conditional_edge(
-                block8_index,
-                block11_index,
-                Variable::new("b", Sort::boolean()).into(),
-            )
-            .unwrap();
-            cfg.conditional_edge(
-                block8_index,
-                block9_index,
-                Boolean::not(Variable::new("b", Sort::boolean()).into()).unwrap(),
-            )
-            .unwrap();
-
-            cfg.unconditional_edge(block7_index, block8_index).unwrap();
-
-            cfg.rewire_edge(block2_index, block0_index, block2_index, block7_index)
-                .unwrap();
+            cfg.set_entry(block0_index).unwrap();
+            cfg.set_exit(block3_index).unwrap();
 
             cfg
         };
 
-        /*given_cfg
-            .render_to_file(Path::new(
-                "loop_unwinding_test_unwind_nested_loop_one_time_given.dot",
-            ))
+        /*debug_cfg(
+            "loop_unwinding_test_unwind_nested_loop_one_time",
+            &given_cfg,
+            &unwound_cfg,
+            &expected_cfg,
+        );*/
+
+        assert_eq!(expected_cfg, unwound_cfg);
+    }
+
+    #[test]
+    fn test_unwind_loop_1_2_with_loop_entry_1_and_loop_exit_2_zero_times() {
+        let l: Expression = Variable::new("L", Sort::boolean()).into();
+        let not_l = Boolean::not(l.clone()).unwrap();
+
+        // Given:
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id(&mut cfg, "c2");
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+
+            cfg.unconditional_edge(block1_index, block2_index).unwrap();
+            cfg.conditional_edge(block2_index, block1_index, l.clone())
+                .unwrap(); // loop
+            cfg.conditional_edge(block2_index, block3_index, not_l.clone())
+                .unwrap();
+
+            cfg.set_entry(block1_index).unwrap();
+            cfg.set_exit(block3_index).unwrap();
+
+            cfg
+        };
+
+        // When: Unwind with k=0
+        let mut unwound_cfg = given_cfg.clone();
+        LoopUnwinding::new()
+            .with_unwinding_bound(0)
+            .unwind_cfg(&mut unwound_cfg)
             .unwrap();
-        unwound_cfg
-            .render_to_file(Path::new(
-                "loop_unwinding_test_unwind_nested_loop_one_time_unwound.dot",
-            ))
+
+        // Then:
+        let expected_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id_and_assumption(&mut cfg, "c2", not_l.clone());
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+
+            cfg.unconditional_edge(block1_index, block2_index).unwrap();
+            cfg.conditional_edge(block2_index, block3_index, not_l.clone())
+                .unwrap();
+
+            cfg.set_entry(block1_index).unwrap();
+            cfg.set_exit(block3_index).unwrap();
+
+            cfg
+        };
+
+        /*debug_cfg(
+            "test_unwind_loop_1_2_with_loop_entry_1_and_loop_exit_2_zero_times",
+            &given_cfg,
+            &unwound_cfg,
+            &expected_cfg,
+        );*/
+
+        assert_eq!(expected_cfg, unwound_cfg);
+    }
+
+    #[test]
+    fn test_unwind_loop_1_2_with_loop_entry_1_and_loop_exit_2_one_time() {
+        let l: Expression = Variable::new("L", Sort::boolean()).into();
+        let not_l = Boolean::not(l.clone()).unwrap();
+
+        // Given:
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id(&mut cfg, "c2");
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+
+            cfg.unconditional_edge(block1_index, block2_index).unwrap();
+            cfg.conditional_edge(block2_index, block1_index, l.clone())
+                .unwrap(); // loop
+            cfg.conditional_edge(block2_index, block3_index, not_l.clone())
+                .unwrap();
+
+            cfg.set_entry(block1_index).unwrap();
+            cfg.set_exit(block3_index).unwrap();
+
+            cfg
+        };
+
+        // When: Unwind with k=1
+        let mut unwound_cfg = given_cfg.clone();
+        LoopUnwinding::new()
+            .with_unwinding_bound(1)
+            .unwind_cfg(&mut unwound_cfg)
             .unwrap();
-        expected_cfg
-            .render_to_file(Path::new(
-                "loop_unwinding_test_unwind_nested_loop_one_time_expected.dot",
-            ))
-            .unwrap();*/
+
+        // Then:
+        let expected_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id(&mut cfg, "c2");
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+            let block4_index = add_block_with_id(&mut cfg, "c1");
+            let block5_index = add_block_with_id_and_assumption(&mut cfg, "c2", not_l.clone());
+
+            cfg.unconditional_edge(block1_index, block2_index).unwrap();
+            cfg.conditional_edge(block2_index, block3_index, not_l.clone())
+                .unwrap();
+            cfg.conditional_edge(block2_index, block4_index, l.clone())
+                .unwrap();
+            cfg.unconditional_edge(block4_index, block5_index).unwrap();
+            cfg.conditional_edge(block5_index, block3_index, not_l.clone())
+                .unwrap();
+
+            cfg.set_entry(block1_index).unwrap();
+            cfg.set_exit(block3_index).unwrap();
+
+            cfg
+        };
+
+        /*debug_cfg(
+            "test_unwind_loop_1_2_with_loop_entry_1_and_loop_exit_2_one_time",
+            &given_cfg,
+            &unwound_cfg,
+            &expected_cfg,
+        );*/
+
+        assert_eq!(expected_cfg, unwound_cfg);
+    }
+
+    #[test]
+    fn test_unwind_loop_1_2_with_loop_entry_1_and_loop_exit_1_zero_times() {
+        let l: Expression = Variable::new("L", Sort::boolean()).into();
+        let not_l = Boolean::not(l.clone()).unwrap();
+
+        // Given:
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id(&mut cfg, "c2");
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+
+            cfg.conditional_edge(block1_index, block2_index, l.clone())
+                .unwrap();
+            cfg.conditional_edge(block1_index, block3_index, not_l.clone())
+                .unwrap();
+            cfg.unconditional_edge(block2_index, block1_index).unwrap(); // loop
+
+            cfg.set_entry(block1_index).unwrap();
+            cfg.set_exit(block3_index).unwrap();
+
+            cfg
+        };
+
+        // When: Unwind with k=0
+        let mut unwound_cfg = given_cfg.clone();
+        LoopUnwinding::new()
+            .with_unwinding_bound(0)
+            .unwind_cfg(&mut unwound_cfg)
+            .unwrap();
+
+        // Then:
+        let expected_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block1_index = add_block_with_id_and_assumption(&mut cfg, "c1", not_l.clone());
+            let block2_index = add_block_with_id(&mut cfg, "c2");
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+
+            // block2 is dead end -> remove
+            cfg.remove_block(block2_index).unwrap();
+
+            cfg.conditional_edge(block1_index, block3_index, not_l.clone())
+                .unwrap();
+
+            cfg.set_entry(block1_index).unwrap();
+            cfg.set_exit(block3_index).unwrap();
+
+            cfg
+        };
+
+        /*debug_cfg(
+            "test_unwind_loop_1_2_with_loop_entry_1_and_loop_exit_1_zero_times",
+            &given_cfg,
+            &unwound_cfg,
+            &expected_cfg,
+        );*/
+
+        assert_eq!(expected_cfg, unwound_cfg);
+    }
+
+    #[test]
+    fn test_unwind_loop_1_2_with_loop_entry_1_and_loop_exit_1_one_time() {
+        let l: Expression = Variable::new("L", Sort::boolean()).into();
+        let not_l = Boolean::not(l.clone()).unwrap();
+
+        // Given:
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id(&mut cfg, "c2");
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+
+            cfg.conditional_edge(block1_index, block2_index, l.clone())
+                .unwrap();
+            cfg.conditional_edge(block1_index, block3_index, not_l.clone())
+                .unwrap();
+            cfg.unconditional_edge(block2_index, block1_index).unwrap(); // loop
+
+            cfg.set_entry(block1_index).unwrap();
+            cfg.set_exit(block3_index).unwrap();
+
+            cfg
+        };
+
+        // When: Unwind with k=1
+        let mut unwound_cfg = given_cfg.clone();
+        LoopUnwinding::new()
+            .with_unwinding_bound(1)
+            .unwind_cfg(&mut unwound_cfg)
+            .unwrap();
+
+        // Then:
+        let expected_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id(&mut cfg, "c2");
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+            let block4_index = add_block_with_id_and_assumption(&mut cfg, "c1", not_l.clone());
+
+            cfg.conditional_edge(block1_index, block2_index, l.clone())
+                .unwrap();
+            cfg.conditional_edge(block1_index, block3_index, not_l.clone())
+                .unwrap();
+            cfg.unconditional_edge(block2_index, block4_index).unwrap();
+            cfg.conditional_edge(block4_index, block3_index, not_l.clone())
+                .unwrap();
+
+            cfg.set_entry(block1_index).unwrap();
+            cfg.set_exit(block3_index).unwrap();
+
+            cfg
+        };
+
+        /*debug_cfg(
+            "test_unwind_loop_1_2_with_loop_entry_1_and_loop_exit_1_one_time",
+            &given_cfg,
+            &unwound_cfg,
+            &expected_cfg,
+        );*/
+
+        assert_eq!(expected_cfg, unwound_cfg);
+    }
+
+    #[test]
+    fn test_unwind_loop_1_2_3_with_loop_entry_1_and_loop_exit_2_zero_times() {
+        let l: Expression = Variable::new("L", Sort::boolean()).into();
+        let not_l = Boolean::not(l.clone()).unwrap();
+
+        // Given:
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id(&mut cfg, "c2");
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+            let block4_index = add_block_with_id(&mut cfg, "c4");
+
+            cfg.unconditional_edge(block1_index, block2_index).unwrap();
+            cfg.conditional_edge(block2_index, block3_index, l.clone())
+                .unwrap();
+            cfg.conditional_edge(block2_index, block4_index, not_l.clone())
+                .unwrap();
+            cfg.unconditional_edge(block3_index, block1_index).unwrap(); // loop
+
+            cfg.set_entry(block1_index).unwrap();
+            cfg.set_exit(block4_index).unwrap();
+
+            cfg
+        };
+
+        // When: Unwind with k=0
+        let mut unwound_cfg = given_cfg.clone();
+        LoopUnwinding::new()
+            .with_unwinding_bound(0)
+            .unwind_cfg(&mut unwound_cfg)
+            .unwrap();
+
+        // Then:
+        let expected_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id_and_assumption(&mut cfg, "c2", not_l.clone());
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+            let block4_index = add_block_with_id(&mut cfg, "c4");
+
+            // block3 is dead end -> remove
+            cfg.remove_block(block3_index).unwrap();
+
+            cfg.unconditional_edge(block1_index, block2_index).unwrap();
+            cfg.conditional_edge(block2_index, block4_index, not_l.clone())
+                .unwrap();
+
+            cfg.set_entry(block1_index).unwrap();
+            cfg.set_exit(block4_index).unwrap();
+
+            cfg
+        };
+
+        /*debug_cfg(
+            "test_unwind_loop_1_2_3_with_loop_entry_1_and_loop_exit_2_zero_times",
+            &given_cfg,
+            &unwound_cfg,
+            &expected_cfg,
+        );*/
+
+        assert_eq!(expected_cfg, unwound_cfg);
+    }
+
+    #[test]
+    fn test_unwind_loop_1_2_3_with_loop_entry_1_and_loop_exit_2_one_time() {
+        let l: Expression = Variable::new("L", Sort::boolean()).into();
+        let not_l = Boolean::not(l.clone()).unwrap();
+
+        // Given:
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id(&mut cfg, "c2");
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+            let block4_index = add_block_with_id(&mut cfg, "c4");
+
+            cfg.unconditional_edge(block1_index, block2_index).unwrap();
+            cfg.conditional_edge(block2_index, block3_index, l.clone())
+                .unwrap();
+            cfg.conditional_edge(block2_index, block4_index, not_l.clone())
+                .unwrap();
+            cfg.unconditional_edge(block3_index, block1_index).unwrap(); // loop
+
+            cfg.set_entry(block1_index).unwrap();
+            cfg.set_exit(block4_index).unwrap();
+
+            cfg
+        };
+
+        // When: Unwind with k=1
+        let mut unwound_cfg = given_cfg.clone();
+        LoopUnwinding::new()
+            .with_unwinding_bound(1)
+            .unwind_cfg(&mut unwound_cfg)
+            .unwrap();
+
+        // Then:
+        let expected_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block1_index = add_block_with_id(&mut cfg, "c1");
+            let block2_index = add_block_with_id(&mut cfg, "c2");
+            let block3_index = add_block_with_id(&mut cfg, "c3");
+            let block4_index = add_block_with_id(&mut cfg, "c4");
+            let block5_index = add_block_with_id(&mut cfg, "c1");
+            let block6_index = add_block_with_id_and_assumption(&mut cfg, "c2", not_l.clone());
+
+            cfg.unconditional_edge(block1_index, block2_index).unwrap();
+            cfg.conditional_edge(block2_index, block4_index, not_l.clone())
+                .unwrap();
+            cfg.conditional_edge(block2_index, block3_index, l.clone())
+                .unwrap();
+            cfg.unconditional_edge(block3_index, block5_index).unwrap();
+            cfg.unconditional_edge(block5_index, block6_index).unwrap();
+            cfg.conditional_edge(block6_index, block4_index, not_l.clone())
+                .unwrap();
+
+            cfg.set_entry(block1_index).unwrap();
+            cfg.set_exit(block4_index).unwrap();
+
+            cfg
+        };
+
+        /*debug_cfg(
+            "test_unwind_loop_1_2_3_with_loop_entry_1_and_loop_exit_2_one_time",
+            &given_cfg,
+            &unwound_cfg,
+            &expected_cfg,
+        );*/
 
         assert_eq!(expected_cfg, unwound_cfg);
     }
