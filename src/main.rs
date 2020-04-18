@@ -27,6 +27,7 @@ struct Arguments {
     check: Option<environment::Check>,
     solver: Option<environment::Solver>,
     predictor_strategy: Option<environment::PredictorStrategy>,
+    transient_encoding_strategy: Option<environment::TransientEncodingStrategy>,
     function: Option<String>,
     unwind: Option<usize>,
     debug: bool,
@@ -84,6 +85,14 @@ fn parse_arguments() -> Arguments {
                 .value_name("STRATEGY")
                 .possible_values(&["invert", "choose"])
                 .help("Sets predictor strategy")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("transient_encoding_strategy")
+                .long("trans-enc")
+                .value_name("STRATEGY")
+                .possible_values(&["unified", "several"])
+                .help("Sets transient encoding strategy")
                 .takes_value(true),
         )
         .arg(
@@ -184,6 +193,12 @@ fn parse_arguments() -> Arguments {
         _ => panic!("unknown predictor strategy"),
     };
 
+    let parse_transient_encoding_strategy = |strategy: &str| match strategy {
+        "unified" => TransientEncodingStrategy::Unified,
+        "several" => TransientEncodingStrategy::Several,
+        _ => panic!("unknown transient encoding strategy"),
+    };
+
     let parse_solver = |solver: &str| match solver {
         "z3" => Solver::Z3,
         "cvc4" => Solver::CVC4,
@@ -201,6 +216,9 @@ fn parse_arguments() -> Arguments {
         predictor_strategy: matches
             .value_of("predictor_strategy")
             .map(parse_predictory_strategy),
+        transient_encoding_strategy: matches
+            .value_of("transient_encoding_strategy")
+            .map(parse_transient_encoding_strategy),
         function: matches.value_of("function").map(String::from),
         unwind: matches
             .value_of("unwind")
@@ -252,6 +270,10 @@ fn build_environment(arguments: &Arguments) -> Result<environment::Environment> 
 
     if let Some(strategy) = arguments.predictor_strategy {
         env_builder.predictor_strategy(strategy);
+    }
+
+    if let Some(strategy) = arguments.transient_encoding_strategy {
+        env_builder.transient_encoding_strategy(strategy);
     }
 
     if let Some(solver) = arguments.solver {

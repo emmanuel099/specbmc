@@ -305,6 +305,7 @@ pub struct EnvironmentBuilder {
     optimization_level: Option<OptimizationLevel>,
     check: Option<Check>,
     predictor_strategy: Option<PredictorStrategy>,
+    transient_encoding_strategy: Option<TransientEncodingStrategy>,
     solver: Option<Solver>,
     debug: Option<bool>,
     unwind: Option<usize>,
@@ -328,6 +329,14 @@ impl EnvironmentBuilder {
 
     pub fn predictor_strategy(&mut self, strategy: PredictorStrategy) -> &mut Self {
         self.predictor_strategy = Some(strategy);
+        self
+    }
+
+    pub fn transient_encoding_strategy(
+        &mut self,
+        strategy: TransientEncodingStrategy,
+    ) -> &mut Self {
+        self.transient_encoding_strategy = Some(strategy);
         self
     }
 
@@ -364,6 +373,9 @@ impl EnvironmentBuilder {
         }
         if let Some(strategy) = self.predictor_strategy {
             env.analysis.predictor_strategy = strategy;
+        }
+        if let Some(strategy) = self.transient_encoding_strategy {
+            env.analysis.transient_encoding_strategy = strategy;
         }
         if let Some(solver) = self.solver {
             env.solver = solver;
