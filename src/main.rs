@@ -56,7 +56,7 @@ fn parse_arguments() -> Arguments {
                 .short("e")
                 .long("env")
                 .value_name("FILE")
-                .help("Sets environment file to use")
+                .help("Sets environment file to use (arguments overwrite it)")
                 .takes_value(true),
         )
         .arg(
@@ -65,7 +65,7 @@ fn parse_arguments() -> Arguments {
                 .long("opt")
                 .value_name("LEVEL")
                 .possible_values(&["none", "basic", "full"])
-                .help("Sets optimization level (overwrites environment)")
+                .help("Sets optimization level")
                 .takes_value(true),
         )
         .arg(
@@ -74,7 +74,7 @@ fn parse_arguments() -> Arguments {
                 .long("check")
                 .value_name("TYPE")
                 .possible_values(&["all", "normal", "transient"])
-                .help("Sets leak check type (overwrites environment)")
+                .help("Sets leak check type")
                 .takes_value(true),
         )
         .arg(
@@ -83,7 +83,7 @@ fn parse_arguments() -> Arguments {
                 .long("predictor")
                 .value_name("STRATEGY")
                 .possible_values(&["invert", "choose"])
-                .help("Sets predictor strategy (overwrites environment)")
+                .help("Sets predictor strategy")
                 .takes_value(true),
         )
         .arg(
@@ -91,7 +91,7 @@ fn parse_arguments() -> Arguments {
                 .long("solver")
                 .value_name("SOLVER")
                 .possible_values(&["z3", "cvc4", "yices2"])
-                .help("Sets solver to use (overwrites environment)")
+                .help("Sets solver to use")
                 .takes_value(true),
         )
         .arg(
