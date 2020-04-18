@@ -12,7 +12,7 @@ pub enum Predictor {
 }
 
 impl fmt::Display for Predictor {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::TransientStart => write!(f, "transient-start"),
             Self::SpeculationWindow => write!(f, "speculation-window"),

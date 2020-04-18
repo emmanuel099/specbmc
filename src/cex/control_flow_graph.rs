@@ -74,7 +74,7 @@ impl ControlFlowGraph {
 }
 
 impl fmt::Display for ControlFlowGraph {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for block in self.blocks() {
             writeln!(f, "{}", block)?;
         }

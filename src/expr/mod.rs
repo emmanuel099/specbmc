@@ -60,7 +60,7 @@ impl_operator_from!(BranchTargetBuffer);
 impl_operator_from!(PatternHistoryTable);
 
 impl fmt::Display for Operator {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Variable(v) => v.fmt(f),
             Self::Constant(c) => c.fmt(f),
@@ -270,7 +270,7 @@ impl TryFrom<&Expression> for BitVectorValue {
 }
 
 impl fmt::Display for Expression {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.operands.is_empty() {
             self.operator.fmt(f)
         } else {

@@ -44,7 +44,7 @@ impl PhiNode {
 }
 
 impl fmt::Display for PhiNode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} = phi", self.out)?;
         for (block_index, src) in &self.incoming {
             write!(f, " [{}, 0x{:X}]", src, block_index)?

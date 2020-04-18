@@ -51,7 +51,7 @@ impl Node {
 }
 
 impl fmt::Display for Node {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(address) = self.address {
             write!(f, "{:X} ", address)?;
         }

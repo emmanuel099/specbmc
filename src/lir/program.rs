@@ -56,7 +56,7 @@ impl Program {
 }
 
 impl fmt::Display for Program {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for node in self.nodes() {
             writeln!(f, "{}", node)?;
         }

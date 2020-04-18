@@ -84,7 +84,7 @@ impl graph::Edge for AnnotatedEdge {
 }
 
 impl fmt::Display for AnnotatedEdge {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.edge())
     }
 }

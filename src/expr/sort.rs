@@ -242,7 +242,7 @@ impl Sort {
 }
 
 impl fmt::Display for Sort {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Boolean => write!(f, "Boolean"),
             Self::Integer => write!(f, "Integer"),

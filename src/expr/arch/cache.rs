@@ -10,7 +10,7 @@ pub enum Cache {
 }
 
 impl fmt::Display for Cache {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Fetch(bit_width) => write!(f, "(cache-fetch {})", bit_width),
         }
@@ -82,7 +82,7 @@ impl CacheValue {
 }
 
 impl fmt::Display for CacheValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if !self.default_empty {
             write!(f, "⊤ ∖ ")?;
         }

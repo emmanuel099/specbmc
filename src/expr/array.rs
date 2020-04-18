@@ -10,7 +10,7 @@ pub enum Array {
 }
 
 impl fmt::Display for Array {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Select => write!(f, "select"),
             Self::Store => write!(f, "store"),
@@ -79,7 +79,7 @@ impl ArrayValue {
 }
 
 impl fmt::Display for ArrayValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[")?;
         for (index, value) in &self.entries {
             write!(f, "{} ↦ {}, ", index, value)?;

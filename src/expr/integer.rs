@@ -18,7 +18,7 @@ pub enum Integer {
 }
 
 impl fmt::Display for Integer {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Lt => write!(f, "<"),
             Self::Gt => write!(f, ">"),

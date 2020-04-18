@@ -77,7 +77,7 @@ impl Node {
 }
 
 impl fmt::Display for Node {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Comment(text) => write!(f, "// {}", text),
             Self::Let { var, expr } => write!(f, "{} = {}", var, expr),

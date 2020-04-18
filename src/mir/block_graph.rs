@@ -129,7 +129,7 @@ impl BlockGraph {
 }
 
 impl fmt::Display for BlockGraph {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for block in self.blocks() {
             writeln!(f, "{}", block)?;
         }

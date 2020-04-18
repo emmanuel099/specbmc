@@ -21,7 +21,7 @@ impl CounterExample {
 }
 
 impl fmt::Display for CounterExample {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.control_flow_graph().fmt(f)
     }
 }

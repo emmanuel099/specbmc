@@ -3,7 +3,7 @@ extern crate clap;
 use clap::Arg;
 use colored::*;
 use console::style;
-use console::Term;
+
 use specbmc::environment;
 use specbmc::error::Result;
 use specbmc::loader;

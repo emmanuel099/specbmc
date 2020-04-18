@@ -1,16 +1,6 @@
-extern crate falcon;
 #[macro_use]
 extern crate error_chain;
-extern crate colored;
-extern crate console;
-extern crate indicatif;
-extern crate muasm_parser;
-extern crate nom;
-extern crate num_bigint;
-extern crate num_traits;
-extern crate rsmt2;
-extern crate serde;
-extern crate serde_yaml;
+
 #[macro_use]
 extern crate derivative;
 

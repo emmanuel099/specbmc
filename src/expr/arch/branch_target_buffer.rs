@@ -8,7 +8,7 @@ pub enum BranchTargetBuffer {
 }
 
 impl fmt::Display for BranchTargetBuffer {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Track => write!(f, "btb-track"),
         }

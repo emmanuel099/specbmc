@@ -38,7 +38,7 @@ impl graph::Edge for Edge {
 }
 
 impl fmt::Display for Edge {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "(0x{:X}->0x{:X})", self.head, self.tail)
     }
 }

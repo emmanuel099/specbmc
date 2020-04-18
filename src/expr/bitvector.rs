@@ -48,7 +48,7 @@ pub enum BitVector {
 }
 
 impl fmt::Display for BitVector {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             Self::ToBoolean => "bv2bool".to_owned(),
             Self::FromBoolean(i) => format!("(bool2bv {})", i),

@@ -10,7 +10,7 @@ pub enum Memory {
 }
 
 impl fmt::Display for Memory {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Store(bit_width) => write!(f, "(store {})", bit_width),
             Self::Load(bit_width) => write!(f, "(load {})", bit_width),
@@ -107,7 +107,7 @@ impl MemoryValue {
 }
 
 impl fmt::Display for MemoryValue {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[")?;
         let mut is_first = true;
         for (address, word) in self.content.iter() {

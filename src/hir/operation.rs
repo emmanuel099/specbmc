@@ -252,7 +252,7 @@ impl Operation {
 }
 
 impl fmt::Display for Operation {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Assign { variable, expr } => write!(f, "{} = {}", variable, expr),
             Self::Store { address, expr } => write!(f, "store({}, {})", address, expr),

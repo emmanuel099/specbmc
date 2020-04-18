@@ -104,7 +104,7 @@ impl Effect {
 }
 
 impl fmt::Display for Effect {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Conditional { condition, effect } => write!(f, "{} if {}", effect, condition),
             Self::CacheFetch { address, bit_width } => {

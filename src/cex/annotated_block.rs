@@ -161,7 +161,7 @@ impl graph::Vertex for AnnotatedBlock {
 }
 
 impl fmt::Display for AnnotatedBlock {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "[ Block: 0x{:X}", self.block().index())?;
         if self.block().is_transient() {
             write!(f, ", Transient")?;

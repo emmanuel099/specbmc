@@ -216,8 +216,7 @@ mod tests {
 
     use crate::expr::{Expression, Sort, Variable};
     use crate::util::RenderGraph;
-    use std::fs::File;
-    use std::io::Write;
+
     use std::path::Path;
 
     fn add_block_with_id(cfg: &mut ControlFlowGraph, id: &str) -> usize {

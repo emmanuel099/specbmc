@@ -48,7 +48,7 @@ impl AnnotatedInstruction {
 }
 
 impl fmt::Display for AnnotatedInstruction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}", self.instruction())?;
         for (composition, annotation) in &self.annotations {
             for (var, value) in &annotation.assignments {
