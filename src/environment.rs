@@ -304,6 +304,7 @@ pub struct EnvironmentBuilder {
     file_path: Option<PathBuf>,
     optimization_level: Option<OptimizationLevel>,
     check: Option<Check>,
+    predictor_strategy: Option<PredictorStrategy>,
     solver: Option<Solver>,
     debug: Option<bool>,
     unwind: Option<usize>,
@@ -322,6 +323,11 @@ impl EnvironmentBuilder {
 
     pub fn check(&mut self, check: Check) -> &mut Self {
         self.check = Some(check);
+        self
+    }
+
+    pub fn predictor_strategy(&mut self, strategy: PredictorStrategy) -> &mut Self {
+        self.predictor_strategy = Some(strategy);
         self
     }
 
@@ -355,6 +361,9 @@ impl EnvironmentBuilder {
         }
         if let Some(check) = self.check {
             env.analysis.check = check;
+        }
+        if let Some(strategy) = self.predictor_strategy {
+            env.analysis.predictor_strategy = strategy;
         }
         if let Some(solver) = self.solver {
             env.solver = solver;
