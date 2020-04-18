@@ -36,19 +36,19 @@ impl InitGlobalVariables {
     }
 
     pub fn new_from_env(env: &Environment) -> Self {
-        let memory_policy = env.policy().memory();
-        let register_policy = env.policy().registers();
+        let memory_policy = &env.policy.memory;
+        let register_policy = &env.policy.registers;
 
         Self {
-            cache_available: env.architecture().cache(),
-            btb_available: env.architecture().branch_target_buffer(),
-            pht_available: env.architecture().pattern_history_table(),
-            memory_default_low: memory_policy.default_level() == SecurityLevel::Low,
-            low_memory_addresses: memory_policy.low().clone(),
-            high_memory_addresses: memory_policy.high().clone(),
-            registers_default_low: register_policy.default_level() == SecurityLevel::Low,
-            low_registers: register_policy.low().clone(),
-            high_registers: register_policy.high().clone(),
+            cache_available: env.architecture.cache,
+            btb_available: env.architecture.branch_target_buffer,
+            pht_available: env.architecture.pattern_history_table,
+            memory_default_low: memory_policy.default_level == SecurityLevel::Low,
+            low_memory_addresses: memory_policy.low.clone(),
+            high_memory_addresses: memory_policy.high.clone(),
+            registers_default_low: register_policy.default_level == SecurityLevel::Low,
+            low_registers: register_policy.low.clone(),
+            high_registers: register_policy.high.clone(),
         }
     }
 

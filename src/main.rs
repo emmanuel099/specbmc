@@ -237,58 +237,54 @@ fn parse_arguments() -> Arguments {
 fn build_environment(arguments: &Arguments) -> Result<environment::Environment> {
     use environment::*;
 
-    let mut env_builder = EnvironmentBuilder::default();
-
-    if let Some(file_path) = &arguments.environment_file {
+    let mut env = if let Some(file_path) = &arguments.environment_file {
         // Load given environment file
-        let env_file = Path::new(file_path);
-        if !env_file.is_file() {
-            return Err(format!("Environment file '{}' does not exist", file_path).into());
-        }
-        env_builder.from_file(Path::new(env_file));
+        Environment::from_file(Path::new(file_path))?
     } else {
-        // Try to find a environment file for the current input
+        // Try to find a environment file for the current input and use it if it exists
         let input_file = Path::new(&arguments.input_file);
         let env_file = input_file.with_extension("yaml");
-        if env_file.is_file() {
-            // Environment file exists, use it
-            println!(
-                "Using environment defined in '{}'",
-                style(&env_file.to_str().unwrap()).yellow()
-            );
-            env_builder.from_file(&env_file);
+        match Environment::from_file(&env_file) {
+            Ok(env) => {
+                println!(
+                    "Using environment defined in '{}'",
+                    style(&env_file.to_str().unwrap()).yellow()
+                );
+                env
+            }
+            Err(_) => Environment::default(),
         }
-    }
+    };
 
     if let Some(level) = arguments.optimization_level {
-        env_builder.optimization_level(level);
+        env.optimization_level = level;
     }
 
     if let Some(check) = arguments.check {
-        env_builder.check(check);
+        env.analysis.check = check;
     }
 
     if let Some(strategy) = arguments.predictor_strategy {
-        env_builder.predictor_strategy(strategy);
+        env.analysis.predictor_strategy = strategy;
     }
 
     if let Some(strategy) = arguments.transient_encoding_strategy {
-        env_builder.transient_encoding_strategy(strategy);
+        env.analysis.transient_encoding_strategy = strategy;
     }
 
     if let Some(solver) = arguments.solver {
-        env_builder.solver(solver);
+        env.solver = solver;
     }
 
     if let Some(unwind) = arguments.unwind {
-        env_builder.unwind(unwind);
+        env.analysis.unwind = unwind;
     }
 
     if arguments.debug {
-        env_builder.debug(true);
+        env.debug = true;
     }
 
-    env_builder.build()
+    Ok(env)
 }
 
 fn hir_transformations(env: &environment::Environment, program: &mut hir::Program) -> Result<()> {
@@ -298,14 +294,14 @@ fn hir_transformations(env: &environment::Environment, program: &mut hir::Progra
         let mut steps: Vec<Box<dyn Transform<hir::Program>>> = Vec::new();
         steps.push(Box::new(LoopUnwinding::new_from_env(env)));
         steps.push(Box::new(InstructionEffects::new_from_env(env)));
-        if env.analysis().check() != environment::Check::OnlyNormalExecutionLeaks {
+        if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
             steps.push(Box::new(TransientExecution::new_from_env(env)));
         }
         steps.push(Box::new(InitGlobalVariables::new_from_env(env)));
         steps.push(Box::new(Observations::new_from_env(env)));
         steps.push(Box::new(ExplicitEffects::new()));
         steps.push(Box::new(ExplicitMemory::new()));
-        if env.analysis().check() == environment::Check::OnlyTransientExecutionLeaks {
+        if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
             steps.push(Box::new(NonSpecObsEquivalence::new_from_env(env)));
         }
         steps.push(Box::new(SSATransformation::new()));
@@ -323,7 +319,7 @@ fn hir_transformations(env: &environment::Environment, program: &mut hir::Progra
 
         transformation.transform(program)?;
 
-        if env.debug() {
+        if env.debug {
             program
                 .control_flow_graph()
                 .render_to_file(Path::new(&format!("dbg_hir_{}.dot", transformation.name())))?;
@@ -336,7 +332,7 @@ fn hir_transformations(env: &environment::Environment, program: &mut hir::Progra
 fn lir_optimize(env: &environment::Environment, program: &mut lir::Program) -> Result<()> {
     use lir::optimization::*;
 
-    let optimizer = match env.optimization_level() {
+    let optimizer = match env.optimization_level {
         environment::OptimizationLevel::Disabled => Optimizer::none(),
         environment::OptimizationLevel::Basic => Optimizer::basic(),
         environment::OptimizationLevel::Full => Optimizer::full(),
@@ -352,7 +348,7 @@ fn spec_bmc(arguments: &Arguments) -> Result<()> {
 
     let env = build_environment(arguments)?;
 
-    if env.debug() {
+    if env.debug {
         println!("{}:\n{}\n---", "Environment".bold(), style(&env).cyan());
     }
 

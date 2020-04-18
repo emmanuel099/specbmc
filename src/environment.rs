@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub const SPECULATION_WINDOW_SIZE: usize = 8;
 pub const WORD_SIZE: usize = 64;
@@ -89,43 +89,17 @@ impl Default for TransientEncodingStrategy {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Analysis {
     #[serde(default = "enabled")]
-    spectre_pht: bool,
+    pub spectre_pht: bool,
     #[serde(default = "disabled")]
-    spectre_stl: bool,
+    pub spectre_stl: bool,
     #[serde(default)]
-    check: Check,
+    pub check: Check,
     #[serde(default)]
-    predictor_strategy: PredictorStrategy,
+    pub predictor_strategy: PredictorStrategy,
     #[serde(default, rename = "transient_encoding")]
-    transient_encoding_strategy: TransientEncodingStrategy,
+    pub transient_encoding_strategy: TransientEncodingStrategy,
     #[serde(default)]
-    unwind: usize,
-}
-
-impl Analysis {
-    pub fn spectre_pht(&self) -> bool {
-        self.spectre_pht
-    }
-
-    pub fn spectre_stl(&self) -> bool {
-        self.spectre_stl
-    }
-
-    pub fn check(&self) -> Check {
-        self.check
-    }
-
-    pub fn predictor_strategy(&self) -> PredictorStrategy {
-        self.predictor_strategy
-    }
-
-    pub fn transient_encoding_strategy(&self) -> TransientEncodingStrategy {
-        self.transient_encoding_strategy
-    }
-
-    pub fn unwind(&self) -> usize {
-        self.unwind
-    }
+    pub unwind: usize,
 }
 
 impl Default for Analysis {
@@ -144,25 +118,11 @@ impl Default for Analysis {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Architecture {
     #[serde(default = "enabled")]
-    cache: bool,
+    pub cache: bool,
     #[serde(rename = "btb", default = "enabled")]
-    branch_target_buffer: bool,
+    pub branch_target_buffer: bool,
     #[serde(rename = "pht", default = "enabled")]
-    pattern_history_table: bool,
-}
-
-impl Architecture {
-    pub fn cache(&self) -> bool {
-        self.cache
-    }
-
-    pub fn branch_target_buffer(&self) -> bool {
-        self.branch_target_buffer
-    }
-
-    pub fn pattern_history_table(&self) -> bool {
-        self.pattern_history_table
-    }
+    pub pattern_history_table: bool,
 }
 
 impl Default for Architecture {
@@ -186,25 +146,11 @@ pub enum SecurityLevel {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenericSecurityPolicy<T: Eq + std::hash::Hash> {
     #[serde(rename = "default")]
-    default_level: SecurityLevel,
+    pub default_level: SecurityLevel,
     #[serde(default, skip_serializing_if = "HashSet::is_empty")]
-    low: HashSet<T>,
+    pub low: HashSet<T>,
     #[serde(default, skip_serializing_if = "HashSet::is_empty")]
-    high: HashSet<T>,
-}
-
-impl<T: Eq + std::hash::Hash> GenericSecurityPolicy<T> {
-    pub fn default_level(&self) -> SecurityLevel {
-        self.default_level
-    }
-
-    pub fn low(&self) -> &HashSet<T> {
-        &self.low
-    }
-
-    pub fn high(&self) -> &HashSet<T> {
-        &self.high
-    }
+    pub high: HashSet<T>,
 }
 
 pub type RegistersSecurityPolicy = GenericSecurityPolicy<String>;
@@ -212,18 +158,8 @@ pub type MemorySecurityPolicy = GenericSecurityPolicy<u64>;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SecurityPolicy {
-    registers: RegistersSecurityPolicy,
-    memory: MemorySecurityPolicy,
-}
-
-impl SecurityPolicy {
-    pub fn registers(&self) -> &RegistersSecurityPolicy {
-        &self.registers
-    }
-
-    pub fn memory(&self) -> &MemorySecurityPolicy {
-        &self.memory
-    }
+    pub registers: RegistersSecurityPolicy,
+    pub memory: MemorySecurityPolicy,
 }
 
 impl Default for SecurityPolicy {
@@ -246,42 +182,25 @@ impl Default for SecurityPolicy {
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Environment {
     #[serde(rename = "optimization", default)]
-    optimization_level: OptimizationLevel,
+    pub optimization_level: OptimizationLevel,
     #[serde(default)]
-    solver: Solver,
+    pub solver: Solver,
     #[serde(default)]
-    analysis: Analysis,
+    pub analysis: Analysis,
     #[serde(default)]
-    architecture: Architecture,
+    pub architecture: Architecture,
     #[serde(default)]
-    policy: SecurityPolicy,
+    pub policy: SecurityPolicy,
     #[serde(default = "disabled")]
-    debug: bool,
+    pub debug: bool,
 }
 
 impl Environment {
-    pub fn optimization_level(&self) -> OptimizationLevel {
-        self.optimization_level
-    }
-
-    pub fn solver(&self) -> Solver {
-        self.solver
-    }
-
-    pub fn analysis(&self) -> &Analysis {
-        &self.analysis
-    }
-
-    pub fn architecture(&self) -> &Architecture {
-        &self.architecture
-    }
-
-    pub fn policy(&self) -> &SecurityPolicy {
-        &self.policy
-    }
-
-    pub fn debug(&self) -> bool {
-        self.debug
+    pub fn from_file(path: &Path) -> Result<Environment> {
+        let file = File::open(path)
+            .map_err(|_| format!("Environment file '{}' could not be loaded", path.display()))?;
+        let reader = BufReader::new(file);
+        Ok(serde_yaml::from_reader(reader)?)
     }
 }
 
@@ -297,96 +216,4 @@ fn disabled() -> bool {
 
 fn enabled() -> bool {
     true
-}
-
-#[derive(Default)]
-pub struct EnvironmentBuilder {
-    file_path: Option<PathBuf>,
-    optimization_level: Option<OptimizationLevel>,
-    check: Option<Check>,
-    predictor_strategy: Option<PredictorStrategy>,
-    transient_encoding_strategy: Option<TransientEncodingStrategy>,
-    solver: Option<Solver>,
-    debug: Option<bool>,
-    unwind: Option<usize>,
-}
-
-impl EnvironmentBuilder {
-    pub fn from_file(&mut self, path: &Path) -> &mut Self {
-        self.file_path = Some(path.to_owned());
-        self
-    }
-
-    pub fn optimization_level(&mut self, level: OptimizationLevel) -> &mut Self {
-        self.optimization_level = Some(level);
-        self
-    }
-
-    pub fn check(&mut self, check: Check) -> &mut Self {
-        self.check = Some(check);
-        self
-    }
-
-    pub fn predictor_strategy(&mut self, strategy: PredictorStrategy) -> &mut Self {
-        self.predictor_strategy = Some(strategy);
-        self
-    }
-
-    pub fn transient_encoding_strategy(
-        &mut self,
-        strategy: TransientEncodingStrategy,
-    ) -> &mut Self {
-        self.transient_encoding_strategy = Some(strategy);
-        self
-    }
-
-    pub fn solver(&mut self, solver: Solver) -> &mut Self {
-        self.solver = Some(solver);
-        self
-    }
-
-    pub fn debug(&mut self, debug: bool) -> &mut Self {
-        self.debug = Some(debug);
-        self
-    }
-
-    pub fn unwind(&mut self, unwind: usize) -> &mut Self {
-        self.unwind = Some(unwind);
-        self
-    }
-
-    pub fn build(&mut self) -> Result<Environment> {
-        let mut env = match &self.file_path {
-            Some(path) => {
-                let file = File::open(path)?;
-                let reader = BufReader::new(file);
-                serde_yaml::from_reader(reader)?
-            }
-            _ => Environment::default(),
-        };
-
-        if let Some(optimization_level) = self.optimization_level {
-            env.optimization_level = optimization_level;
-        }
-        if let Some(check) = self.check {
-            env.analysis.check = check;
-        }
-        if let Some(strategy) = self.predictor_strategy {
-            env.analysis.predictor_strategy = strategy;
-        }
-        if let Some(strategy) = self.transient_encoding_strategy {
-            env.analysis.transient_encoding_strategy = strategy;
-        }
-        if let Some(solver) = self.solver {
-            env.solver = solver;
-        }
-        if let Some(debug) = self.debug {
-            env.debug = debug;
-        }
-        if let Some(unwind) = self.unwind {
-            env.analysis.unwind = unwind;
-        }
-
-        Ok(env)
-    }
 }

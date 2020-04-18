@@ -22,9 +22,9 @@ impl NonSpecObsEquivalence {
 
     pub fn new_from_env(env: &Environment) -> Self {
         Self {
-            cache_available: env.architecture().cache(),
-            btb_available: env.architecture().branch_target_buffer(),
-            pht_available: env.architecture().pattern_history_table(),
+            cache_available: env.architecture.cache,
+            btb_available: env.architecture.branch_target_buffer,
+            pht_available: env.architecture.pattern_history_table,
         }
     }
 

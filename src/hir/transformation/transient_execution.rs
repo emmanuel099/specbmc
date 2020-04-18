@@ -27,10 +27,10 @@ impl TransientExecution {
 
     pub fn new_from_env(env: &Environment) -> Self {
         Self {
-            spectre_pht: env.analysis().spectre_pht(),
-            spectre_stl: env.analysis().spectre_stl(),
-            predictor_strategy: env.analysis().predictor_strategy(),
-            transient_encoding_strategy: env.analysis().transient_encoding_strategy(),
+            spectre_pht: env.analysis.spectre_pht,
+            spectre_stl: env.analysis.spectre_stl,
+            predictor_strategy: env.analysis.predictor_strategy,
+            transient_encoding_strategy: env.analysis.transient_encoding_strategy,
         }
     }
 

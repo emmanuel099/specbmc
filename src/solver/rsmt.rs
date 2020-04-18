@@ -20,7 +20,7 @@ pub struct RSMTSolver {
 
 impl RSMTSolver {
     pub fn new_from_env(env: &environment::Environment) -> Result<Self> {
-        let mut conf = match env.solver() {
+        let mut conf = match env.solver {
             environment::Solver::Z3 => SmtConf::z3(),
             environment::Solver::CVC4 => SmtConf::cvc4(),
             environment::Solver::Yices2 => SmtConf::yices_2(),

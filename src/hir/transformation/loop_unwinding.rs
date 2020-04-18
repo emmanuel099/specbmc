@@ -16,7 +16,7 @@ impl LoopUnwinding {
 
     pub fn new_from_env(env: &Environment) -> Self {
         Self {
-            unwinding_bound: env.analysis().unwind(),
+            unwinding_bound: env.analysis.unwind,
         }
     }
 
