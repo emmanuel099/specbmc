@@ -117,7 +117,7 @@ impl LoopUnwinding {
             }
 
             // Collect the newly created nodes
-            for (_, &new_block_id) in &new_block_indices {
+            for &new_block_id in new_block_indices.values() {
                 loop_nodes_unwound.insert(new_block_id);
             }
 
@@ -138,7 +138,7 @@ impl LoopUnwinding {
             }
 
             // Collect the newly created nodes
-            for (_, &new_block_id) in &new_block_indices {
+            for &new_block_id in new_block_indices.values() {
                 loop_nodes_unwound.insert(new_block_id);
             }
 

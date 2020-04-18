@@ -152,7 +152,7 @@ fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
     Ok(nodes)
 }
 
-fn equal_under_self_composition(exprs: &Vec<expr::Expression>) -> expr::Expression {
+fn equal_under_self_composition(exprs: &[expr::Expression]) -> expr::Expression {
     expr::Boolean::conjunction(
         &exprs
             .iter()

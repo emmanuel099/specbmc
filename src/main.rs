@@ -206,7 +206,7 @@ fn parse_arguments() -> Arguments {
         _ => panic!("unknown solver"),
     };
 
-    return Arguments {
+    Arguments {
         environment_file: matches.value_of("environment_file").map(String::from),
         optimization_level: matches
             .value_of("optimization_level")
@@ -231,7 +231,7 @@ fn parse_arguments() -> Arguments {
         lir_file: matches.value_of("lir_file").map(String::from),
         smt_file: matches.value_of("smt_file").map(String::from),
         input_file: matches.value_of("input_file").map(String::from).unwrap(),
-    };
+    }
 }
 
 fn build_environment(arguments: &Arguments) -> Result<environment::Environment> {

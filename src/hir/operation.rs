@@ -189,7 +189,7 @@ impl Operation {
             Self::Barrier => Vec::new(),
             Self::Observable { variables } => variables.iter().collect(),
             Self::Indistinguishable { exprs } => {
-                exprs.iter().flat_map(|expr| expr.variables()).collect()
+                exprs.iter().flat_map(Expression::variables).collect()
             }
         }
     }
@@ -215,7 +215,7 @@ impl Operation {
             Self::Observable { variables } => variables.iter_mut().collect(),
             Self::Indistinguishable { exprs } => exprs
                 .iter_mut()
-                .flat_map(|expr| expr.variables_mut())
+                .flat_map(Expression::variables_mut)
                 .collect(),
         }
     }
