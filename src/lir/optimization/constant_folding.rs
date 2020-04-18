@@ -1,3 +1,10 @@
+//! Constant Folding
+//!
+//! Tries to evaluate expressions to constants if all their operands are constant,
+//! e.g. `1 + 2` will become `3`.
+//!
+//! Please note that some operators aren't yet implemented.
+
 use crate::error::Result;
 use crate::expr::*;
 use crate::lir;
@@ -143,7 +150,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fold_bitvec_to_boolean_1_should_give_true() {
+    fn test_fold_bitvec_to_boolean_1_should_give_true() {
         // GIVEN
         let mut expr = BitVector::to_boolean(BitVector::constant_u64(1, 32)).unwrap();
 
@@ -155,7 +162,7 @@ mod tests {
     }
 
     #[test]
-    fn fold_bitvec_to_boolean_42_should_give_true() {
+    fn test_fold_bitvec_to_boolean_42_should_give_true() {
         // GIVEN
         let mut expr = BitVector::to_boolean(BitVector::constant_u64(42, 32)).unwrap();
 
@@ -167,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn fold_bitvec_to_boolean_0_should_give_false() {
+    fn test_fold_bitvec_to_boolean_0_should_give_false() {
         // GIVEN
         let mut expr = BitVector::to_boolean(BitVector::constant_u64(0, 32)).unwrap();
 
@@ -179,7 +186,7 @@ mod tests {
     }
 
     #[test]
-    fn fold_bitvec_from_boolean_true_should_give_1() {
+    fn test_fold_bitvec_from_boolean_true_should_give_1() {
         // GIVEN
         let mut expr = BitVector::from_boolean(32, Boolean::constant(true)).unwrap();
 
@@ -191,7 +198,7 @@ mod tests {
     }
 
     #[test]
-    fn fold_bitvec_from_boolean_false_should_give_0() {
+    fn test_fold_bitvec_from_boolean_false_should_give_0() {
         // GIVEN
         let mut expr = BitVector::from_boolean(32, Boolean::constant(false)).unwrap();
 
@@ -203,7 +210,7 @@ mod tests {
     }
 
     #[test]
-    fn fold_bitvec_zero_extend() {
+    fn test_fold_bitvec_zero_extend() {
         // GIVEN
         let mut expr = BitVector::zero_extend(24, BitVector::constant_u64(42, 8)).unwrap();
 
@@ -215,7 +222,7 @@ mod tests {
     }
 
     #[test]
-    fn fold_bitvec_sign_extend() {
+    fn test_fold_bitvec_sign_extend() {
         // GIVEN
         let mut expr = BitVector::sign_extend(24, BitVector::constant_u64(42, 8)).unwrap();
 

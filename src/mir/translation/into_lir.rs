@@ -34,10 +34,10 @@ fn translate_block(
     block: &mir::Block,
     composition: usize,
 ) -> Result<()> {
-    program.append_comment(format!("Block 0x{:X}@{}", block.index(), composition));
+    program.comment(format!("Block 0x{:X}@{}", block.index(), composition));
 
     // make the block's execution condition explicit
-    program.append_let(
+    program.assign(
         block
             .execution_condition_variable()
             .self_compose(composition),
@@ -47,13 +47,13 @@ fn translate_block(
     for node in block.nodes() {
         match node.operation() {
             mir::Operation::Let { var, expr } => {
-                program.append_let(
+                program.assign(
                     var.self_compose(composition),
                     expr.self_compose(composition),
                 )?;
             }
             mir::Operation::Assert { condition } => {
-                program.append_assert(expr::Boolean::imply(
+                program.assert(expr::Boolean::imply(
                     block
                         .execution_condition_variable()
                         .self_compose(composition)
@@ -62,7 +62,7 @@ fn translate_block(
                 )?)?;
             }
             mir::Operation::Assume { condition } => {
-                program.append_assume(expr::Boolean::imply(
+                program.assume(expr::Boolean::imply(
                     block
                         .execution_condition_variable()
                         .self_compose(composition)
@@ -81,21 +81,21 @@ fn add_self_composition_constraints(
     lir_program: &mut lir::Program,
     mir_program: &mir::Program,
 ) -> Result<()> {
-    lir_program.append_comment("Self-Composition Constraints");
+    lir_program.comment("Self-Composition Constraints");
 
     for block in mir_program.block_graph().blocks() {
         for node in block.nodes() {
             match node.operation() {
                 mir::Operation::HyperAssert { condition } => {
                     let compositions = involved_compositions(condition)?;
-                    lir_program.append_assert(expr::Boolean::imply(
+                    lir_program.assert(expr::Boolean::imply(
                         hyper_execution_condition(&block, &compositions)?, // only if executed
                         condition.clone(),
                     )?)?;
                 }
                 mir::Operation::HyperAssume { condition } => {
                     let compositions = involved_compositions(condition)?;
-                    lir_program.append_assume(expr::Boolean::imply(
+                    lir_program.assume(expr::Boolean::imply(
                         hyper_execution_condition(&block, &compositions)?, // only if executed
                         condition.clone(),
                     )?)?;

@@ -74,6 +74,40 @@ impl Node {
             _ => false,
         }
     }
+
+    /// Get each `Variable` used by this `Node`.
+    pub fn variables_used(&self) -> Vec<&Variable> {
+        match self {
+            Self::Let { expr, .. } => expr.variables(),
+            Self::Assert { condition } | Self::Assume { condition } => condition.variables(),
+            Self::Comment(_) => Vec::new(),
+        }
+    }
+
+    /// Get a mutable reference to each `Variable` used by this `Node`.
+    pub fn variables_used_mut(&mut self) -> Vec<&mut Variable> {
+        match self {
+            Self::Let { expr, .. } => expr.variables_mut(),
+            Self::Assert { condition } | Self::Assume { condition } => condition.variables_mut(),
+            Self::Comment(_) => Vec::new(),
+        }
+    }
+
+    /// Get a Vec of the `Variable`s defined by this `Node`
+    pub fn variables_defined(&self) -> Vec<&Variable> {
+        match self {
+            Self::Let { var, .. } => vec![var],
+            Self::Assert { .. } | Self::Assume { .. } | Self::Comment(_) => Vec::new(),
+        }
+    }
+
+    /// Get a Vec of mutable reference to the `Variable`s defined by this `Node`
+    pub fn variables_defined_mut(&mut self) -> Vec<&mut Variable> {
+        match self {
+            Self::Let { var, .. } => vec![var],
+            Self::Assert { .. } | Self::Assume { .. } | Self::Comment(_) => Vec::new(),
+        }
+    }
 }
 
 impl fmt::Display for Node {

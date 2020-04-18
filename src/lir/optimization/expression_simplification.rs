@@ -1,3 +1,9 @@
+//! Expression Simplification
+//!
+//! Tries to simplify expressions, e.g. `x /\ false` will become `false`.
+//!
+//! Please note that some operators aren't yet implemented.
+
 use crate::error::Result;
 use crate::expr::*;
 use crate::lir;

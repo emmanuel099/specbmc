@@ -20,38 +20,50 @@ impl Program {
         src.translate_into()
     }
 
-    pub fn append_node(&mut self, node: Node) {
-        self.nodes.push(node);
+    /// Returns a reference to the node at the given index.
+    pub fn node(&self, index: usize) -> Option<&Node> {
+        self.nodes.get(index)
     }
 
-    pub fn append_comment<S>(&mut self, text: S)
-    where
-        S: Into<String>,
-    {
-        self.append_node(Node::comment(text));
+    /// Returns a mutable reference to the node at the given index.
+    pub fn node_mut(&mut self, index: usize) -> Option<&mut Node> {
+        self.nodes.get_mut(index)
     }
 
-    pub fn append_let(&mut self, var: Variable, expr: Expression) -> Result<()> {
-        self.append_node(Node::assign(var, expr)?);
-        Ok(())
-    }
-
-    pub fn append_assert(&mut self, condition: Expression) -> Result<()> {
-        self.append_node(Node::assert(condition)?);
-        Ok(())
-    }
-
-    pub fn append_assume(&mut self, condition: Expression) -> Result<()> {
-        self.append_node(Node::assume(condition)?);
-        Ok(())
-    }
-
+    /// Returns a reference to all nodes of this program.
     pub fn nodes(&self) -> &[Node] {
         &self.nodes
     }
 
+    /// Returns a mutable reference to all nodes of this program.
     pub fn nodes_mut(&mut self) -> &mut Vec<Node> {
         &mut self.nodes
+    }
+
+    /// Adds a comment to the end of this program.
+    pub fn comment<S>(&mut self, text: S)
+    where
+        S: Into<String>,
+    {
+        self.nodes.push(Node::comment(text));
+    }
+
+    /// Adds an assignment to the end of this program.
+    pub fn assign(&mut self, var: Variable, expr: Expression) -> Result<()> {
+        self.nodes.push(Node::assign(var, expr)?);
+        Ok(())
+    }
+
+    /// Adds an assertion to the end of this program.
+    pub fn assert(&mut self, condition: Expression) -> Result<()> {
+        self.nodes.push(Node::assert(condition)?);
+        Ok(())
+    }
+
+    /// Adds an assumption to the end of this program.
+    pub fn assume(&mut self, condition: Expression) -> Result<()> {
+        self.nodes.push(Node::assume(condition)?);
+        Ok(())
     }
 }
 
@@ -65,7 +77,7 @@ impl fmt::Display for Program {
 }
 
 impl Validate for Program {
-    /// Validate the given LIR program.
+    /// Validates the program.
     ///
     /// Checks:
     ///   - No re-assignment to variables
@@ -75,7 +87,7 @@ impl Validate for Program {
 
         // Def
         for (index, node) in self.nodes.iter().enumerate() {
-            if let Node::Let { var, .. } = node {
+            for var in node.variables_defined() {
                 if !defs.insert(var) {
                     return Err(format!("@{}: Re-assignment of variable `{}`", index, var).into());
                 }
@@ -84,26 +96,10 @@ impl Validate for Program {
 
         // Use
         for (index, node) in self.nodes.iter().enumerate() {
-            match node {
-                Node::Let { expr, .. } => {
-                    for var in expr.variables() {
-                        if !defs.contains(var) {
-                            return Err(
-                                format!("@{}: Use of undefined variable `{}`", index, var).into()
-                            );
-                        }
-                    }
+            for var in node.variables_used() {
+                if !defs.contains(var) {
+                    return Err(format!("@{}: Use of undefined variable `{}`", index, var).into());
                 }
-                Node::Assert { condition } | Node::Assume { condition } => {
-                    for var in condition.variables() {
-                        if !defs.contains(var) {
-                            return Err(
-                                format!("@{}: Use of undefined variable `{}`", index, var).into()
-                            );
-                        }
-                    }
-                }
-                _ => (),
             }
         }
 
