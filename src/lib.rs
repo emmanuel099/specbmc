@@ -11,6 +11,8 @@ extern crate num_traits;
 extern crate rsmt2;
 extern crate serde;
 extern crate serde_yaml;
+#[macro_use]
+extern crate derivative;
 
 pub mod cex;
 pub mod environment;

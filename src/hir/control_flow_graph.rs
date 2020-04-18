@@ -14,16 +14,19 @@ use std::fmt;
 /// # Entry and Exit
 /// A `ControlFlowGraph` has an optional, "Entry," and an optional, "Exit." When these are
 /// provided, certain convenience functions become available.
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(Hash, Eq, PartialEq)]
 pub struct ControlFlowGraph {
     // The internal graph used to store our blocks.
     graph: graph::Graph<Block, Edge>,
-    // The next index to use when creating a basic block.
-    next_index: usize,
     // An optional entry index for the graph.
     entry: Option<usize>,
     // An optional exit index for the graph.
     exit: Option<usize>,
+    // The next index to use when creating a basic block.
+    #[derivative(Hash = "ignore")]
+    #[derivative(PartialEq = "ignore")]
+    next_index: usize,
 }
 
 impl ControlFlowGraph {
