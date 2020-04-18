@@ -164,15 +164,6 @@ impl LoopUnwinding {
         let parent_loop_ids = loop_tree.compute_predecessors()?;
         let loops = loop_tree.vertices();
 
-        /*use std::fs::File;
-        use std::io::Write;
-        use std::path::Path;
-        let mut file = File::create(Path::new("loop_tree.dot"))?;
-        file.write_all(loop_tree.dot_graph().as_bytes())?;
-        file.flush()?;
-
-        println!("loops: {:?}", loops);*/
-
         // Initialize the set of nodes for each loop.
         // The set of nodes for each loop will grow during unwinding.
         let mut all_loop_nodes: BTreeMap<usize, BTreeSet<usize>> = BTreeMap::new();
@@ -183,17 +174,16 @@ impl LoopUnwinding {
         // Unwind the loops in reverse topsort ordering, i.e. starting from the innermost loop
         let top_sort = loop_tree.compute_topological_ordering()?;
         for &loop_header in top_sort.iter().rev() {
-            //println!("Unwind loop {}", loop_header);
-
             let loop_nodes = &all_loop_nodes[&loop_header];
+
             let loop_nodes_unwound = self.unwind_loop(cfg, loop_header, loop_nodes)?;
             assert!(loop_nodes_unwound.is_superset(loop_nodes));
 
             // Now push all newly created loop nodes to the parent loops
-            for &parent_loop_id in &parent_loop_ids[&loop_header] {
+            for parent_loop_id in &parent_loop_ids[&loop_header] {
                 all_loop_nodes
-                    .entry(parent_loop_id)
-                    .or_default()
+                    .get_mut(parent_loop_id)
+                    .unwrap()
                     .extend(&loop_nodes_unwound);
             }
 
