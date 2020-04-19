@@ -3,10 +3,36 @@ use crate::environment::{
 };
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Expression, Predictor, Sort, Variable};
-use crate::hir::{ControlFlowGraph, Instruction, Operation, Program};
+use crate::hir::{ControlFlowGraph, Operation, Program};
 use crate::util::Transform;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
+
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+struct InstructionRef {
+    block: usize,
+    index: usize,
+    address: u64,
+}
+
+impl InstructionRef {
+    pub fn new(block: usize, index: usize, address: u64) -> Self {
+        Self {
+            block,
+            index,
+            address,
+        }
+    }
+    pub fn block(&self) -> usize {
+        self.block
+    }
+    pub fn index(&self) -> usize {
+        self.index
+    }
+    pub fn address(&self) -> u64 {
+        self.address
+    }
+}
 
 pub struct TransientExecution {
     spectre_pht: bool,
@@ -68,7 +94,7 @@ impl TransientExecution {
     fn build_default_cfg(
         &self,
         cfg: &ControlFlowGraph,
-    ) -> Result<(ControlFlowGraph, BTreeMap<u64, (usize, usize)>)> {
+    ) -> Result<(ControlFlowGraph, BTreeMap<InstructionRef, (usize, usize)>)> {
         let mut default_cfg = cfg.clone();
 
         // For each instruction which can start a transient execution,
@@ -78,6 +104,9 @@ impl TransientExecution {
 
         for block in cfg.blocks() {
             for (inst_index, inst) in block.instructions().iter().enumerate().rev() {
+                let address = inst.address().unwrap_or_default();
+                let inst_ref = InstructionRef::new(block.index(), inst_index, address);
+
                 for operation in inst.operations() {
                     match operation {
                         Operation::Store { .. } => {
@@ -86,9 +115,7 @@ impl TransientExecution {
                                 add_transient_execution_start(
                                     &mut default_cfg,
                                     &mut transient_start_rollback_points,
-                                    block.index(),
-                                    inst_index,
-                                    inst,
+                                    &inst_ref,
                                 )?;
                             }
                         }
@@ -98,9 +125,7 @@ impl TransientExecution {
                                 add_transient_execution_start(
                                     &mut default_cfg,
                                     &mut transient_start_rollback_points,
-                                    block.index(),
-                                    inst_index,
-                                    inst,
+                                    &inst_ref,
                                 )?;
                             }
                         }
@@ -116,7 +141,7 @@ impl TransientExecution {
     fn build_transient_cfg(
         &self,
         cfg: &ControlFlowGraph,
-    ) -> Result<(ControlFlowGraph, BTreeMap<u64, usize>)> {
+    ) -> Result<(ControlFlowGraph, BTreeMap<InstructionRef, usize>)> {
         let mut transient_cfg = cfg.clone();
 
         // For each instruction which can start a transient execution,
@@ -132,6 +157,9 @@ impl TransientExecution {
 
         for block in cfg.blocks() {
             for (inst_index, inst) in block.instructions().iter().enumerate().rev() {
+                let address = inst.address().unwrap_or_default();
+                let inst_ref = InstructionRef::new(block.index(), inst_index, address);
+
                 for operation in inst.operations() {
                     match operation {
                         Operation::Store { .. } => {
@@ -139,9 +167,7 @@ impl TransientExecution {
                                 transient_store(
                                     &mut transient_cfg,
                                     &mut transient_entry_points,
-                                    block.index(),
-                                    inst_index,
-                                    inst,
+                                    &inst_ref,
                                 )?;
                             }
                         }
@@ -150,15 +176,13 @@ impl TransientExecution {
                                 transient_conditional_branch(
                                     &mut transient_cfg,
                                     &mut transient_entry_points,
-                                    block.index(),
-                                    inst_index,
-                                    inst,
+                                    &inst_ref,
                                     self.predictor_strategy,
                                 )?;
                             }
                         }
                         Operation::Barrier => {
-                            transient_barrier(&mut transient_cfg, block.index(), inst_index)?;
+                            transient_barrier(&mut transient_cfg, &inst_ref)?;
                         }
                         _ => (),
                     }
@@ -188,8 +212,8 @@ impl TransientExecution {
         let block_map = cfg.insert(&transient_cfg)?;
 
         // Wire the default and transient CFG together.
-        for (inst_addr, (start, rollback)) in transient_start_rollback_points {
-            let transient_entry = block_map[transient_entry_points.get(&inst_addr).unwrap()];
+        for (inst_ref, (start, rollback)) in transient_start_rollback_points {
+            let transient_entry = block_map[transient_entry_points.get(&inst_ref).unwrap()];
             let transient_resolve = block_map[&transient_cfg.exit().unwrap()];
             cfg.unconditional_edge(start, transient_entry).unwrap();
 
@@ -198,7 +222,7 @@ impl TransientExecution {
             // started by the current instruction.
             let transient_exec = Expression::equal(
                 Predictor::transient_start(Predictor::variable().into())?,
-                BitVector::constant_u64(inst_addr, WORD_SIZE),
+                BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
             )?;
             cfg.conditional_edge(transient_resolve, rollback, transient_exec)
                 .unwrap();
@@ -219,11 +243,11 @@ impl TransientExecution {
         let (transient_cfg, transient_entry_points) =
             self.build_transient_cfg(program.control_flow_graph())?;
 
-        for (inst_addr, (start, rollback)) in transient_start_rollback_points {
+        for (inst_ref, (start, rollback)) in transient_start_rollback_points {
             let block_map = cfg.insert(&transient_cfg)?;
             // TODO reduce the size of the inserted graph (depth limit)
 
-            let transient_entry = block_map[transient_entry_points.get(&inst_addr).unwrap()];
+            let transient_entry = block_map[transient_entry_points.get(&inst_ref).unwrap()];
             let transient_resolve = block_map[&transient_cfg.exit().unwrap()];
 
             cfg.unconditional_edge(start, transient_entry).unwrap();
@@ -248,7 +272,7 @@ impl Transform<Program> for TransientExecution {
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {
-        let mut cfg = match self.transient_encoding_strategy {
+        let cfg = match self.transient_encoding_strategy {
             TransientEncodingStrategy::Unified => self.encode_unified(program)?,
             TransientEncodingStrategy::Several => self.encode_several(program)?,
         };
@@ -271,12 +295,11 @@ fn spec_win() -> Variable {
 ///   - Unconditional edge from transient to tail -> rollback + re-execution
 fn add_transient_execution_start(
     cfg: &mut ControlFlowGraph,
-    transient_start_rollback_points: &mut BTreeMap<u64, (usize, usize)>,
-    head_index: usize,
-    inst_index: usize,
-    inst: &Instruction,
+    transient_start_rollback_points: &mut BTreeMap<InstructionRef, (usize, usize)>,
+    inst_ref: &InstructionRef,
 ) -> Result<()> {
-    let tail_index = cfg.split_block_at(head_index, inst_index)?;
+    let head_index = inst_ref.block();
+    let tail_index = cfg.split_block_at(head_index, inst_ref.index())?;
 
     let transient_start_index = {
         let transient_start = cfg.new_block()?;
@@ -285,7 +308,7 @@ fn add_transient_execution_start(
         // initial speculation window size
         let spec_window = Predictor::speculation_window(
             Predictor::variable().into(),
-            BitVector::constant_u64(inst.address().unwrap_or_default(), WORD_SIZE),
+            BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
         )?;
         transient_start.assign(spec_win(), spec_window)?;
 
@@ -294,7 +317,7 @@ fn add_transient_execution_start(
 
     let transient_exec = Expression::equal(
         Predictor::transient_start(Predictor::variable().into())?,
-        BitVector::constant_u64(inst.address().unwrap_or_default(), WORD_SIZE),
+        BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
     )?;
 
     let normal_exec = Boolean::not(transient_exec.clone())?;
@@ -303,10 +326,7 @@ fn add_transient_execution_start(
     cfg.conditional_edge(head_index, transient_start_index, transient_exec)?;
 
     // Tail is the rollback point, meaning that on rollback the instruction will be re-executed.
-    transient_start_rollback_points.insert(
-        inst.address().unwrap_or_default(),
-        (transient_start_index, tail_index),
-    );
+    transient_start_rollback_points.insert(inst_ref.clone(), (transient_start_index, tail_index));
 
     Ok(())
 }
@@ -319,17 +339,16 @@ fn add_transient_execution_start(
 ///   - Unconditional edge from store to tail
 fn transient_store(
     cfg: &mut ControlFlowGraph,
-    transient_entry_points: &mut BTreeMap<u64, usize>,
-    head_index: usize,
-    inst_index: usize,
-    inst: &Instruction,
+    transient_entry_points: &mut BTreeMap<InstructionRef, usize>,
+    inst_ref: &InstructionRef,
 ) -> Result<()> {
-    let store_index = cfg.split_block_at(head_index, inst_index)?;
+    let head_index = inst_ref.block();
+    let store_index = cfg.split_block_at(head_index, inst_ref.index())?;
     let tail_index = cfg.split_block_at(store_index, 1)?;
 
     let bypass = Predictor::speculate(
         Predictor::variable().into(),
-        BitVector::constant_u64(inst.address().unwrap_or_default(), WORD_SIZE),
+        BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
     )?;
     let execute = Boolean::not(bypass.clone())?;
 
@@ -338,7 +357,7 @@ fn transient_store(
     cfg.unconditional_edge(store_index, tail_index)?;
 
     // Transient execution will begin in tail (same as on bypass during transient execution).
-    transient_entry_points.insert(inst.address().unwrap(), tail_index);
+    transient_entry_points.insert(inst_ref.clone(), tail_index);
 
     Ok(())
 }
@@ -348,23 +367,22 @@ fn transient_store(
 /// and additionally add a new block [speculate].
 /// Then add the following edges between them:
 ///   - Conditional edge with "speculate" from head to speculate -> speculative execution
-///   - Conditional edge with "correctly predicted" from head to branch -> correct execution
+///   - Conditional edge with "execute correctly" from head to branch -> correct execution
 ///   - Conditional edges from speculate to each successor of the branch instruction,
 ///     the conditions of these edges depend on the strategy in use
 fn transient_conditional_branch(
     cfg: &mut ControlFlowGraph,
-    transient_entry_points: &mut BTreeMap<u64, usize>,
-    head_index: usize,
-    inst_index: usize,
-    inst: &Instruction,
+    transient_entry_points: &mut BTreeMap<InstructionRef, usize>,
+    inst_ref: &InstructionRef,
     predictor_strategy: PredictorStrategy,
 ) -> Result<()> {
-    let branch_index = cfg.split_block_at(head_index, inst_index)?;
+    let head_index = inst_ref.block();
+    let branch_index = cfg.split_block_at(head_index, inst_ref.index())?;
     let speculate_index = cfg.new_block()?.index();
 
     let speculate = Predictor::speculate(
         Predictor::variable().into(),
-        BitVector::constant_u64(inst.address().unwrap_or_default(), WORD_SIZE),
+        BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
     )?;
     let execute_correctly = Boolean::not(speculate.clone())?;
 
@@ -380,7 +398,7 @@ fn transient_conditional_branch(
 
                 let taken = Predictor::taken(
                     Predictor::variable().into(),
-                    BitVector::constant_u64(inst.address().unwrap_or_default(), WORD_SIZE),
+                    BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
                 )?;
                 let not_taken = Boolean::not(taken.clone())?;
 
@@ -401,25 +419,22 @@ fn transient_conditional_branch(
     }
 
     // Transient execution will begin in speculate.
-    transient_entry_points.insert(inst.address().unwrap(), speculate_index);
+    transient_entry_points.insert(inst_ref.clone(), speculate_index);
 
     Ok(())
 }
 
 /// The `Barrier` instruction immediately stops the transient execution.
 /// Therefore, replace the `Barrier` with an unconditional edge to the resolve block.
-fn transient_barrier(
-    cfg: &mut ControlFlowGraph,
-    block_index: usize,
-    inst_index: usize,
-) -> Result<()> {
-    let tail_index = cfg.split_block_at(block_index, inst_index)?;
+fn transient_barrier(cfg: &mut ControlFlowGraph, inst_ref: &InstructionRef) -> Result<()> {
+    let head_index = inst_ref.block();
+    let tail_index = cfg.split_block_at(head_index, inst_ref.index())?;
 
     // drop barrier instruction from tail
     cfg.block_mut(tail_index)?.remove_instruction(0)?;
 
     let resolve_index = cfg.exit().unwrap();
-    cfg.unconditional_edge(block_index, resolve_index)?;
+    cfg.unconditional_edge(head_index, resolve_index)?;
 
     Ok(())
 }
