@@ -167,7 +167,6 @@ impl TransientExecution {
         }
 
         add_transient_resolve_edges(&mut transient_cfg)?;
-        append_spec_win_decrease_to_all_blocks(&mut transient_cfg)?;
 
         // Mark all blocks as transient
         for block in transient_cfg.blocks_mut() {
@@ -205,6 +204,10 @@ impl TransientExecution {
                 .unwrap();
         }
 
+        cfg.simplify()?;
+
+        append_spec_win_decrease_to_all_transient_blocks(&mut cfg)?;
+
         Ok(cfg)
     }
 
@@ -227,6 +230,10 @@ impl TransientExecution {
             cfg.unconditional_edge(transient_resolve, rollback).unwrap();
         }
 
+        cfg.simplify()?;
+
+        append_spec_win_decrease_to_all_transient_blocks(&mut cfg)?;
+
         Ok(cfg)
     }
 }
@@ -246,7 +253,6 @@ impl Transform<Program> for TransientExecution {
             TransientEncodingStrategy::Several => self.encode_several(program)?,
         };
 
-        cfg.simplify()?;
         program.set_control_flow_graph(cfg);
 
         Ok(())
@@ -462,11 +468,9 @@ fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
 }
 
 /// Appends "_spec_win := _spec_win - |instructions in BB|" to the end of each basic block.
-fn append_spec_win_decrease_to_all_blocks(cfg: &mut ControlFlowGraph) -> Result<()> {
-    let resolve_block_index = cfg.exit().unwrap();
-
+fn append_spec_win_decrease_to_all_transient_blocks(cfg: &mut ControlFlowGraph) -> Result<()> {
     for block in cfg.blocks_mut() {
-        if block.index() == resolve_block_index {
+        if !block.is_transient() {
             continue;
         }
 
