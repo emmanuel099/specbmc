@@ -246,12 +246,8 @@ impl ControlFlowGraph {
 
         for successor in self.successor_indices(block_index)? {
             let edge = self.remove_edge(block_index, successor)?;
-            match edge.condition() {
-                Some(condition) => {
-                    self.conditional_edge(tail_block_index, successor, condition.clone())?
-                }
-                None => self.unconditional_edge(tail_block_index, successor)?,
-            };
+            self.graph
+                .insert_edge(edge.clone_new_head_tail(tail_block_index, successor))?;
         }
 
         if let Some(exit) = self.exit() {
@@ -362,9 +358,7 @@ impl ControlFlowGraph {
                 for edge in self.graph.edges_out(successor_index).unwrap() {
                     let head = merge_index;
                     let tail = edge.tail();
-                    let condition = edge.condition();
-                    let edge = Edge::new(head, tail, condition.cloned());
-                    new_edges.push(edge);
+                    new_edges.push(edge.clone_new_head_tail(head, tail));
                 }
                 for edge in new_edges {
                     self.graph.insert_edge(edge)?;
@@ -402,14 +396,8 @@ impl ControlFlowGraph {
         if is_empty {
             self.entry = Some(block_map[&other.entry().unwrap()]);
         } else {
-            // Create an edge from the exit of this graph to the head of the other
-            // graph
-            let transition_edge = Edge::new(
-                self.exit.unwrap(),
-                block_map[&(other.entry().unwrap())],
-                None,
-            );
-            self.graph.insert_edge(transition_edge)?;
+            // Create an edge from the exit of this graph to the head of the other graph
+            self.unconditional_edge(self.exit.unwrap(), block_map[&(other.entry().unwrap())])?;
         }
 
         self.exit = Some(block_map[&other.exit().unwrap()]);
@@ -437,8 +425,8 @@ impl ControlFlowGraph {
         for edge in other.graph().edges() {
             let new_head = block_map[&edge.head()];
             let new_tail = block_map[&edge.tail()];
-            let new_edge = Edge::new(new_head, new_tail, edge.condition().cloned());
-            self.graph.insert_edge(new_edge)?;
+            self.graph
+                .insert_edge(edge.clone_new_head_tail(new_head, new_tail))?;
         }
 
         Ok(block_map)
@@ -466,7 +454,7 @@ impl ControlFlowGraph {
         new_tail: usize,
     ) -> Result<()> {
         let edge = self.edge(head, tail)?;
-        let new_edge = Edge::new(new_head, new_tail, edge.condition().cloned());
+        let new_edge = edge.clone_new_head_tail(new_head, new_tail);
         self.remove_edge(head, tail)?;
         self.graph.insert_edge(new_edge)?;
         Ok(())
@@ -491,7 +479,7 @@ impl ControlFlowGraph {
             for edge in self.edges_out(index)? {
                 let new_head = block_map.get(&edge.head()).cloned().unwrap_or(edge.head());
                 let new_tail = block_map.get(&edge.tail()).cloned().unwrap_or(edge.tail());
-                new_edges.push(Edge::new(new_head, new_tail, edge.condition().cloned()));
+                new_edges.push(edge.clone_new_head_tail(new_head, new_tail));
             }
         }
 

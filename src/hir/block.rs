@@ -51,9 +51,9 @@ impl Block {
         self.index
     }
 
-    /// Sets whether this `Block` is part of transient execution or not.
-    pub fn set_transient(&mut self, transient: bool) {
-        self.transient = transient;
+    /// Marks this `Block` as transient.
+    pub fn set_transient(&mut self) {
+        self.transient = true;
     }
 
     /// Returns whether this `Block` is part of transient execution or not.

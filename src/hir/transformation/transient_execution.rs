@@ -194,7 +194,7 @@ impl TransientExecution {
 
         // Mark all blocks as transient
         for block in transient_cfg.blocks_mut() {
-            block.set_transient(true);
+            block.set_transient();
         }
 
         Ok((transient_cfg, transient_entry_points))
@@ -303,7 +303,7 @@ fn add_transient_execution_start(
 
     let transient_start_index = {
         let transient_start = cfg.new_block()?;
-        transient_start.set_transient(true);
+        transient_start.set_transient();
 
         // initial speculation window size
         let spec_window = Predictor::speculation_window(

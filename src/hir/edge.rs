@@ -18,6 +18,14 @@ impl Edge {
         }
     }
 
+    /// Clone this `Edge` and set a new head and tail.
+    pub fn clone_new_head_tail(&self, head: usize, tail: usize) -> Self {
+        let mut clone = self.clone();
+        clone.head = head;
+        clone.tail = tail;
+        clone
+    }
+
     /// Retrieve the condition for this `Edge`.
     pub fn condition(&self) -> Option<&Expression> {
         self.condition.as_ref()
@@ -36,6 +44,11 @@ impl Edge {
     /// Retrieve the index of the tail `Vertex` for this `Edge`.
     pub fn tail(&self) -> usize {
         self.tail
+    }
+
+    /// Returns whether this `Edge` is conditional or not.
+    pub fn is_conditional(&self) -> bool {
+        self.condition.is_some()
     }
 }
 
