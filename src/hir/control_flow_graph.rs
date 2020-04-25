@@ -260,9 +260,10 @@ impl ControlFlowGraph {
     }
 
     /// Creates an unconditional edge from one block to another block
-    pub fn unconditional_edge(&mut self, head: usize, tail: usize) -> Result<()> {
+    pub fn unconditional_edge(&mut self, head: usize, tail: usize) -> Result<&mut Edge> {
         let edge = Edge::new(head, tail, None);
-        Ok(self.graph.insert_edge(edge)?)
+        self.graph.insert_edge(edge)?;
+        Ok(self.graph.edge_mut(head, tail)?)
     }
 
     /// Creates a conditional edge from one block to another block
@@ -271,9 +272,10 @@ impl ControlFlowGraph {
         head: usize,
         tail: usize,
         condition: Expression,
-    ) -> Result<()> {
+    ) -> Result<&mut Edge> {
         let edge = Edge::new(head, tail, Some(condition));
-        Ok(self.graph.insert_edge(edge)?)
+        self.graph.insert_edge(edge)?;
+        Ok(self.graph.edge_mut(head, tail)?)
     }
 
     /// Merge `Block`s.
