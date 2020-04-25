@@ -432,17 +432,50 @@ impl ControlFlowGraph {
         Ok(block_map)
     }
 
-    /// Removes all unreachable blocks from the control flow graph.
-    pub fn remove_unreachable_blocks(&mut self) -> Result<()> {
+    /// Removes all blocks which are unreachable from CFG entry.
+    fn remove_unreachable_blocks(&mut self) -> Result<()> {
         let entry = self.entry.ok_or("CFG entry must be set")?;
         self.graph.remove_unreachable_vertices(entry)?;
         Ok(())
     }
 
-    /// Simplifies the control flow graph by removing unreachable blocks as well as merging blocks.
+    /// Removes all empty blocks with single successor by rewiring all the
+    /// incoming edges of the empty block to its successor.
+    fn remove_empty_blocks_with_single_successor(&mut self) -> Result<()> {
+        let empty_blocks: Vec<usize> = self
+            .blocks()
+            .iter()
+            .filter(|block| block.is_empty())
+            .map(|block| block.index())
+            .collect();
+
+        for block_index in empty_blocks {
+            let successors = self.successor_indices(block_index)?;
+            if successors.len() != 1 {
+                continue;
+            }
+            let successor = successors[0];
+
+            let predecessors = self.predecessor_indices(block_index)?;
+            if predecessors.is_empty() {
+                continue;
+            }
+
+            for predecessor in predecessors {
+                self.rewire_edge(predecessor, block_index, predecessor, successor)?;
+            }
+
+            self.remove_block(block_index)?;
+        }
+
+        Ok(())
+    }
+
+    /// Simplifies the control flow graph by removing as well as merging blocks.
     pub fn simplify(&mut self) -> Result<()> {
         self.remove_unreachable_blocks()?;
         self.merge()?;
+        self.remove_empty_blocks_with_single_successor()?;
         Ok(())
     }
 
