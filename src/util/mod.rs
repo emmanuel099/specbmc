@@ -4,8 +4,10 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 
+mod absolute_difference;
 mod compact_iterator;
 
+pub use absolute_difference::AbsoluteDifference;
 pub use compact_iterator::CompactIterator;
 
 pub trait Validate {

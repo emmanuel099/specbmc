@@ -78,15 +78,13 @@ fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::Program> {
         instruction_indices.insert(address, (*new_entry, *new_exit));
     }
 
-    let mut add_edge =
-        |from_address: u64, to_address: u64, cond: Option<expr::Expression>| -> Result<()> {
+    let resolve_edge_block_indices =
+        |from_address: u64, to_address: u64| -> Option<(usize, usize)> {
             let (_, from_exit) = instruction_indices.get(&from_address).unwrap();
-            match instruction_indices.get(&to_address) {
-                Some((to_entry, _)) => match cond {
-                    Some(expr) => cfg.conditional_edge(*from_exit, *to_entry, expr),
-                    None => cfg.unconditional_edge(*from_exit, *to_entry),
-                },
-                None => Ok(()), // ignore it
+            if let Some((to_entry, _)) = instruction_indices.get(&to_address) {
+                Some((*from_exit, *to_entry))
+            } else {
+                None
             }
         };
 
@@ -96,18 +94,30 @@ fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::Program> {
         match instruction.operation() {
             ir::Operation::Jump { target } => {
                 let target_address = resolve_target_address(target)?;
-                add_edge(address, target_address, None)?
+                if let Some((from, to)) = resolve_edge_block_indices(address, target_address) {
+                    cfg.unconditional_edge(from, to)?;
+                }
             }
             ir::Operation::BranchIfZero { reg, target } => {
                 let cond_not_taken =
                     expr::Expression::unequal(reg.to_hir_expr()?, 0.to_hir_expr()?)?;
-                add_edge(address, address + 1, Some(cond_not_taken))?;
+                if let Some((from, to)) = resolve_edge_block_indices(address, address + 1) {
+                    cfg.conditional_edge(from, to, cond_not_taken)?;
+                }
 
                 let cond_taken = expr::Expression::equal(reg.to_hir_expr()?, 0.to_hir_expr()?)?;
                 let target_address = resolve_target_address(target)?;
-                add_edge(address, target_address, Some(cond_taken))?
+                if let Some((from, to)) = resolve_edge_block_indices(address, target_address) {
+                    cfg.conditional_edge(from, to, cond_taken)?
+                        .labels_mut()
+                        .taken();
+                }
             }
-            _ => add_edge(address, address + 1, None)?,
+            _ => {
+                if let Some((from, to)) = resolve_edge_block_indices(address, address + 1) {
+                    cfg.unconditional_edge(from, to)?;
+                }
+            }
         };
     }
 

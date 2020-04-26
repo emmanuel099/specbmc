@@ -1,6 +1,7 @@
 use crate::error::Result;
 use crate::expr;
 use crate::hir;
+use crate::util::AbsoluteDifference;
 use falcon::il;
 use falcon::loader::{Elf, Loader};
 use std::path::Path;
@@ -59,13 +60,18 @@ fn translate_control_flow_graph(src_cfg: &il::ControlFlowGraph) -> Result<hir::C
         cfg.add_block(translate_block(block)?)?;
     }
 
-    for edge in src_cfg.edges() {
-        match edge.condition() {
+    for src_edge in src_cfg.edges() {
+        match src_edge.condition() {
             Some(condition) => {
                 let condition = translate_expr(condition)?;
-                cfg.conditional_edge(edge.head(), edge.tail(), condition)?;
+                let edge = cfg.conditional_edge(src_edge.head(), src_edge.tail(), condition)?;
+                if is_taken_edge(src_cfg, src_edge)? {
+                    edge.labels_mut().taken();
+                }
             }
-            None => cfg.unconditional_edge(edge.head(), edge.tail())?,
+            None => {
+                cfg.unconditional_edge(src_edge.head(), src_edge.tail())?;
+            }
         }
     }
 
@@ -263,4 +269,41 @@ fn translate_scalar(scalar: &il::Scalar) -> Result<expr::Variable> {
         expr::Sort::boolean()
     };
     Ok(expr::Variable::new(scalar.name(), sort))
+}
+
+/// Try to determine if the given edge is a "taken" edge.
+/// This function assumes that the taken edge is the edge with the greatest distance from
+/// the last instruction of the head block to first instruction of the tail block.
+fn is_taken_edge(cfg: &il::ControlFlowGraph, edge: &il::Edge) -> Result<bool> {
+    let tail_address = match cfg.block(edge.tail())?.address() {
+        Some(address) => address,
+        None => {
+            return Ok(false);
+        }
+    };
+
+    let last_inst = match cfg.block(edge.head())?.instructions().last() {
+        Some(inst) => inst,
+        None => {
+            return Ok(false);
+        }
+    };
+    let start_address = match last_inst.address() {
+        Some(address) => address,
+        None => {
+            return Ok(false);
+        }
+    };
+
+    let distance = tail_address.abs_diff(start_address);
+
+    for out_edge in cfg.edges_out(edge.head())? {
+        if let Some(target_address) = cfg.block(out_edge.tail())?.address() {
+            if target_address.abs_diff(start_address) > distance {
+                return Ok(false);
+            }
+        }
+    }
+
+    Ok(true)
 }
