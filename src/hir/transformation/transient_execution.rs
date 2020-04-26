@@ -464,12 +464,51 @@ fn transient_conditional_branch(
         }
         PredictorStrategy::InvertCondition => {
             // Add negated conditional edges from speculate to all branch successors
-            for successor in cfg.successor_indices(branch_index)? {
-                let edge = cfg.edge(branch_index, successor)?;
-                let negated_condition = Boolean::not(edge.condition().unwrap().clone())?;
-                cfg.conditional_edge(speculate_index, successor, negated_condition)?
-                    .labels_mut()
-                    .speculate();
+            let outgoing_edges: Vec<Edge> =
+                cfg.edges_out(branch_index)?.into_iter().cloned().collect();
+            match outgoing_edges.as_slice() {
+                [edge] => {
+                    // There is only one successor which is only possible because of loop unwinding.
+                    // In this case we add an assumption that the condition of the edge holds.
+                    if edge.labels().is_taken() {
+                        let taken = Boolean::not(edge.condition().unwrap().clone())?;
+                        cfg.block_mut(speculate_index)?.assume(taken.clone())?;
+                        cfg.conditional_edge(speculate_index, edge.tail(), taken)?
+                            .labels_mut()
+                            .speculate()
+                            .taken();
+                    } else {
+                        let not_taken = Boolean::not(edge.condition().unwrap().clone())?;
+                        cfg.block_mut(speculate_index)?.assume(not_taken.clone())?;
+                        cfg.conditional_edge(speculate_index, edge.tail(), not_taken)?
+                            .labels_mut()
+                            .speculate();
+                    }
+                }
+                [edge1, edge2] => {
+                    let (taken_edge, not_taken_edge) = if edge1.labels().is_taken() {
+                        assert!(!edge2.labels().is_taken());
+                        (edge1, edge2)
+                    } else {
+                        assert!(edge2.labels().is_taken());
+                        (edge2, edge1)
+                    };
+
+                    let taken = Boolean::not(taken_edge.condition().unwrap().clone())?;
+                    let not_taken = Boolean::not(not_taken_edge.condition().unwrap().clone())?;
+
+                    cfg.conditional_edge(speculate_index, not_taken_edge.tail(), not_taken)?
+                        .labels_mut()
+                        .speculate();
+
+                    cfg.conditional_edge(speculate_index, taken_edge.tail(), taken)?
+                        .labels_mut()
+                        .speculate()
+                        .taken();
+                }
+                _ => {
+                    return Err("Expected one or two successors for conditional branch".into());
+                }
             }
         }
     }
