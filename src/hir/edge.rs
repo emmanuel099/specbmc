@@ -52,6 +52,12 @@ impl EdgeLabels {
     pub fn is_rollback(&self) -> bool {
         self.labels.contains(&EdgeLabel::Rollback)
     }
+
+    pub fn merge(&mut self, other: &EdgeLabels) {
+        other.labels.iter().for_each(|&label| {
+            self.labels.insert(label);
+        });
+    }
 }
 
 impl Default for EdgeLabels {

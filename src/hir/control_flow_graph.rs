@@ -463,9 +463,15 @@ impl ControlFlowGraph {
                 continue;
             }
 
+            // Merge the labels of the outgoing edge into the rewired edges
+            let outgoing_edge_labels = self.edge(block_index, successor)?.labels().clone();
+
             // Rewire predecessor's outgoing edges from self to successor
             for predecessor in predecessors {
                 self.rewire_edge(predecessor, block_index, predecessor, successor)?;
+                self.edge_mut(predecessor, successor)?
+                    .labels_mut()
+                    .merge(&outgoing_edge_labels);
             }
 
             self.remove_block(block_index)?;
