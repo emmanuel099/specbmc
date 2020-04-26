@@ -55,10 +55,6 @@ impl Block {
     pub fn add_node(&mut self, node: Node) {
         self.nodes.push(node);
     }
-
-    pub fn append_nodes(&mut self, nodes: &mut Vec<Node>) {
-        self.nodes.append(nodes);
-    }
 }
 
 impl graph::Vertex for Block {

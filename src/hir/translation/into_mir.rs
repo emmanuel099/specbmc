@@ -4,12 +4,12 @@ use crate::hir;
 use crate::mir;
 use crate::util::TranslateInto;
 
+/// We have a 2-safety hyperproperty
 const NUMBER_OF_SELF_COMPOSITIONS: usize = 2;
 
 impl TranslateInto<mir::Program> for hir::Program {
     fn translate_into(&self) -> Result<mir::Program> {
         let block_graph = translate_control_flow_graph(self.control_flow_graph())?;
-
         Ok(mir::Program::new(block_graph, NUMBER_OF_SELF_COMPOSITIONS))
     }
 }
@@ -35,6 +35,57 @@ fn translate_control_flow_graph(cfg: &hir::ControlFlowGraph) -> Result<mir::Bloc
     Ok(block_graph)
 }
 
+/// Translates a block by:
+///   - making the control-flow explicit by computing the block execution condition
+///   - translating all instructions into corresponding MIR nodes
+///   - translating phi nodes into MIR assignments
+fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Result<mir::Block> {
+    let mut block = mir::Block::new(src_block.index());
+
+    block.set_execution_condition(compute_execution_condition(cfg, block.index())?);
+
+    for phi_node in src_block.phi_nodes() {
+        let expr = compute_phi_expr(cfg, block.index(), phi_node)?;
+        block.add_node(mir::Node::assign(phi_node.out().clone(), expr)?);
+    }
+
+    for instruction in src_block.instructions() {
+        for operation in instruction.operations() {
+            if let Some(mut node) = translate_operation(operation)? {
+                node.set_address(instruction.address());
+                block.add_node(node);
+            }
+        }
+    }
+
+    Ok(block)
+}
+
+fn translate_operation(operation: &hir::Operation) -> Result<Option<mir::Node>> {
+    use hir::Operation::*;
+    let op = match operation {
+        Assign { variable, expr } => Some(mir::Node::assign(variable.clone(), expr.clone())?),
+        Assert { condition } => Some(mir::Node::assert(condition.clone())?),
+        Assume { condition } => Some(mir::Node::assume(condition.clone())?),
+        Observable { exprs } => Some(mir::Node::hyper_assert(equal_under_self_composition(
+            exprs,
+        ))?),
+        Indistinguishable { exprs } => Some(mir::Node::hyper_assume(
+            equal_under_self_composition(exprs),
+        )?),
+        Store { .. } => panic!("Unexpected store operation, should have been made explicit"),
+        Load { .. } => panic!("Unexpected load operation, should have been made explicit"),
+        Branch { .. } | ConditionalBranch { .. } | Barrier => {
+            // Ignore because they are already implicitly encoded into the CFG
+            None
+        }
+    };
+    Ok(op)
+}
+
+/// Gives the transition condition of edge (p, q) which is defined as:
+///   - exec(p) /\ true if the edge is an unconditional edge
+///   - exec(p) /\ c if the edge is a conditional edge with condition c
 fn transition_condition(edge: &hir::Edge) -> Result<expr::Expression> {
     let pred_exec_cond = mir::Block::execution_condition_variable_for_index(edge.head());
     match edge.condition() {
@@ -44,6 +95,12 @@ fn transition_condition(edge: &hir::Edge) -> Result<expr::Expression> {
 }
 
 /// Computes the execution condition of the block.
+///
+/// For the execution condition of block Q to become true it must hold that:
+///   - Either the block is the CFG entry (no predecessors)
+///   - Or
+///      1. The execution condition of a predecessor block P is true
+///      2. The condition of the edge from P to Q evaluates to true
 ///
 /// The execution condition is defined as:
 ///    exec(b) = true                                               if pred(b) is empty
@@ -67,87 +124,41 @@ fn compute_execution_condition(
     expr::Boolean::disjunction(&transitions)
 }
 
-fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Result<mir::Block> {
-    let mut block = mir::Block::new(src_block.index());
+/// Transforms the phi node into a conditional expression s.t. it can be assigned to a variable.
+///
+/// For example, let the phi node be `c = phi [c.0, 0x0] [c.1, 0x1] [c.2, 0x2]` then this function
+/// will produce `ite(transition_from(0x2), c.2, ite(transition_from(0x1), c.1, c.0))`.
+fn compute_phi_expr(
+    cfg: &hir::ControlFlowGraph,
+    block_index: usize,
+    phi_node: &hir::PhiNode,
+) -> Result<expr::Expression> {
+    let mut phi_expr: Option<expr::Expression> = None;
 
-    block.set_execution_condition(compute_execution_condition(cfg, block.index())?);
-
-    for phi_node in src_block.phi_nodes() {
-        let mut phi_expr: Option<expr::Expression> = None;
-
-        for pred_index in cfg.predecessor_indices(block.index())? {
-            if !phi_node.has_incoming(pred_index) {
-                // The SSA transformation doesn't add phi inputs for variables which
-                // don't survive the rollback (e.g. memory). Therefore, it's possible
-                // that an incoming edge has no corresponding phi-node input.
-                continue;
-            }
-
-            let edge = cfg.edge(pred_index, block.index())?;
-            let phi_cond = transition_condition(edge)?;
-            let phi_var = phi_node.incoming_variable(pred_index).unwrap().clone();
-
-            if let Some(expr) = phi_expr {
-                phi_expr = Some(expr::Expression::ite(phi_cond, phi_var.into(), expr)?);
-            } else {
-                phi_expr = Some(phi_var.into());
-            }
+    for pred_index in cfg.predecessor_indices(block_index)? {
+        if !phi_node.has_incoming(pred_index) {
+            // The SSA transformation doesn't add phi inputs for variables which
+            // don't survive the rollback (e.g. memory). Therefore, it's possible
+            // that an incoming edge has no corresponding phi-node input.
+            continue;
         }
 
-        block.add_node(mir::Node::assign(
-            phi_node.out().clone(),
-            phi_expr.unwrap(),
-        )?);
-    }
+        let edge = cfg.edge(pred_index, block_index)?;
+        let trans_cond = transition_condition(edge)?;
+        let var = phi_node.incoming_variable(pred_index).unwrap().clone();
 
-    for instruction in src_block.instructions() {
-        for operation in instruction.operations() {
-            let mut nodes = translate_operation(operation)?;
-            nodes
-                .iter_mut()
-                .for_each(|node| node.set_address(instruction.address()));
-            block.append_nodes(&mut nodes);
+        if let Some(expr) = phi_expr {
+            phi_expr = Some(expr::Expression::ite(trans_cond, var.into(), expr)?);
+        } else {
+            phi_expr = Some(var.into());
         }
     }
 
-    Ok(block)
+    Ok(phi_expr.unwrap())
 }
 
-fn translate_operation(operation: &hir::Operation) -> Result<Vec<mir::Node>> {
-    let mut nodes = Vec::new();
-
-    match operation {
-        hir::Operation::Assign { variable, expr } => {
-            nodes.push(mir::Node::assign(variable.clone(), expr.clone())?);
-        }
-        hir::Operation::Assert { condition } => {
-            nodes.push(mir::Node::assert(condition.clone())?);
-        }
-        hir::Operation::Assume { condition } => {
-            nodes.push(mir::Node::assume(condition.clone())?);
-        }
-        hir::Operation::Observable { exprs } => nodes.push(mir::Node::hyper_assert(
-            equal_under_self_composition(exprs),
-        )?),
-        hir::Operation::Indistinguishable { exprs } => nodes.push(mir::Node::hyper_assume(
-            equal_under_self_composition(exprs),
-        )?),
-        hir::Operation::Store { .. } => {
-            panic!("Unexpected store operation, should have been made explicit")
-        }
-        hir::Operation::Load { .. } => {
-            panic!("Unexpected load operation, should have been made explicit")
-        }
-        hir::Operation::Branch { .. }
-        | hir::Operation::ConditionalBranch { .. }
-        | hir::Operation::Barrier => {
-            // ignore
-        }
-    }
-
-    Ok(nodes)
-}
-
+/// Create an expression to enforce equality of all given expression under 2-way self composition.
+/// For example, let `exprs` be `[x, y]` then this function will produce `x.1 == x.2 /\ y.1 == y.2`.
 fn equal_under_self_composition(exprs: &[expr::Expression]) -> expr::Expression {
     expr::Boolean::conjunction(
         &exprs
