@@ -107,18 +107,18 @@ fn add_trace_info(
                 if let Some(value) = var.evaluate(model, composition) {
                     annotated_inst
                         .annotation_mut(composition)
-                        .add_assignment(var.clone(), value);
+                        .add_assignment(var.clone().into(), value);
                 }
             }
 
             for operation in inst.operations() {
                 match operation {
-                    hir::Operation::Observable { variables } => {
-                        for var in variables {
-                            if let Some(value) = var.evaluate(model, composition) {
+                    hir::Operation::Observable { exprs } => {
+                        for expr in exprs {
+                            if let Some(value) = expr.evaluate(model, composition) {
                                 annotated_inst
                                     .annotation_mut(composition)
-                                    .add_assignment(var.clone(), value);
+                                    .add_assignment(expr.clone(), value);
                             }
                         }
                     }

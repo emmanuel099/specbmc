@@ -32,8 +32,8 @@ pub enum Operation {
     Assert { condition: Expression },
     /// Assume that the condition is true.
     Assume { condition: Expression },
-    /// The listed variables are observable to an adversary.
-    Observable { variables: Vec<Variable> },
+    /// The listed expressions are observable to an adversary.
+    Observable { exprs: Vec<Expression> },
     /// The listed expressions are indistinguishable for an adversary.
     Indistinguishable { exprs: Vec<Expression> },
 }
@@ -90,8 +90,8 @@ impl Operation {
     }
 
     /// Create a new `Operation::Observable`
-    pub fn observable(variables: Vec<Variable>) -> Self {
-        Self::Observable { variables }
+    pub fn observable(exprs: Vec<Expression>) -> Self {
+        Self::Observable { exprs }
     }
 
     /// Create a new `Operation::Indistinguishable`
@@ -187,8 +187,7 @@ impl Operation {
                 .collect(),
             Self::Assert { condition } | Self::Assume { condition } => condition.variables(),
             Self::Barrier => Vec::new(),
-            Self::Observable { variables } => variables.iter().collect(),
-            Self::Indistinguishable { exprs } => {
+            Self::Observable { exprs } | Self::Indistinguishable { exprs } => {
                 exprs.iter().flat_map(Expression::variables).collect()
             }
         }
@@ -212,8 +211,7 @@ impl Operation {
                 .collect(),
             Self::Assert { condition } | Self::Assume { condition } => condition.variables_mut(),
             Self::Barrier => Vec::new(),
-            Self::Observable { variables } => variables.iter_mut().collect(),
-            Self::Indistinguishable { exprs } => exprs
+            Self::Observable { exprs } | Self::Indistinguishable { exprs } => exprs
                 .iter_mut()
                 .flat_map(Expression::variables_mut)
                 .collect(),
@@ -264,12 +262,12 @@ impl fmt::Display for Operation {
             Self::Assert { condition } => write!(f, "assert {}", condition),
             Self::Assume { condition } => write!(f, "assume {}", condition),
             Self::Barrier => write!(f, "barrier"),
-            Self::Observable { variables } => {
+            Self::Observable { exprs } => {
                 write!(f, "observable(")?;
-                if !variables.is_empty() {
-                    write!(f, "{}", variables.first().unwrap())?;
-                    for var in variables.iter().skip(1) {
-                        write!(f, ", {}", var)?;
+                if !exprs.is_empty() {
+                    write!(f, "{}", exprs.first().unwrap())?;
+                    for expr in exprs.iter().skip(1) {
+                        write!(f, ", {}", expr)?;
                     }
                 }
                 write!(f, ")")

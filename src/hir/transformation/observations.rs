@@ -76,7 +76,12 @@ impl Transform<Program> for Observations {
 
         // Place an observe at the end of the program
         let exit_block = cfg.exit_block_mut().ok_or("CFG exit must be set")?;
-        exit_block.observable(self.observable_variables());
+        let exprs: Vec<expr::Expression> = self
+            .observable_variables()
+            .iter()
+            .map(|var| var.clone().into())
+            .collect();
+        exit_block.observable(exprs);
 
         // TODO add more obs if defined so
 

@@ -209,8 +209,8 @@ impl Block {
     }
 
     /// Adds an observable operation to the end of this block.
-    pub fn observable(&mut self, variables: Vec<Variable>) -> &mut Instruction {
-        self.instructions.push(Instruction::observable(variables));
+    pub fn observable(&mut self, exprs: Vec<Expression>) -> &mut Instruction {
+        self.instructions.push(Instruction::observable(exprs));
         self.instructions.last_mut().unwrap()
     }
 
