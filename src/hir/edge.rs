@@ -3,11 +3,10 @@ use falcon::graph;
 use std::collections::BTreeSet;
 use std::fmt;
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum EdgeLabel {
     Taken,
     Speculate,
-    Resolve,
     Rollback,
 }
 
@@ -16,7 +15,6 @@ impl fmt::Display for EdgeLabel {
         match self {
             Self::Taken => write!(f, "taken"),
             Self::Speculate => write!(f, "speculate"),
-            Self::Resolve => write!(f, "resolve"),
             Self::Rollback => write!(f, "rollback"),
         }
     }
@@ -44,15 +42,6 @@ impl EdgeLabels {
 
     pub fn is_speculate(&self) -> bool {
         self.labels.contains(&EdgeLabel::Speculate)
-    }
-
-    pub fn resolve(&mut self) -> &mut Self {
-        self.labels.insert(EdgeLabel::Resolve);
-        self
-    }
-
-    pub fn is_resolve(&self) -> bool {
-        self.labels.contains(&EdgeLabel::Resolve)
     }
 
     pub fn rollback(&mut self) -> &mut Self {

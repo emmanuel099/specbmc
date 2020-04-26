@@ -152,10 +152,7 @@ impl TransientExecution {
 
         // Add resolve block as exit
         let resolve_block_index = transient_cfg.new_block()?.index();
-        transient_cfg
-            .unconditional_edge(cfg.exit().unwrap(), resolve_block_index)?
-            .labels_mut()
-            .resolve(); // end of program -> resolve
+        transient_cfg.unconditional_edge(cfg.exit().unwrap(), resolve_block_index)?; // end of program -> resolve
         transient_cfg.set_exit(resolve_block_index)?;
 
         for block in cfg.blocks() {
@@ -420,7 +417,6 @@ fn transient_conditional_branch(
                         cfg.block_mut(speculate_index)?.assume(taken.clone())?;
                         cfg.conditional_edge(speculate_index, edge.tail(), taken)?
                             .labels_mut()
-                            .speculate()
                             .taken();
                     } else {
                         let not_taken = Boolean::not(Predictor::taken(
@@ -428,9 +424,7 @@ fn transient_conditional_branch(
                             BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
                         )?)?;
                         cfg.block_mut(speculate_index)?.assume(not_taken.clone())?;
-                        cfg.conditional_edge(speculate_index, edge.tail(), not_taken)?
-                            .labels_mut()
-                            .speculate();
+                        cfg.conditional_edge(speculate_index, edge.tail(), not_taken)?;
                     }
                 }
                 [edge1, edge2] => {
@@ -448,13 +442,10 @@ fn transient_conditional_branch(
                     )?;
                     let not_taken = Boolean::not(taken.clone())?;
 
-                    cfg.conditional_edge(speculate_index, not_taken_edge.tail(), not_taken)?
-                        .labels_mut()
-                        .speculate();
+                    cfg.conditional_edge(speculate_index, not_taken_edge.tail(), not_taken)?;
 
                     cfg.conditional_edge(speculate_index, taken_edge.tail(), taken)?
                         .labels_mut()
-                        .speculate()
                         .taken();
                 }
                 _ => {
@@ -475,14 +466,11 @@ fn transient_conditional_branch(
                         cfg.block_mut(speculate_index)?.assume(taken.clone())?;
                         cfg.conditional_edge(speculate_index, edge.tail(), taken)?
                             .labels_mut()
-                            .speculate()
                             .taken();
                     } else {
                         let not_taken = Boolean::not(edge.condition().unwrap().clone())?;
                         cfg.block_mut(speculate_index)?.assume(not_taken.clone())?;
-                        cfg.conditional_edge(speculate_index, edge.tail(), not_taken)?
-                            .labels_mut()
-                            .speculate();
+                        cfg.conditional_edge(speculate_index, edge.tail(), not_taken)?;
                     }
                 }
                 [edge1, edge2] => {
@@ -497,13 +485,10 @@ fn transient_conditional_branch(
                     let taken = Boolean::not(taken_edge.condition().unwrap().clone())?;
                     let not_taken = Boolean::not(not_taken_edge.condition().unwrap().clone())?;
 
-                    cfg.conditional_edge(speculate_index, not_taken_edge.tail(), not_taken)?
-                        .labels_mut()
-                        .speculate();
+                    cfg.conditional_edge(speculate_index, not_taken_edge.tail(), not_taken)?;
 
                     cfg.conditional_edge(speculate_index, taken_edge.tail(), taken)?
                         .labels_mut()
-                        .speculate()
                         .taken();
                 }
                 _ => {
@@ -529,9 +514,7 @@ fn transient_barrier(cfg: &mut ControlFlowGraph, inst_ref: &InstructionRef) -> R
     cfg.block_mut(tail_index)?.remove_instruction(0)?;
 
     let resolve_index = cfg.exit().unwrap();
-    cfg.unconditional_edge(head_index, resolve_index)?
-        .labels_mut()
-        .resolve();
+    cfg.unconditional_edge(head_index, resolve_index)?;
 
     Ok(())
 }
@@ -572,9 +555,7 @@ fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
             cfg.conditional_edge(block_index, tail_index, continue_execution)?;
 
             let resolve = BitVector::sle(spec_win().into(), zero)?;
-            cfg.conditional_edge(block_index, resolve_block_index, resolve)?
-                .labels_mut()
-                .resolve();
+            cfg.conditional_edge(block_index, resolve_block_index, resolve)?;
         }
     }
 
