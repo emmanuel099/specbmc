@@ -25,12 +25,8 @@ fn translate_control_flow_graph(cfg: &hir::ControlFlowGraph) -> Result<mir::Bloc
         block_graph.add_edge(edge.head(), edge.tail())?;
     }
 
-    if let Some(entry) = cfg.entry() {
-        block_graph.set_entry(entry)?;
-    }
-    if let Some(exit) = cfg.exit() {
-        block_graph.set_exit(exit)?;
-    }
+    block_graph.set_entry(cfg.entry()?)?;
+    block_graph.set_exit(cfg.exit()?)?;
 
     Ok(block_graph)
 }

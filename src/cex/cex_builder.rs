@@ -27,10 +27,8 @@ fn extract_trace(
     model: &Box<dyn Model>,
     composition: Composition,
 ) -> Result<Vec<usize>> {
-    let entry = cfg.entry().ok_or("CFG entry must be set")?;
-
     let mut trace = Vec::new();
-    trace.push(entry);
+    trace.push(cfg.entry()?);
 
     'outer: loop {
         let last = trace.last().unwrap();

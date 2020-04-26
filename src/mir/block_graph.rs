@@ -7,9 +7,9 @@ use std::fmt;
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct BlockGraph {
     graph: Graph<Block, Edge>,
-    // An optional entry index for the graph.
+    // The entry block index of the graph.
     entry: Option<usize>,
-    // An optional exit index for the graph.
+    // The exit block index of the graph.
     exit: Option<usize>,
 }
 
@@ -28,31 +28,31 @@ impl BlockGraph {
     }
 
     /// Get the entry `Block` index of this `BlockGraph`.
-    pub fn entry(&self) -> Option<usize> {
-        self.entry
+    pub fn entry(&self) -> Result<usize> {
+        self.entry.ok_or("CFG entry must be set".into())
     }
 
     /// Sets the entry point for this `BlockGraph` to the given `Block` index.
     pub fn set_entry(&mut self, entry: usize) -> Result<()> {
-        if self.graph.has_vertex(entry) {
-            self.entry = Some(entry);
-            return Ok(());
+        if !self.graph.has_vertex(entry) {
+            return Err("Index does not exist for set_entry".into());
         }
-        Err("Index does not exist for set_entry".into())
+        self.entry = Some(entry);
+        Ok(())
     }
 
     /// Get the exit `Block` index of this `BlockGraph`.
-    pub fn exit(&self) -> Option<usize> {
-        self.exit
+    pub fn exit(&self) -> Result<usize> {
+        self.exit.ok_or("CFG exit must be set".into())
     }
 
     /// Sets the exit point for this `BlockGraph` to the given `Block` index.
     pub fn set_exit(&mut self, exit: usize) -> Result<()> {
-        if self.graph.has_vertex(exit) {
-            self.exit = Some(exit);
-            return Ok(());
+        if !self.graph.has_vertex(exit) {
+            return Err("Index does not exist for set_exit".into());
         }
-        Err("Index does not exist for set_exit".into())
+        self.exit = Some(exit);
+        Ok(())
     }
 
     /// Get a `Block` by index.
@@ -76,39 +76,23 @@ impl BlockGraph {
     }
 
     /// Returns the entry block of this `BlockGraph`.
-    pub fn entry_block(&self) -> Option<&Block> {
-        if self.entry.is_none() {
-            None
-        } else {
-            self.block(self.entry.unwrap()).ok()
-        }
+    pub fn entry_block(&self) -> Result<&Block> {
+        self.entry().and_then(|entry| self.block(entry))
     }
 
     /// Returns a mutable reference to the entry block of this `BlockGraph`.
-    pub fn entry_block_mut(&mut self) -> Option<&mut Block> {
-        if self.entry.is_none() {
-            None
-        } else {
-            self.block_mut(self.entry.unwrap()).ok()
-        }
+    pub fn entry_block_mut(&mut self) -> Result<&mut Block> {
+        self.entry().and_then(move |entry| self.block_mut(entry))
     }
 
     /// Returns the exit block of this `BlockGraph`.
-    pub fn exit_block(&self) -> Option<&Block> {
-        if self.exit.is_none() {
-            None
-        } else {
-            self.block(self.exit.unwrap()).ok()
-        }
+    pub fn exit_block(&self) -> Result<&Block> {
+        self.exit().and_then(|exit| self.block(exit))
     }
 
     /// Returns a mutable reference to the exit block of this `BlockGraph`.
-    pub fn exit_block_mut(&mut self) -> Option<&mut Block> {
-        if self.exit.is_none() {
-            None
-        } else {
-            self.block_mut(self.exit.unwrap()).ok()
-        }
+    pub fn exit_block_mut(&mut self) -> Result<&mut Block> {
+        self.exit().and_then(move |exit| self.block_mut(exit))
     }
 
     /// Get the indices of every successor of a `Block` in this `BlockGraph`.

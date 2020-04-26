@@ -155,7 +155,7 @@ impl Transform<Program> for InitGlobalVariables {
         let global_variables = analysis::global_variables(&program);
 
         let cfg = program.control_flow_graph_mut();
-        let entry_block = cfg.entry_block_mut().ok_or("CFG entry must be set")?;
+        let entry_block = cfg.entry_block_mut()?;
 
         self.init_memory(entry_block)?;
         self.init_predictor(entry_block)?;

@@ -66,7 +66,7 @@ impl NonSpecObsEquivalence {
         let cfg = program.control_flow_graph_mut();
 
         // Initially low-equivalent, therefore assign same content in entry
-        let entry_block = cfg.entry_block_mut().ok_or("CFG entry must be set")?;
+        let entry_block = cfg.entry_block_mut()?;
         if self.cache_available {
             entry_block.assign(cache_nonspec(), Cache::variable().into())?;
         }

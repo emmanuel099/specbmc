@@ -6,7 +6,7 @@ use crate::hir::{Block, Edge};
 use crate::util::RenderGraph;
 use falcon::graph;
 use std::cmp;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt;
 
 /// A directed graph of types `Block` and `Edge`.
@@ -44,32 +44,42 @@ impl ControlFlowGraph {
         &self.graph
     }
 
+    /// Get the entry `Block` index of this `ControlFlowGraph`.
+    pub fn entry(&self) -> Result<usize> {
+        self.entry.ok_or("CFG entry must be set".into())
+    }
+
     /// Sets the entry point for this `ControlFlowGraph` to the given `Block` index.
     pub fn set_entry(&mut self, entry: usize) -> Result<()> {
-        if self.graph.has_vertex(entry) {
-            self.entry = Some(entry);
-            return Ok(());
+        if !self.graph.has_vertex(entry) {
+            return Err("Index does not exist for set_entry".into());
         }
-        Err("Index does not exist for set_entry".into())
+        self.entry = Some(entry);
+        Ok(())
+    }
+
+    /// Get the exit `Block` index of this `ControlFlowGraph`.
+    pub fn exit(&self) -> Result<usize> {
+        self.exit.ok_or("CFG exit must be set".into())
     }
 
     /// Sets the exit point for this `ControlFlowGraph` to the given `Block` index.
     pub fn set_exit(&mut self, exit: usize) -> Result<()> {
-        if self.graph.has_vertex(exit) {
-            self.exit = Some(exit);
-            return Ok(());
+        if !self.graph.has_vertex(exit) {
+            return Err("Index does not exist for set_exit".into());
         }
-        Err("Index does not exist for set_exit".into())
+        self.exit = Some(exit);
+        Ok(())
     }
 
-    /// Get the entry `Block` index for this `ControlFlowGraph`.
-    pub fn entry(&self) -> Option<usize> {
-        self.entry
+    /// Get the indices of every predecessor of a `Block` in this `ControlFlowGraph`.
+    pub fn predecessor_indices(&self, index: usize) -> Result<Vec<usize>> {
+        Ok(self.graph.predecessor_indices(index)?)
     }
 
-    /// Get the exit `Block` index for this `ControlFlowGraph`.
-    pub fn exit(&self) -> Option<usize> {
-        self.exit
+    /// Get the indices of every successor of a `Block` in this `ControlFlowGraph`.
+    pub fn successor_indices(&self, index: usize) -> Result<Vec<usize>> {
+        Ok(self.graph.successor_indices(index)?)
     }
 
     /// Get a `Block` by index.
@@ -92,105 +102,24 @@ impl ControlFlowGraph {
         self.graph.vertices_mut()
     }
 
-    /// Removes an `Block` by its index.
-    pub fn remove_block(&mut self, index: usize) -> Result<Block> {
-        let block = self.block(index)?.clone();
-        self.graph.remove_vertex(index)?;
-        Ok(block)
+    /// Returns the entry block of this `ControlFlowGraph`.
+    pub fn entry_block(&self) -> Result<&Block> {
+        self.entry().and_then(|entry| self.block(entry))
     }
 
-    /// Get an `Edge` by its head and tail `Block` indices.
-    pub fn edge(&self, head: usize, tail: usize) -> Result<&Edge> {
-        Ok(self.graph.edge(head, tail)?)
+    /// Returns a mutable reference to the entry block of this `ControlFlowGraph`.
+    pub fn entry_block_mut(&mut self) -> Result<&mut Block> {
+        self.entry().and_then(move |entry| self.block_mut(entry))
     }
 
-    /// Removes an `Edge` by its head and tail `Block` indices.
-    pub fn remove_edge(&mut self, head: usize, tail: usize) -> Result<Edge> {
-        let edge = self.edge(head, tail)?.clone();
-        self.graph.remove_edge(head, tail)?;
-        Ok(edge)
+    /// Returns the exit block of this `ControlFlowGraph`.
+    pub fn exit_block(&self) -> Result<&Block> {
+        self.exit().and_then(|exit| self.block(exit))
     }
 
-    /// Get a mutable reference to an `Edge` by its head and tail `Block` indices.
-    pub fn edge_mut(&mut self, head: usize, tail: usize) -> Result<&mut Edge> {
-        Ok(self.graph.edge_mut(head, tail)?)
-    }
-
-    /// Get every `Edge` in thie `ControlFlowGraph`.
-    pub fn edges(&self) -> Vec<&Edge> {
-        self.graph.edges()
-    }
-
-    /// Get a mutable reference to every `Edge` in this `ControlFlowGraph`.
-    pub fn edges_mut(&mut self) -> Vec<&mut Edge> {
-        self.graph.edges_mut()
-    }
-
-    /// Get every incoming edge to a block
-    pub fn edges_in(&self, index: usize) -> Result<Vec<&Edge>> {
-        Ok(self.graph.edges_in(index)?)
-    }
-
-    /// Get every outgoing edge from a block
-    pub fn edges_out(&self, index: usize) -> Result<Vec<&Edge>> {
-        Ok(self.graph.edges_out(index)?)
-    }
-
-    /// Get the indices of every predecessor of a `Block` in this `ControlFlowGraph`.
-    pub fn predecessor_indices(&self, index: usize) -> Result<Vec<usize>> {
-        Ok(self.graph.predecessor_indices(index)?)
-    }
-
-    /// Get the indices of every successor of a `Block` in this `ControlFlowGraph`.
-    pub fn successor_indices(&self, index: usize) -> Result<Vec<usize>> {
-        Ok(self.graph.successor_indices(index)?)
-    }
-
-    /// Sets the address for all instructions in this `ControlFlowGraph`.
-    ///
-    /// Useful for translators to set address information.
-    pub fn set_address(&mut self, address: Option<u64>) {
-        for block in self.blocks_mut() {
-            for instruction in block.instructions_mut() {
-                instruction.set_address(address);
-            }
-        }
-    }
-
-    /// Returns the entry block of this ControlFlowGraph
-    pub fn entry_block(&self) -> Option<&Block> {
-        if self.entry.is_none() {
-            None
-        } else {
-            self.block(self.entry.unwrap()).ok()
-        }
-    }
-
-    /// Returns a mutable reference to the entry block of this ControlFlowGraph
-    pub fn entry_block_mut(&mut self) -> Option<&mut Block> {
-        if self.entry.is_none() {
-            None
-        } else {
-            self.block_mut(self.entry.unwrap()).ok()
-        }
-    }
-
-    /// Returns the exit block of this ControlFlowGraph
-    pub fn exit_block(&self) -> Option<&Block> {
-        if self.exit.is_none() {
-            None
-        } else {
-            self.block(self.exit.unwrap()).ok()
-        }
-    }
-
-    /// Returns a mutable reference to the exit block of this ControlFlowGraph
-    pub fn exit_block_mut(&mut self) -> Option<&mut Block> {
-        if self.exit.is_none() {
-            None
-        } else {
-            self.block_mut(self.exit.unwrap()).ok()
-        }
+    /// Returns a mutable reference to the exit block of this `ControlFlowGraph`.
+    pub fn exit_block_mut(&mut self) -> Result<&mut Block> {
+        self.exit().and_then(move |exit| self.block_mut(exit))
     }
 
     /// Creates a new basic block, adds it to the graph, and returns it
@@ -211,10 +140,53 @@ impl ControlFlowGraph {
         Ok(self.graph.vertex_mut(next_index).unwrap())
     }
 
+    /// Duplicates the blocks with the given indices, including their outgoing edges,
+    /// and returns the mapping from the old to the new block indices for the duplicated blocks.
+    pub fn duplicate_blocks(
+        &mut self,
+        block_indices: &BTreeSet<usize>,
+    ) -> Result<BTreeMap<usize, usize>> {
+        let mut block_map: BTreeMap<usize, usize> = BTreeMap::new();
+
+        for &index in block_indices {
+            let duplicated_block = self.duplicate_block(index)?;
+            block_map.insert(index, duplicated_block.index());
+        }
+
+        let mut new_edges: Vec<Edge> = Vec::new();
+
+        for &index in block_indices {
+            for edge in self.edges_out(index)? {
+                let new_head = block_map.get(&edge.head()).cloned().unwrap_or(edge.head());
+                let new_tail = block_map.get(&edge.tail()).cloned().unwrap_or(edge.tail());
+                new_edges.push(edge.clone_new_head_tail(new_head, new_tail));
+            }
+        }
+
+        for edge in new_edges {
+            self.graph.insert_edge(edge)?;
+        }
+
+        Ok(block_map)
+    }
+
     /// Adds the basic block to the graph
     pub fn add_block(&mut self, block: Block) -> Result<()> {
         self.next_index = cmp::max(block.index() + 1, self.next_index);
         Ok(self.graph.insert_vertex(block)?)
+    }
+
+    /// Removes an `Block` by its index.
+    pub fn remove_block(&mut self, index: usize) -> Result<Block> {
+        if self.entry == Some(index) {
+            return Err("Cannot remove entry block".into());
+        }
+        if self.exit == Some(index) {
+            return Err("Cannot remove exit block".into());
+        }
+        let block = self.block(index)?.clone();
+        self.graph.remove_vertex(index)?;
+        Ok(block)
     }
 
     /// Splits the block with the given index at the specified instruction.
@@ -250,13 +222,41 @@ impl ControlFlowGraph {
                 .insert_edge(edge.clone_new_head_tail(tail_block_index, successor))?;
         }
 
-        if let Some(exit) = self.exit() {
-            if exit == block_index {
-                self.set_exit(tail_block_index)?;
-            }
+        if self.exit == Some(block_index) {
+            self.set_exit(tail_block_index)?;
         }
 
         Ok(tail_block_index)
+    }
+
+    /// Get an `Edge` by its head and tail `Block` indices.
+    pub fn edge(&self, head: usize, tail: usize) -> Result<&Edge> {
+        Ok(self.graph.edge(head, tail)?)
+    }
+
+    /// Get a mutable reference to an `Edge` by its head and tail `Block` indices.
+    pub fn edge_mut(&mut self, head: usize, tail: usize) -> Result<&mut Edge> {
+        Ok(self.graph.edge_mut(head, tail)?)
+    }
+
+    /// Get every `Edge` in thie `ControlFlowGraph`.
+    pub fn edges(&self) -> Vec<&Edge> {
+        self.graph.edges()
+    }
+
+    /// Get a mutable reference to every `Edge` in this `ControlFlowGraph`.
+    pub fn edges_mut(&mut self) -> Vec<&mut Edge> {
+        self.graph.edges_mut()
+    }
+
+    /// Get every incoming edge to a block
+    pub fn edges_in(&self, index: usize) -> Result<Vec<&Edge>> {
+        Ok(self.graph.edges_in(index)?)
+    }
+
+    /// Get every outgoing edge from a block
+    pub fn edges_out(&self, index: usize) -> Result<Vec<&Edge>> {
+        Ok(self.graph.edges_out(index)?)
     }
 
     /// Creates an unconditional edge from one block to another block
@@ -278,15 +278,90 @@ impl ControlFlowGraph {
         Ok(self.graph.edge_mut(head, tail)?)
     }
 
-    /// Merge `Block`s.
-    ///
-    /// When a `Block` as only one successor, and that successor has only one predecessor, we
-    /// merge both into one `Block`.
-    ///
-    /// Keeps the entry and exit blocks intact.
-    pub fn merge(&mut self) -> Result<()> {
-        use std::collections::HashSet;
+    /// Removes an `Edge` by its head and tail `Block` indices.
+    pub fn remove_edge(&mut self, head: usize, tail: usize) -> Result<Edge> {
+        let edge = self.edge(head, tail)?.clone();
+        self.graph.remove_edge(head, tail)?;
+        Ok(edge)
+    }
 
+    /// Rewires an `Edge` from its current head and tail `Block`s to the new head and tail `Block`s.
+    pub fn rewire_edge(
+        &mut self,
+        head: usize,
+        tail: usize,
+        new_head: usize,
+        new_tail: usize,
+    ) -> Result<()> {
+        let edge = self.edge(head, tail)?;
+        let new_edge = edge.clone_new_head_tail(new_head, new_tail);
+        self.remove_edge(head, tail)?;
+        self.graph.insert_edge(new_edge)?;
+        Ok(())
+    }
+
+    /// Appends a control flow graph to this control flow graph.
+    ///
+    /// In order for this to work, the entry and exit of boths graphs must be
+    /// set, which should be the case for all conformant translators. You can
+    /// also append to an empty ControlFlowGraph.
+    pub fn append(&mut self, other: &Self) -> Result<()> {
+        let is_empty = match self.graph.num_vertices() {
+            0 => true,
+            _ => false,
+        };
+
+        // Bring in new blocks
+        let block_map = self.insert(other)?;
+
+        if is_empty {
+            self.entry = Some(block_map[&other.entry()?]);
+        } else {
+            // Create an edge from the exit of this graph to the head of the other graph
+            self.unconditional_edge(self.exit()?, block_map[&(other.entry()?)])?;
+        }
+
+        self.exit = Some(block_map[&other.exit()?]);
+
+        Ok(())
+    }
+
+    /// Inserts a control flow graph into this control flow graph, and returns
+    /// the mapping from the old to the new block indices for the inserted graph.
+    ///
+    /// This function causes the `ControlFlowGraph` to become disconnected.
+    pub fn insert(&mut self, other: &Self) -> Result<BTreeMap<usize, usize>> {
+        // keep track of mapping between old indices and new indices
+        let mut block_map: BTreeMap<usize, usize> = BTreeMap::new();
+
+        // insert all the blocks
+        for block in other.graph().vertices() {
+            let new_block = block.clone_new_index(self.next_index);
+            block_map.insert(block.index(), self.next_index);
+            self.next_index += 1;
+            self.graph.insert_vertex(new_block)?;
+        }
+
+        // insert edges
+        for edge in other.graph().edges() {
+            let new_head = block_map[&edge.head()];
+            let new_tail = block_map[&edge.tail()];
+            self.graph
+                .insert_edge(edge.clone_new_head_tail(new_head, new_tail))?;
+        }
+
+        Ok(block_map)
+    }
+
+    /// Removes all blocks which are unreachable from CFG entry.
+    fn remove_unreachable_blocks(&mut self) -> Result<()> {
+        let entry = self.entry()?;
+        self.graph.remove_unreachable_vertices(entry)?;
+        Ok(())
+    }
+
+    /// Merges all blocks which only have one successor, and that successor has only one predecessor.
+    fn merge_consecutive_blocks_with_single_successor_and_predecessor(&mut self) -> Result<()> {
         loop {
             let mut blocks_being_merged: HashSet<usize> = HashSet::new();
             let mut merges: Vec<(usize, usize)> = Vec::new();
@@ -302,41 +377,32 @@ impl ControlFlowGraph {
                     continue;
                 }
 
-                // check to see how many successors we have
-                let successors = self.graph.edges_out(block.index()).unwrap();
-
-                // if we do not have just one successor, we will not merge this block
-                if successors.len() != 1 {
+                // If we do not have just one successor, we will not merge this block
+                let outgoing_edges = self.edges_out(block.index())?;
+                if outgoing_edges.len() != 1 {
                     continue;
                 }
 
                 // If this successor has a condition, we will not merge this block
-                if successors.first().unwrap().condition().is_some() {
+                let outgoing_edge = outgoing_edges[0];
+                if outgoing_edge.is_conditional() {
                     continue;
                 }
 
-                // get the vertex for this successor
-                let successor: usize = match successors.first() {
-                    Some(successor) => successor.tail(),
-                    None => bail!("successor not found"),
-                };
+                // If this successor is already being merged, skip it
+                let successor = outgoing_edge.tail();
+                if blocks_being_merged.contains(&successor) {
+                    continue;
+                }
 
                 // Do not merge the exit block
                 if self.exit == Some(successor) {
                     continue;
                 }
 
-                // If this successor is already being merged, skip it
-                if blocks_being_merged.contains(&successor) {
-                    continue;
-                }
-
-                // get all predecessors for this successor
-                let predecessors = self.graph.edges_in(successor).unwrap();
-
-                // if this successor does not have exactly one predecessor, we
-                // will not merge this block
-                if predecessors.len() != 1 {
+                // If successor does not have just one predecessor, we will not merge this block
+                let successor_incoming_edges = self.graph.edges_in(successor).unwrap();
+                if successor_incoming_edges.len() != 1 {
                     continue;
                 }
 
@@ -373,74 +439,6 @@ impl ControlFlowGraph {
         Ok(())
     }
 
-    /// Appends a control flow graph to this control flow graph.
-    ///
-    /// In order for this to work, the entry and exit of boths graphs must be
-    /// set, which should be the case for all conformant translators. You can
-    /// also append to an empty ControlFlowGraph.
-    pub fn append(&mut self, other: &Self) -> Result<()> {
-        let is_empty = match self.graph.num_vertices() {
-            0 => true,
-            _ => false,
-        };
-
-        if !is_empty && (self.entry().is_none() || self.exit().is_none()) {
-            return Err("entry/exit not set for dest ControlFlowGraph::append".into());
-        }
-
-        if other.entry().is_none() || other.exit().is_none() {
-            return Err("entry/exit not set for src ControlFlowGraph::append".into());
-        }
-
-        // Bring in new blocks
-        let block_map = self.insert(other)?;
-
-        if is_empty {
-            self.entry = Some(block_map[&other.entry().unwrap()]);
-        } else {
-            // Create an edge from the exit of this graph to the head of the other graph
-            self.unconditional_edge(self.exit.unwrap(), block_map[&(other.entry().unwrap())])?;
-        }
-
-        self.exit = Some(block_map[&other.exit().unwrap()]);
-
-        Ok(())
-    }
-
-    /// Inserts a control flow graph into this control flow graph, and returns
-    /// the mapping from the old to the new block indices for the inserted graph.
-    ///
-    /// This function causes the `ControlFlowGraph` to become disconnected.
-    pub fn insert(&mut self, other: &Self) -> Result<BTreeMap<usize, usize>> {
-        // keep track of mapping between old indices and new indices
-        let mut block_map: BTreeMap<usize, usize> = BTreeMap::new();
-
-        // insert all the blocks
-        for block in other.graph().vertices() {
-            let new_block = block.clone_new_index(self.next_index);
-            block_map.insert(block.index(), self.next_index);
-            self.next_index += 1;
-            self.graph.insert_vertex(new_block)?;
-        }
-
-        // insert edges
-        for edge in other.graph().edges() {
-            let new_head = block_map[&edge.head()];
-            let new_tail = block_map[&edge.tail()];
-            self.graph
-                .insert_edge(edge.clone_new_head_tail(new_head, new_tail))?;
-        }
-
-        Ok(block_map)
-    }
-
-    /// Removes all blocks which are unreachable from CFG entry.
-    fn remove_unreachable_blocks(&mut self) -> Result<()> {
-        let entry = self.entry.ok_or("CFG entry must be set")?;
-        self.graph.remove_unreachable_vertices(entry)?;
-        Ok(())
-    }
-
     /// Removes all empty blocks with single successor by rewiring all the
     /// incoming edges of the empty block to its successor.
     fn remove_empty_blocks_with_single_successor(&mut self) -> Result<()> {
@@ -452,17 +450,20 @@ impl ControlFlowGraph {
             .collect();
 
         for block_index in empty_blocks {
+            // If we do not have just one successor, we will not remove this block
             let successors = self.successor_indices(block_index)?;
             if successors.len() != 1 {
                 continue;
             }
             let successor = successors[0];
 
+            // If we do not have any predecessor, we will not remove this block
             let predecessors = self.predecessor_indices(block_index)?;
             if predecessors.is_empty() {
                 continue;
             }
 
+            // Rewire predecessor's outgoing edges from self to successor
             for predecessor in predecessors {
                 self.rewire_edge(predecessor, block_index, predecessor, successor)?;
             }
@@ -476,53 +477,20 @@ impl ControlFlowGraph {
     /// Simplifies the control flow graph by removing as well as merging blocks.
     pub fn simplify(&mut self) -> Result<()> {
         self.remove_unreachable_blocks()?;
-        self.merge()?;
+        self.merge_consecutive_blocks_with_single_successor_and_predecessor()?;
         self.remove_empty_blocks_with_single_successor()?;
         Ok(())
     }
 
-    pub fn rewire_edge(
-        &mut self,
-        head: usize,
-        tail: usize,
-        new_head: usize,
-        new_tail: usize,
-    ) -> Result<()> {
-        let edge = self.edge(head, tail)?;
-        let new_edge = edge.clone_new_head_tail(new_head, new_tail);
-        self.remove_edge(head, tail)?;
-        self.graph.insert_edge(new_edge)?;
-        Ok(())
-    }
-
-    /// Duplicates the blocks with the given indices, including their outgoing edges,
-    /// and returns the mapping from the old to the new block indices for the duplicated blocks.
-    pub fn duplicate_blocks(
-        &mut self,
-        block_indices: &BTreeSet<usize>,
-    ) -> Result<BTreeMap<usize, usize>> {
-        let mut block_map: BTreeMap<usize, usize> = BTreeMap::new();
-
-        for &index in block_indices {
-            let duplicated_block = self.duplicate_block(index)?;
-            block_map.insert(index, duplicated_block.index());
-        }
-
-        let mut new_edges: Vec<Edge> = Vec::new();
-
-        for &index in block_indices {
-            for edge in self.edges_out(index)? {
-                let new_head = block_map.get(&edge.head()).cloned().unwrap_or(edge.head());
-                let new_tail = block_map.get(&edge.tail()).cloned().unwrap_or(edge.tail());
-                new_edges.push(edge.clone_new_head_tail(new_head, new_tail));
+    /// Sets the address for all instructions in this `ControlFlowGraph`.
+    ///
+    /// Useful for translators to set address information.
+    pub fn set_address(&mut self, address: Option<u64>) {
+        for block in self.blocks_mut() {
+            for instruction in block.instructions_mut() {
+                instruction.set_address(address);
             }
         }
-
-        for edge in new_edges {
-            self.graph.insert_edge(edge)?;
-        }
-
-        Ok(block_map)
     }
 }
 
@@ -689,6 +657,6 @@ mod tests {
         let tail_index = cfg.split_block_at(block_index, 1).unwrap();
 
         // Then: Should change exit to new tail block
-        assert_eq!(cfg.exit(), Some(tail_index));
+        assert_eq!(cfg.exit().unwrap(), tail_index);
     }
 }

@@ -40,7 +40,7 @@ impl Transform<Program> for SSATransformation {
 /// see Algorithm 3.1 in "SSA-based Compiler Design" book for more details.
 fn insert_phi_nodes(program: &mut Program) -> Result<()> {
     let cfg = program.control_flow_graph();
-    let entry = cfg.entry().ok_or("CFG entry must be set")?;
+    let entry = cfg.entry()?;
 
     if !cfg.predecessor_indices(entry)?.is_empty() {
         return Err("The CFG must not have any predecessors".into());
@@ -222,7 +222,7 @@ impl SSARename for Block {
 
 impl SSARename for ControlFlowGraph {
     fn rename_variables(&mut self, versioning: &mut VariableVersioning) -> Result<()> {
-        let entry = self.entry().ok_or("CFG entry must be set")?;
+        let entry = self.entry()?;
 
         type DominatorTree = Graph<NullVertex, NullEdge>;
         let dominator_tree = self.graph().compute_dominator_tree(entry)?;

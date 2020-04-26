@@ -75,7 +75,7 @@ impl Transform<Program> for Observations {
         let cfg = program.control_flow_graph_mut();
 
         // Place an observe at the end of the program
-        let exit_block = cfg.exit_block_mut().ok_or("CFG exit must be set")?;
+        let exit_block = cfg.exit_block_mut()?;
         let exprs: Vec<expr::Expression> = self
             .observable_variables()
             .iter()

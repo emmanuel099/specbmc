@@ -33,7 +33,7 @@ impl LoopUnwinding {
     /// All such blocks are removed and unwinding assumptions are added,
     /// which make sure that the removed edges aren't taken.
     fn remove_dead_end_blocks(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
-        let exit = cfg.exit().ok_or("CFG exit must be set")?;
+        let exit = cfg.exit()?;
 
         let mut queue: Vec<usize> = cfg
             .graph()
@@ -154,7 +154,7 @@ impl LoopUnwinding {
     }
 
     pub fn unwind_cfg(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
-        let entry = cfg.entry().ok_or("CFG entry must be set")?;
+        let entry = cfg.entry()?;
 
         if !cfg.graph().is_reducible(entry)? {
             println!("Warning: CFG is not reducible!");
