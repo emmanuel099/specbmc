@@ -23,7 +23,7 @@ rsmt2 = { git = "https://github.com/emmanuel099/rsmt2.git" }
 bit-vec = "0.6.1"
 serde = { version = "1.0.104", features = ["derive"] }
 serde_yaml = "0.8.11"
-console = "0.10.0"
+console = "0.11.1"
 colored = "1.9.3"
 indicatif = "0.14.0"
 nom = "5.1.0"
