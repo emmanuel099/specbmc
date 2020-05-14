@@ -123,6 +123,8 @@ pub struct Architecture {
     pub branch_target_buffer: bool,
     #[serde(rename = "pht", default = "enabled")]
     pub pattern_history_table: bool,
+    #[serde(default = "default_speculation_window")]
+    pub speculation_window: usize,
 }
 
 impl Default for Architecture {
@@ -131,6 +133,7 @@ impl Default for Architecture {
             cache: true,
             branch_target_buffer: true,
             pattern_history_table: true,
+            speculation_window: default_speculation_window(),
         }
     }
 }
@@ -216,4 +219,8 @@ fn disabled() -> bool {
 
 fn enabled() -> bool {
     true
+}
+
+fn default_speculation_window() -> usize {
+    100
 }

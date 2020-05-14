@@ -30,6 +30,7 @@ struct Arguments {
     transient_encoding_strategy: Option<environment::TransientEncodingStrategy>,
     function: Option<String>,
     unwind: Option<usize>,
+    speculation_window: Option<usize>,
     debug: bool,
     skip_solving: bool,
     cfg_file: Option<String>,
@@ -114,7 +115,17 @@ fn parse_arguments() -> Arguments {
             Arg::with_name("unwind")
                 .short("k")
                 .long("unwind")
+                .value_name("k")
                 .help("Unwind loops k times")
+                .validator(is_positive_number)
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("speculation_window")
+                .short("s")
+                .long("spec-win")
+                .value_name("WINDOW")
+                .help("Sets the maximum length of the speculation window")
                 .validator(is_positive_number)
                 .takes_value(true),
         )
@@ -223,6 +234,9 @@ fn parse_arguments() -> Arguments {
         unwind: matches
             .value_of("unwind")
             .map(|v| v.parse::<usize>().unwrap()),
+        speculation_window: matches
+            .value_of("speculation_window")
+            .map(|v| v.parse::<usize>().unwrap()),
         debug: matches.is_present("debug"),
         skip_solving: matches.is_present("skip_solving"),
         cfg_file: matches.value_of("cfg_file").map(String::from),
@@ -278,6 +292,10 @@ fn build_environment(arguments: &Arguments) -> Result<environment::Environment> 
 
     if let Some(unwind) = arguments.unwind {
         env.analysis.unwind = unwind;
+    }
+
+    if let Some(speculation_window) = arguments.speculation_window {
+        env.architecture.speculation_window = speculation_window;
     }
 
     if arguments.debug {
