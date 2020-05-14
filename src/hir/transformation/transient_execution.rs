@@ -501,13 +501,10 @@ fn transient_conditional_branch(
 }
 
 /// The `Barrier` instruction immediately stops the transient execution.
-/// Therefore, replace the `Barrier` with an unconditional edge to the resolve block.
+/// Therefore, split the block and add an unconditional edge from head to the resolve block.
 fn transient_barrier(cfg: &mut ControlFlowGraph, inst_ref: &InstructionRef) -> Result<()> {
     let head_index = inst_ref.block();
-    let tail_index = cfg.split_block_at(head_index, inst_ref.index())?;
-
-    // drop barrier instruction from tail
-    cfg.block_mut(tail_index)?.remove_instruction(0)?;
+    let _tail_index = cfg.split_block_at(head_index, inst_ref.index())?;
 
     let resolve_index = cfg.exit().unwrap();
     cfg.unconditional_edge(head_index, resolve_index)?;
@@ -558,7 +555,7 @@ fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
     Ok(())
 }
 
-/// Appends "_spec_win := _spec_win - |instructions in BB|" to the end of each basic block.
+/// Appends "_spec_win := _spec_win - |instructions in BB|" to the end of each transient basic block.
 fn append_spec_win_decrease_to_all_transient_blocks(cfg: &mut ControlFlowGraph) -> Result<()> {
     for block in cfg.blocks_mut() {
         if !block.is_transient() {
