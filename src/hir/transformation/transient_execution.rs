@@ -230,10 +230,6 @@ impl TransientExecution {
                 .rollback();
         }
 
-        cfg.simplify()?;
-
-        append_spec_win_decrease_to_all_transient_blocks(&mut cfg)?;
-
         Ok(cfg)
     }
 
@@ -259,10 +255,6 @@ impl TransientExecution {
                 .rollback();
         }
 
-        cfg.simplify()?;
-
-        append_spec_win_decrease_to_all_transient_blocks(&mut cfg)?;
-
         Ok(cfg)
     }
 }
@@ -277,10 +269,14 @@ impl Transform<Program> for TransientExecution {
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {
-        let cfg = match self.transient_encoding_strategy {
+        let mut cfg = match self.transient_encoding_strategy {
             TransientEncodingStrategy::Unified => self.encode_unified(program)?,
             TransientEncodingStrategy::Several => self.encode_several(program)?,
         };
+
+        cfg.simplify()?;
+
+        append_spec_win_decrease_to_all_transient_blocks(&mut cfg)?;
 
         program.set_control_flow_graph(cfg);
 
