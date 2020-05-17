@@ -1,7 +1,7 @@
 use crate::environment::Environment;
 use crate::error::*;
 use crate::expr::Boolean;
-use crate::hir::{Block, ControlFlowGraph, Edge, Program};
+use crate::hir::{ControlFlowGraph, Program};
 use crate::util::Transform;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -23,51 +23,6 @@ impl LoopUnwinding {
     pub fn with_unwinding_bound(&mut self, bound: usize) -> &mut Self {
         self.unwinding_bound = bound;
         self
-    }
-
-    /// Removes all dead-end blocks
-    ///
-    /// Loop unwinding may leave behind blocks which are dead ends,
-    /// meaning that no path from the block to the CFG exit exists.
-    ///
-    /// All such blocks are removed and unwinding assumptions are added,
-    /// which make sure that the removed edges aren't taken.
-    fn remove_dead_end_blocks(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
-        let exit = cfg.exit()?;
-
-        let mut queue: Vec<usize> = cfg
-            .graph()
-            .vertices_without_successors()
-            .into_iter()
-            .map(Block::index)
-            .filter(|&block_index| block_index != exit)
-            .collect();
-
-        // Repeatedly remove blocks (!= exit) without successors
-        while let Some(block_index) = queue.pop() {
-            assert!(block_index != exit);
-            assert!(cfg.successor_indices(block_index)?.is_empty());
-
-            let incoming_edges: Vec<Edge> =
-                cfg.edges_in(block_index)?.into_iter().cloned().collect();
-            cfg.remove_block(block_index)?;
-
-            for edge in incoming_edges {
-                let predecessor_index = edge.head();
-
-                // Add unwinding assumption
-                if let Some(condition) = edge.condition() {
-                    cfg.block_mut(predecessor_index)?
-                        .assume(Boolean::not(condition.clone())?)?;
-                }
-
-                if cfg.successor_indices(predecessor_index)?.is_empty() {
-                    queue.push(predecessor_index);
-                }
-            }
-        }
-
-        Ok(())
     }
 
     fn unwind_loop(
@@ -190,7 +145,9 @@ impl LoopUnwinding {
             all_loop_nodes.insert(loop_header, loop_nodes_unwound);
         }
 
-        self.remove_dead_end_blocks(cfg)?;
+        // Loop unwinding may leave behind blocks which are dead ends,
+        // meaning that no path from the block to the CFG exit exists.
+        cfg.remove_dead_end_blocks()?;
 
         Ok(())
     }

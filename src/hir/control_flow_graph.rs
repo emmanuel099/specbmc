@@ -1,7 +1,7 @@
 //! A `ControlFlowGraph` is a directed `Graph` of `Block` and `Edge`.
 
 use crate::error::Result;
-use crate::expr::Expression;
+use crate::expr::{Boolean, Expression};
 use crate::hir::{Block, Edge};
 use crate::util::RenderGraph;
 use falcon::graph;
@@ -497,6 +497,50 @@ impl ControlFlowGraph {
                 instruction.set_address(address);
             }
         }
+    }
+
+    /// Removes all dead-end blocks.
+    ///
+    /// A block is considered dead-end if no path from the block to the CFG exit exists.
+    ///
+    /// All such blocks are removed and unwinding assumptions are added,
+    /// which make sure that the removed edges aren't taken.
+    pub fn remove_dead_end_blocks(&mut self) -> Result<()> {
+        let exit = self.exit()?;
+
+        let mut queue: Vec<usize> = self
+            .graph
+            .vertices_without_successors()
+            .into_iter()
+            .map(Block::index)
+            .filter(|&block_index| block_index != exit)
+            .collect();
+
+        // Repeatedly remove blocks (!= exit) without successors
+        while let Some(block_index) = queue.pop() {
+            assert!(block_index != exit);
+            assert!(self.successor_indices(block_index)?.is_empty());
+
+            let incoming_edges: Vec<Edge> =
+                self.edges_in(block_index)?.into_iter().cloned().collect();
+            self.remove_block(block_index)?;
+
+            for edge in incoming_edges {
+                let predecessor_index = edge.head();
+
+                // Add unwinding assumption
+                if let Some(condition) = edge.condition() {
+                    self.block_mut(predecessor_index)?
+                        .assume(Boolean::not(condition.clone())?)?;
+                }
+
+                if self.successor_indices(predecessor_index)?.is_empty() {
+                    queue.push(predecessor_index);
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
