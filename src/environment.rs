@@ -86,6 +86,20 @@ impl Default for TransientEncodingStrategy {
     }
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
+pub enum UnwindingGuard {
+    #[serde(rename = "assumption")]
+    Assumption, // add unwinding assumptions
+    #[serde(rename = "assertion")]
+    Assertion, // add unwinding assertions
+}
+
+impl Default for UnwindingGuard {
+    fn default() -> Self {
+        Self::Assumption
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Analysis {
     #[serde(default = "enabled")]
@@ -100,6 +114,8 @@ pub struct Analysis {
     pub transient_encoding_strategy: TransientEncodingStrategy,
     #[serde(default)]
     pub unwind: usize,
+    #[serde(default)]
+    pub unwinding_guard: UnwindingGuard,
 }
 
 impl Default for Analysis {
@@ -111,6 +127,7 @@ impl Default for Analysis {
             predictor_strategy: PredictorStrategy::default(),
             transient_encoding_strategy: TransientEncodingStrategy::default(),
             unwind: 0,
+            unwinding_guard: UnwindingGuard::default(),
         }
     }
 }

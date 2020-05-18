@@ -9,6 +9,11 @@ use std::cmp;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt;
 
+pub enum RemovedEdgeGuard {
+    AssumeEdgeNotTaken,
+    AssertEdgeNotTaken,
+}
+
 /// A directed graph of types `Block` and `Edge`.
 ///
 /// # Entry and Exit
@@ -503,9 +508,9 @@ impl ControlFlowGraph {
     ///
     /// A block is considered dead-end if no path from the block to the CFG exit exists.
     ///
-    /// All such blocks are removed and unwinding assumptions are added,
-    /// which make sure that the removed edges aren't taken.
-    pub fn remove_dead_end_blocks(&mut self) -> Result<()> {
+    /// All such blocks are removed and assumptions/assertions are added which make sure
+    /// that the removed edges aren't taken.
+    pub fn remove_dead_end_blocks(&mut self, removed_edge_guard: RemovedEdgeGuard) -> Result<()> {
         let exit = self.exit()?;
 
         let mut queue: Vec<usize> = self
@@ -528,10 +533,19 @@ impl ControlFlowGraph {
             for edge in incoming_edges {
                 let predecessor_index = edge.head();
 
-                // Add unwinding assumption
+                // Add "negated condition" assumption/assertion for removed conditional edges
+                // to make sure that the conditional edges aren't taken anymore.
                 if let Some(condition) = edge.condition() {
-                    self.block_mut(predecessor_index)?
-                        .assume(Boolean::not(condition.clone())?)?;
+                    let predecessor = self.block_mut(predecessor_index)?;
+                    let negated_condition = Boolean::not(condition.clone())?;
+                    match removed_edge_guard {
+                        RemovedEdgeGuard::AssumeEdgeNotTaken => {
+                            predecessor.assume(negated_condition)?;
+                        }
+                        RemovedEdgeGuard::AssertEdgeNotTaken => {
+                            predecessor.assert(negated_condition)?;
+                        }
+                    }
                 }
 
                 if self.successor_indices(predecessor_index)?.is_empty() {

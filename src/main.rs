@@ -30,6 +30,7 @@ struct Arguments {
     transient_encoding_strategy: Option<environment::TransientEncodingStrategy>,
     function: Option<String>,
     unwind: Option<usize>,
+    unwinding_guard: Option<environment::UnwindingGuard>,
     speculation_window: Option<usize>,
     debug: bool,
     skip_solving: bool,
@@ -118,6 +119,14 @@ fn parse_arguments() -> Arguments {
                 .value_name("k")
                 .help("Unwind loops k times")
                 .validator(is_positive_number)
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("unwinding_guard")
+                .long("unwinding-guard")
+                .value_name("GUARD")
+                .possible_values(&["assumption", "assertion"])
+                .help("Sets the unwinding guard")
                 .takes_value(true),
         )
         .arg(
@@ -217,6 +226,12 @@ fn parse_arguments() -> Arguments {
         _ => panic!("unknown solver"),
     };
 
+    let parse_unwinding_guard = |guard: &str| match guard {
+        "assumption" => UnwindingGuard::Assumption,
+        "assertion" => UnwindingGuard::Assertion,
+        _ => panic!("unknown unwinding guard"),
+    };
+
     Arguments {
         environment_file: matches.value_of("environment_file").map(String::from),
         optimization_level: matches
@@ -234,6 +249,9 @@ fn parse_arguments() -> Arguments {
         unwind: matches
             .value_of("unwind")
             .map(|v| v.parse::<usize>().unwrap()),
+        unwinding_guard: matches
+            .value_of("unwinding_guard")
+            .map(parse_unwinding_guard),
         speculation_window: matches
             .value_of("speculation_window")
             .map(|v| v.parse::<usize>().unwrap()),
@@ -292,6 +310,10 @@ fn build_environment(arguments: &Arguments) -> Result<environment::Environment> 
 
     if let Some(unwind) = arguments.unwind {
         env.analysis.unwind = unwind;
+    }
+
+    if let Some(unwinding_guard) = arguments.unwinding_guard {
+        env.analysis.unwinding_guard = unwinding_guard;
     }
 
     if let Some(speculation_window) = arguments.speculation_window {

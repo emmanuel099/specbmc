@@ -1,27 +1,37 @@
-use crate::environment::Environment;
+use crate::environment::{Environment, UnwindingGuard};
 use crate::error::*;
 use crate::expr::Boolean;
-use crate::hir::{ControlFlowGraph, Program};
+use crate::hir::{ControlFlowGraph, Program, RemovedEdgeGuard};
 use crate::util::Transform;
 use std::collections::{BTreeMap, BTreeSet};
 
 pub struct LoopUnwinding {
     unwinding_bound: usize,
+    unwinding_guard: UnwindingGuard,
 }
 
 impl LoopUnwinding {
     pub fn new() -> Self {
-        Self { unwinding_bound: 0 }
+        Self {
+            unwinding_bound: 0,
+            unwinding_guard: UnwindingGuard::default(),
+        }
     }
 
     pub fn new_from_env(env: &Environment) -> Self {
         Self {
             unwinding_bound: env.analysis.unwind,
+            unwinding_guard: env.analysis.unwinding_guard,
         }
     }
 
     pub fn with_unwinding_bound(&mut self, bound: usize) -> &mut Self {
         self.unwinding_bound = bound;
+        self
+    }
+
+    pub fn with_unwinding_guard(&mut self, guard: UnwindingGuard) -> &mut Self {
+        self.unwinding_guard = guard;
         self
     }
 
@@ -147,7 +157,12 @@ impl LoopUnwinding {
 
         // Loop unwinding may leave behind blocks which are dead ends,
         // meaning that no path from the block to the CFG exit exists.
-        cfg.remove_dead_end_blocks()?;
+        // Remove all of them and add unwinding assumptions/assertions instead.
+        let removed_edge_guard = match self.unwinding_guard {
+            UnwindingGuard::Assumption => RemovedEdgeGuard::AssumeEdgeNotTaken,
+            UnwindingGuard::Assertion => RemovedEdgeGuard::AssertEdgeNotTaken,
+        };
+        cfg.remove_dead_end_blocks(removed_edge_guard)?;
 
         Ok(())
     }
