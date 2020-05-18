@@ -136,18 +136,11 @@ impl graph::Vertex for AnnotatedBlock {
     }
 
     fn dot_fill_color(&self) -> String {
-        if self.executed() {
-            if self.block().is_transient() {
-                "#e1e1e1ff".to_string()
-            } else {
-                "#ffddccff".to_string()
-            }
-        } else {
-            if self.block().is_transient() {
-                "#e1e1e155".to_string()
-            } else {
-                "#ffddcc55".to_string()
-            }
+        match (self.executed(), self.block().is_transient()) {
+            (true, true) => "#e1e1e1ff".to_string(),
+            (true, false) => "#ffddccff".to_string(),
+            (false, true) => "#e1e1e155".to_string(),
+            (false, false) => "#ffddcc55".to_string(),
         }
     }
 

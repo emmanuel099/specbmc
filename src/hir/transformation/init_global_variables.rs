@@ -75,14 +75,10 @@ impl InitGlobalVariables {
         for reg in regs {
             entry_block.assign(reg.clone(), Expression::nondet(reg.sort().clone()))?;
 
-            if self.registers_default_low {
-                if !self.high_registers.contains(reg.name()) {
-                    entry_block.indistinguishable(vec![reg.clone().into()]);
-                }
-            } else {
-                if self.low_registers.contains(reg.name()) {
-                    entry_block.indistinguishable(vec![reg.clone().into()]);
-                }
+            if self.low_registers.contains(reg.name())
+                || (self.registers_default_low && !self.high_registers.contains(reg.name()))
+            {
+                entry_block.indistinguishable(vec![reg.clone().into()]);
             }
         }
 

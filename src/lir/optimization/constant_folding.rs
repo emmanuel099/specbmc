@@ -110,12 +110,8 @@ fn evaluate_boolean(op: &Boolean, values: &[bool]) -> Option<Expression> {
     match (op, values) {
         (Not, [v]) => Some(Boolean::constant(!v)),
         (Imply, [a, b]) => Some(Boolean::constant(!a || *b)),
-        (And, values) => Some(Boolean::constant(
-            values.iter().fold(true, |res, v| res && *v),
-        )),
-        (Or, values) => Some(Boolean::constant(
-            values.iter().fold(false, |res, v| res || *v),
-        )),
+        (And, values) => Some(Boolean::constant(values.iter().all(|v| *v))),
+        (Or, values) => Some(Boolean::constant(values.iter().any(|v| *v))),
         (Xor, [a, b]) => Some(Boolean::constant(a ^ b)),
         _ => None,
     }

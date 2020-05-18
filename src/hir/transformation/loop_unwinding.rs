@@ -241,8 +241,7 @@ mod tests {
             let block0_index = add_block_with_id(&mut cfg, "c0");
             let block1_index = add_block_with_id(&mut cfg, "c1");
 
-            cfg.conditional_edge(block0_index, block0_index, l.clone())
-                .unwrap(); // loop
+            cfg.conditional_edge(block0_index, block0_index, l).unwrap(); // loop
             cfg.conditional_edge(block0_index, block1_index, not_l.clone())
                 .unwrap();
 
@@ -253,7 +252,7 @@ mod tests {
         };
 
         // When: Unwind with k=0
-        let mut unwound_cfg = given_cfg.clone();
+        let mut unwound_cfg = given_cfg;
         LoopUnwinding::new()
             .with_unwinding_bound(0)
             .unwind_cfg(&mut unwound_cfg)
@@ -266,7 +265,7 @@ mod tests {
             let block0_index = add_block_with_id_and_assumption(&mut cfg, "c0", not_l.clone());
             let block1_index = add_block_with_id(&mut cfg, "c1");
 
-            cfg.conditional_edge(block0_index, block1_index, not_l.clone())
+            cfg.conditional_edge(block0_index, block1_index, not_l)
                 .unwrap();
 
             cfg.set_entry(block0_index).unwrap();
@@ -309,7 +308,7 @@ mod tests {
         };
 
         // When: Unwind with k=3
-        let mut unwound_cfg = given_cfg.clone();
+        let mut unwound_cfg = given_cfg;
         LoopUnwinding::new()
             .with_unwinding_bound(3)
             .unwind_cfg(&mut unwound_cfg)
@@ -335,11 +334,10 @@ mod tests {
                 .unwrap();
             cfg.conditional_edge(block4_index, block1_index, not_l.clone())
                 .unwrap();
-            cfg.conditional_edge(block3_index, block2_index, l.clone())
-                .unwrap();
+            cfg.conditional_edge(block3_index, block2_index, l).unwrap();
             cfg.conditional_edge(block3_index, block1_index, not_l.clone())
                 .unwrap();
-            cfg.conditional_edge(block2_index, block1_index, not_l.clone())
+            cfg.conditional_edge(block2_index, block1_index, not_l)
                 .unwrap();
 
             cfg.set_entry(block0_index).unwrap();
@@ -392,7 +390,7 @@ mod tests {
         };
 
         // When: Unwind with k=1
-        let mut unwound_cfg = given_cfg.clone();
+        let mut unwound_cfg = given_cfg;
         LoopUnwinding::new()
             .with_unwinding_bound(1)
             .unwind_cfg(&mut unwound_cfg)
@@ -419,18 +417,16 @@ mod tests {
                 .unwrap();
             cfg.conditional_edge(block2_index, block3_index, not_a.clone())
                 .unwrap();
-            cfg.conditional_edge(block2_index, block5_index, a.clone())
-                .unwrap();
+            cfg.conditional_edge(block2_index, block5_index, a).unwrap();
             cfg.conditional_edge(block4_index, block2_index, not_b.clone())
                 .unwrap();
             cfg.unconditional_edge(block5_index, block6_index).unwrap();
             cfg.conditional_edge(block6_index, block7_index, not_b.clone())
                 .unwrap();
-            cfg.conditional_edge(block6_index, block8_index, b.clone())
+            cfg.conditional_edge(block6_index, block8_index, b).unwrap();
+            cfg.conditional_edge(block7_index, block3_index, not_a)
                 .unwrap();
-            cfg.conditional_edge(block7_index, block3_index, not_a.clone())
-                .unwrap();
-            cfg.conditional_edge(block8_index, block7_index, not_b.clone())
+            cfg.conditional_edge(block8_index, block7_index, not_b)
                 .unwrap();
 
             cfg.set_entry(block0_index).unwrap();
@@ -463,8 +459,7 @@ mod tests {
             let block3_index = add_block_with_id(&mut cfg, "c3");
 
             cfg.unconditional_edge(block1_index, block2_index).unwrap();
-            cfg.conditional_edge(block2_index, block1_index, l.clone())
-                .unwrap(); // loop
+            cfg.conditional_edge(block2_index, block1_index, l).unwrap(); // loop
             cfg.conditional_edge(block2_index, block3_index, not_l.clone())
                 .unwrap();
 
@@ -475,7 +470,7 @@ mod tests {
         };
 
         // When: Unwind with k=0
-        let mut unwound_cfg = given_cfg.clone();
+        let mut unwound_cfg = given_cfg;
         LoopUnwinding::new()
             .with_unwinding_bound(0)
             .unwind_cfg(&mut unwound_cfg)
@@ -490,7 +485,7 @@ mod tests {
             let block3_index = add_block_with_id(&mut cfg, "c3");
 
             cfg.unconditional_edge(block1_index, block2_index).unwrap();
-            cfg.conditional_edge(block2_index, block3_index, not_l.clone())
+            cfg.conditional_edge(block2_index, block3_index, not_l)
                 .unwrap();
 
             cfg.set_entry(block1_index).unwrap();
@@ -535,7 +530,7 @@ mod tests {
         };
 
         // When: Unwind with k=1
-        let mut unwound_cfg = given_cfg.clone();
+        let mut unwound_cfg = given_cfg;
         LoopUnwinding::new()
             .with_unwinding_bound(1)
             .unwind_cfg(&mut unwound_cfg)
@@ -554,10 +549,9 @@ mod tests {
             cfg.unconditional_edge(block1_index, block2_index).unwrap();
             cfg.conditional_edge(block2_index, block3_index, not_l.clone())
                 .unwrap();
-            cfg.conditional_edge(block2_index, block4_index, l.clone())
-                .unwrap();
+            cfg.conditional_edge(block2_index, block4_index, l).unwrap();
             cfg.unconditional_edge(block4_index, block5_index).unwrap();
-            cfg.conditional_edge(block5_index, block3_index, not_l.clone())
+            cfg.conditional_edge(block5_index, block3_index, not_l)
                 .unwrap();
 
             cfg.set_entry(block1_index).unwrap();
@@ -589,8 +583,7 @@ mod tests {
             let block2_index = add_block_with_id(&mut cfg, "c2");
             let block3_index = add_block_with_id(&mut cfg, "c3");
 
-            cfg.conditional_edge(block1_index, block2_index, l.clone())
-                .unwrap();
+            cfg.conditional_edge(block1_index, block2_index, l).unwrap();
             cfg.conditional_edge(block1_index, block3_index, not_l.clone())
                 .unwrap();
             cfg.unconditional_edge(block2_index, block1_index).unwrap(); // loop
@@ -602,7 +595,7 @@ mod tests {
         };
 
         // When: Unwind with k=0
-        let mut unwound_cfg = given_cfg.clone();
+        let mut unwound_cfg = given_cfg;
         LoopUnwinding::new()
             .with_unwinding_bound(0)
             .unwind_cfg(&mut unwound_cfg)
@@ -619,7 +612,7 @@ mod tests {
             // block2 is dead end -> remove
             cfg.remove_block(block2_index).unwrap();
 
-            cfg.conditional_edge(block1_index, block3_index, not_l.clone())
+            cfg.conditional_edge(block1_index, block3_index, not_l)
                 .unwrap();
 
             cfg.set_entry(block1_index).unwrap();
@@ -664,7 +657,7 @@ mod tests {
         };
 
         // When: Unwind with k=1
-        let mut unwound_cfg = given_cfg.clone();
+        let mut unwound_cfg = given_cfg;
         LoopUnwinding::new()
             .with_unwinding_bound(1)
             .unwind_cfg(&mut unwound_cfg)
@@ -679,12 +672,11 @@ mod tests {
             let block3_index = add_block_with_id(&mut cfg, "c3");
             let block4_index = add_block_with_id_and_assumption(&mut cfg, "c1", not_l.clone());
 
-            cfg.conditional_edge(block1_index, block2_index, l.clone())
-                .unwrap();
+            cfg.conditional_edge(block1_index, block2_index, l).unwrap();
             cfg.conditional_edge(block1_index, block3_index, not_l.clone())
                 .unwrap();
             cfg.unconditional_edge(block2_index, block4_index).unwrap();
-            cfg.conditional_edge(block4_index, block3_index, not_l.clone())
+            cfg.conditional_edge(block4_index, block3_index, not_l)
                 .unwrap();
 
             cfg.set_entry(block1_index).unwrap();
@@ -718,8 +710,7 @@ mod tests {
             let block4_index = add_block_with_id(&mut cfg, "c4");
 
             cfg.unconditional_edge(block1_index, block2_index).unwrap();
-            cfg.conditional_edge(block2_index, block3_index, l.clone())
-                .unwrap();
+            cfg.conditional_edge(block2_index, block3_index, l).unwrap();
             cfg.conditional_edge(block2_index, block4_index, not_l.clone())
                 .unwrap();
             cfg.unconditional_edge(block3_index, block1_index).unwrap(); // loop
@@ -731,7 +722,7 @@ mod tests {
         };
 
         // When: Unwind with k=0
-        let mut unwound_cfg = given_cfg.clone();
+        let mut unwound_cfg = given_cfg;
         LoopUnwinding::new()
             .with_unwinding_bound(0)
             .unwind_cfg(&mut unwound_cfg)
@@ -750,7 +741,7 @@ mod tests {
             cfg.remove_block(block3_index).unwrap();
 
             cfg.unconditional_edge(block1_index, block2_index).unwrap();
-            cfg.conditional_edge(block2_index, block4_index, not_l.clone())
+            cfg.conditional_edge(block2_index, block4_index, not_l)
                 .unwrap();
 
             cfg.set_entry(block1_index).unwrap();
@@ -797,7 +788,7 @@ mod tests {
         };
 
         // When: Unwind with k=1
-        let mut unwound_cfg = given_cfg.clone();
+        let mut unwound_cfg = given_cfg;
         LoopUnwinding::new()
             .with_unwinding_bound(1)
             .unwind_cfg(&mut unwound_cfg)
@@ -817,11 +808,10 @@ mod tests {
             cfg.unconditional_edge(block1_index, block2_index).unwrap();
             cfg.conditional_edge(block2_index, block4_index, not_l.clone())
                 .unwrap();
-            cfg.conditional_edge(block2_index, block3_index, l.clone())
-                .unwrap();
+            cfg.conditional_edge(block2_index, block3_index, l).unwrap();
             cfg.unconditional_edge(block3_index, block5_index).unwrap();
             cfg.unconditional_edge(block5_index, block6_index).unwrap();
-            cfg.conditional_edge(block6_index, block4_index, not_l.clone())
+            cfg.conditional_edge(block6_index, block4_index, not_l)
                 .unwrap();
 
             cfg.set_entry(block1_index).unwrap();

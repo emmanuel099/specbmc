@@ -7,7 +7,7 @@ use falcon::loader::{Elf, Loader};
 use std::path::Path;
 
 #[rustfmt::skip]
-const SPECULATION_BARRIERS: &'static [&'static str] = &[
+const SPECULATION_BARRIERS: &[&str] = &[
     // Intel
     "mfence", "lfence", "cpuid",
 ];
