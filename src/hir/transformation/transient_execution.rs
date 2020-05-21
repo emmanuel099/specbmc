@@ -512,14 +512,7 @@ fn transient_barrier(cfg: &mut ControlFlowGraph, inst_ref: &InstructionRef) -> R
     Ok(())
 }
 
-/// Add additional resolve edges to the transient control flow graph.
-/// This makes sure that the transient execution can stop/resolve at any point in time.
-///
-/// Instead of adding resolve edges for each single instruction,
-/// we limit them to "effect-ful" instructions only.
-fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
-    let resolve_block_index = cfg.exit().unwrap();
-
+fn split_blocks_at_effectful_instructions(cfg: &mut ControlFlowGraph) -> Result<()> {
     // effect-ful instructions for each block
     let effectful_instructions: Vec<(usize, Vec<usize>)> = cfg
         .blocks()
@@ -541,15 +534,42 @@ fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
     for (block_index, instruction_indices) in effectful_instructions {
         for inst_index in instruction_indices.iter().rev() {
             let tail_index = cfg.split_block_at(block_index, *inst_index)?;
-
-            let zero = BitVector::constant_u64(0, SPECULATION_WINDOW_SIZE);
-
-            let continue_execution = BitVector::sgt(spec_win().into(), zero.clone())?;
-            cfg.conditional_edge(block_index, tail_index, continue_execution)?;
-
-            let resolve = BitVector::sle(spec_win().into(), zero)?;
-            cfg.conditional_edge(block_index, resolve_block_index, resolve)?;
+            cfg.unconditional_edge(block_index, tail_index)?;
         }
+    }
+
+    Ok(())
+}
+
+/// Add additional resolve edges to the transient control flow graph.
+/// This makes sure that the transient execution can stop/resolve at any point in time.
+///
+/// Instead of adding resolve edges for each single instruction,
+/// we limit them to "effect-ful" instructions only.
+fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
+    let resolve_block_index = cfg.exit().unwrap();
+
+    split_blocks_at_effectful_instructions(cfg)?;
+
+    let block_indices: Vec<usize> = cfg
+        .blocks()
+        .iter()
+        .filter(|block| {
+            block.index() != resolve_block_index && block.instruction_count_by_address() > 0
+        })
+        .map(|block| block.index())
+        .collect();
+
+    for block_index in block_indices {
+        let tail_index = cfg.split_block_at_end(block_index)?;
+
+        let zero = BitVector::constant_u64(0, SPECULATION_WINDOW_SIZE);
+
+        let continue_execution = BitVector::sgt(spec_win().into(), zero.clone())?;
+        cfg.conditional_edge(block_index, tail_index, continue_execution)?;
+
+        let resolve = BitVector::sle(spec_win().into(), zero)?;
+        cfg.conditional_edge(block_index, resolve_block_index, resolve)?;
     }
 
     Ok(())

@@ -234,6 +234,24 @@ impl ControlFlowGraph {
         Ok(tail_block_index)
     }
 
+    /// Splits the block with the given index before the first instruction,
+    /// meaning that the resulting top block will be empty.
+    ///
+    /// Doesn't add a new edge between the cut-up blocks!
+    pub fn split_block_at_begin(&mut self, block_index: usize) -> Result<usize> {
+        self.split_block_at(block_index, 0)
+    }
+
+    /// Splits the block with the given index after the last instruction,
+    /// meaning that the resulting tail block will be empty.
+    ///
+    /// Outgoing edges will be rewired to the new tail block.
+    /// Doesn't add a new edge between the cut-up blocks!
+    pub fn split_block_at_end(&mut self, block_index: usize) -> Result<usize> {
+        let instruction_count = self.block(block_index)?.instruction_count();
+        self.split_block_at(block_index, instruction_count)
+    }
+
     /// Get an `Edge` by its head and tail `Block` indices.
     pub fn edge(&self, head: usize, tail: usize) -> Result<&Edge> {
         Ok(self.graph.edge(head, tail)?)
