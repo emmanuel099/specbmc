@@ -178,7 +178,9 @@ impl Transform<Program> for LoopUnwinding {
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {
-        self.unwind_cfg(program.control_flow_graph_mut())
+        let cfg = program.control_flow_graph_mut();
+        self.unwind_cfg(cfg)?;
+        cfg.simplify()
     }
 }
 
