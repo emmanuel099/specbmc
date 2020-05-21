@@ -473,7 +473,10 @@ impl ControlFlowGraph {
 
             // Rewire predecessor's outgoing edges from self to successor
             for predecessor in predecessors {
-                self.rewire_edge(predecessor, block_index, predecessor, successor)?;
+                // Ignore error because an edge may already exist
+                self.rewire_edge(predecessor, block_index, predecessor, successor)
+                    .ok();
+
                 self.edge_mut(predecessor, successor)?
                     .labels_mut()
                     .merge(&outgoing_edge_labels);
