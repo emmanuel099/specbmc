@@ -561,10 +561,10 @@ impl ControlFlowGraph {
                     let negated_condition = Boolean::not(condition.clone())?;
                     match removed_edge_guard {
                         RemovedEdgeGuard::AssumeEdgeNotTaken => {
-                            predecessor.assume(negated_condition)?;
+                            predecessor.assume(negated_condition)?.labels_mut().pseudo();
                         }
                         RemovedEdgeGuard::AssertEdgeNotTaken => {
-                            predecessor.assert(negated_condition)?;
+                            predecessor.assert(negated_condition)?.labels_mut().pseudo();
                         }
                     }
                 }

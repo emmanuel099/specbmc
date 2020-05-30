@@ -81,7 +81,7 @@ impl Transform<Program> for Observations {
             .iter()
             .map(|var| var.clone().into())
             .collect();
-        exit_block.observable(exprs);
+        exit_block.observable(exprs).labels_mut().pseudo();
 
         // TODO add more obs if defined so
 

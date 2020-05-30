@@ -330,10 +330,16 @@ fn add_transient_execution_start(
             Predictor::variable().into(),
             BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
         )?;
-        transient_start.assign(spec_win(), spec_window)?;
+        transient_start
+            .assign(spec_win(), spec_window)?
+            .labels_mut()
+            .pseudo();
 
         let zero = BitVector::constant_u64(0, SPECULATION_WINDOW_SIZE);
-        transient_start.assume(BitVector::sgt(spec_win().into(), zero.clone())?)?;
+        transient_start
+            .assume(BitVector::sgt(spec_win().into(), zero.clone())?)?
+            .labels_mut()
+            .pseudo();
 
         transient_start.index()
     };
@@ -432,7 +438,10 @@ fn transient_conditional_branch(
                             Predictor::variable().into(),
                             BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
                         )?;
-                        cfg.block_mut(speculate_index)?.assume(taken.clone())?;
+                        cfg.block_mut(speculate_index)?
+                            .assume(taken.clone())?
+                            .labels_mut()
+                            .pseudo();
                         cfg.conditional_edge(speculate_index, edge.tail(), taken)?
                             .labels_mut()
                             .taken();
@@ -441,7 +450,10 @@ fn transient_conditional_branch(
                             Predictor::variable().into(),
                             BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
                         )?)?;
-                        cfg.block_mut(speculate_index)?.assume(not_taken.clone())?;
+                        cfg.block_mut(speculate_index)?
+                            .assume(not_taken.clone())?
+                            .labels_mut()
+                            .pseudo();
                         cfg.conditional_edge(speculate_index, edge.tail(), not_taken)?;
                     }
                 }
@@ -481,13 +493,19 @@ fn transient_conditional_branch(
                     // In this case we add an assumption that the condition of the edge holds.
                     if edge.labels().is_taken() {
                         let taken = Boolean::not(edge.condition().unwrap().clone())?;
-                        cfg.block_mut(speculate_index)?.assume(taken.clone())?;
+                        cfg.block_mut(speculate_index)?
+                            .assume(taken.clone())?
+                            .labels_mut()
+                            .pseudo();
                         cfg.conditional_edge(speculate_index, edge.tail(), taken)?
                             .labels_mut()
                             .taken();
                     } else {
                         let not_taken = Boolean::not(edge.condition().unwrap().clone())?;
-                        cfg.block_mut(speculate_index)?.assume(not_taken.clone())?;
+                        cfg.block_mut(speculate_index)?
+                            .assume(not_taken.clone())?
+                            .labels_mut()
+                            .pseudo();
                         cfg.conditional_edge(speculate_index, edge.tail(), not_taken)?;
                     }
                 }
@@ -610,13 +628,16 @@ fn append_spec_win_decrease_to_all_transient_blocks(cfg: &mut ControlFlowGraph) 
             continue; // Avoid adding useless decrease by zero instructions
         }
 
-        block.assign(
-            spec_win(),
-            BitVector::sub(
-                spec_win().into(),
-                BitVector::constant_u64(count.try_into().unwrap(), SPECULATION_WINDOW_SIZE),
-            )?,
-        )?;
+        block
+            .assign(
+                spec_win(),
+                BitVector::sub(
+                    spec_win().into(),
+                    BitVector::constant_u64(count.try_into().unwrap(), SPECULATION_WINDOW_SIZE),
+                )?,
+            )?
+            .labels_mut()
+            .pseudo();
     }
 
     Ok(())

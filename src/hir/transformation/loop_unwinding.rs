@@ -54,7 +54,9 @@ impl LoopUnwinding {
                 let edge = cfg.remove_edge(back_node, loop_header)?;
                 if let Some(condition) = edge.condition() {
                     cfg.block_mut(back_node)?
-                        .assume(Boolean::not(condition.clone())?)?;
+                        .assume(Boolean::not(condition.clone())?)?
+                        .labels_mut()
+                        .pseudo();
                 }
             }
             return Ok(loop_nodes.clone());
@@ -77,7 +79,9 @@ impl LoopUnwinding {
                 // Add unwinding assumption
                 if let Some(condition) = edge.condition() {
                     cfg.block_mut(back_node)?
-                        .assume(Boolean::not(condition.clone())?)?;
+                        .assume(Boolean::not(condition.clone())?)?
+                        .labels_mut()
+                        .pseudo();
                 }
             }
 
@@ -197,7 +201,9 @@ mod tests {
         let block = cfg.new_block().unwrap();
         block
             .assign(Variable::new(id, Sort::boolean()), Boolean::constant(true))
-            .unwrap();
+            .unwrap()
+            .labels_mut()
+            .pseudo();
         block.index()
     }
 
@@ -209,8 +215,10 @@ mod tests {
         let block = cfg.new_block().unwrap();
         block
             .assign(Variable::new(id, Sort::boolean()), Boolean::constant(true))
-            .unwrap();
-        block.assume(assumption).unwrap();
+            .unwrap()
+            .labels_mut()
+            .pseudo();
+        block.assume(assumption).unwrap().labels_mut().pseudo();
         block.index()
     }
 

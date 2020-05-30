@@ -73,12 +73,18 @@ impl InitGlobalVariables {
     /// Havoc registers and make low-registers indistinguishable
     fn init_registers(&self, regs: &HashSet<Variable>, entry_block: &mut Block) -> Result<()> {
         for reg in regs {
-            entry_block.assign(reg.clone(), Expression::nondet(reg.sort().clone()))?;
+            entry_block
+                .assign(reg.clone(), Expression::nondet(reg.sort().clone()))?
+                .labels_mut()
+                .pseudo();
 
             if self.low_registers.contains(reg.name())
                 || (self.registers_default_low && !self.high_registers.contains(reg.name()))
             {
-                entry_block.indistinguishable(vec![reg.clone().into()]);
+                entry_block
+                    .indistinguishable(vec![reg.clone().into()])
+                    .labels_mut()
+                    .pseudo();
             }
         }
 
@@ -87,18 +93,24 @@ impl InitGlobalVariables {
 
     /// Havoc memory and make low-addresses indistinguishable
     fn init_memory(&self, entry_block: &mut Block) -> Result<()> {
-        entry_block.assign(Memory::variable(), Expression::nondet(Sort::memory()))?;
+        entry_block
+            .assign(Memory::variable(), Expression::nondet(Sort::memory()))?
+            .labels_mut()
+            .pseudo();
 
         if self.memory_default_low {
             println!("low addresses {:?}", self.high_memory_addresses); // TODO
             unimplemented!();
         } else {
             for address in &self.low_memory_addresses {
-                entry_block.indistinguishable(vec![Memory::load(
-                    8,
-                    Memory::variable().into(),
-                    BitVector::constant_u64(*address, WORD_SIZE),
-                )?]);
+                entry_block
+                    .indistinguishable(vec![Memory::load(
+                        8,
+                        Memory::variable().into(),
+                        BitVector::constant_u64(*address, WORD_SIZE),
+                    )?])
+                    .labels_mut()
+                    .pseudo();
             }
         }
 
@@ -106,32 +118,56 @@ impl InitGlobalVariables {
     }
 
     fn init_predictor(&self, entry_block: &mut Block) -> Result<()> {
-        entry_block.assign(Predictor::variable(), Expression::nondet(Sort::predictor()))?;
-        entry_block.indistinguishable(vec![Predictor::variable().into()]);
+        entry_block
+            .assign(Predictor::variable(), Expression::nondet(Sort::predictor()))?
+            .labels_mut()
+            .pseudo();
+        entry_block
+            .indistinguishable(vec![Predictor::variable().into()])
+            .labels_mut()
+            .pseudo();
 
         Ok(())
     }
 
     fn init_microarchitectual_components(&self, entry_block: &mut Block) -> Result<()> {
         if self.cache_available {
-            entry_block.assign(Cache::variable(), Expression::nondet(Sort::cache()))?;
-            entry_block.indistinguishable(vec![Cache::variable().into()]);
+            entry_block
+                .assign(Cache::variable(), Expression::nondet(Sort::cache()))?
+                .labels_mut()
+                .pseudo();
+            entry_block
+                .indistinguishable(vec![Cache::variable().into()])
+                .labels_mut()
+                .pseudo();
         }
 
         if self.btb_available {
-            entry_block.assign(
-                BranchTargetBuffer::variable(),
-                Expression::nondet(Sort::branch_target_buffer()),
-            )?;
-            entry_block.indistinguishable(vec![BranchTargetBuffer::variable().into()]);
+            entry_block
+                .assign(
+                    BranchTargetBuffer::variable(),
+                    Expression::nondet(Sort::branch_target_buffer()),
+                )?
+                .labels_mut()
+                .pseudo();
+            entry_block
+                .indistinguishable(vec![BranchTargetBuffer::variable().into()])
+                .labels_mut()
+                .pseudo();
         }
 
         if self.pht_available {
-            entry_block.assign(
-                PatternHistoryTable::variable(),
-                Expression::nondet(Sort::pattern_history_table()),
-            )?;
-            entry_block.indistinguishable(vec![PatternHistoryTable::variable().into()]);
+            entry_block
+                .assign(
+                    PatternHistoryTable::variable(),
+                    Expression::nondet(Sort::pattern_history_table()),
+                )?
+                .labels_mut()
+                .pseudo();
+            entry_block
+                .indistinguishable(vec![PatternHistoryTable::variable().into()])
+                .labels_mut()
+                .pseudo();
         }
 
         Ok(())

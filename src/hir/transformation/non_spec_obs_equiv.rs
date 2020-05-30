@@ -68,13 +68,22 @@ impl NonSpecObsEquivalence {
         // Initially low-equivalent, therefore assign same content in entry
         let entry_block = cfg.entry_block_mut()?;
         if self.cache_available {
-            entry_block.assign(cache_nonspec(), Cache::variable().into())?;
+            entry_block
+                .assign(cache_nonspec(), Cache::variable().into())?
+                .labels_mut()
+                .pseudo();
         }
         if self.btb_available {
-            entry_block.assign(btb_nonspec(), BranchTargetBuffer::variable().into())?;
+            entry_block
+                .assign(btb_nonspec(), BranchTargetBuffer::variable().into())?
+                .labels_mut()
+                .pseudo();
         }
         if self.pht_available {
-            entry_block.assign(pht_nonspec(), PatternHistoryTable::variable().into())?;
+            entry_block
+                .assign(pht_nonspec(), PatternHistoryTable::variable().into())?
+                .labels_mut()
+                .pseudo();
         }
 
         let encoder = InstructionEffectEncoder::new(cache_nonspec(), btb_nonspec(), pht_nonspec());
