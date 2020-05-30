@@ -3,7 +3,69 @@
 use crate::error::Result;
 use crate::expr::{Expression, Variable};
 use crate::hir::{Effect, Operation};
+use std::collections::BTreeSet;
 use std::fmt;
+
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+pub enum InstructionLabel {
+    Pseudo, // Instruction isn't part of the assembly
+}
+
+impl fmt::Display for InstructionLabel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Pseudo => write!(f, "pseudo"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub struct InstructionLabels {
+    labels: BTreeSet<InstructionLabel>,
+}
+
+impl InstructionLabels {
+    pub fn pseudo(&mut self) -> &mut Self {
+        self.labels.insert(InstructionLabel::Pseudo);
+        self
+    }
+
+    pub fn is_pseudo(&self) -> bool {
+        self.labels.contains(&InstructionLabel::Pseudo)
+    }
+
+    pub fn merge(&mut self, other: &InstructionLabels) {
+        other.labels.iter().for_each(|&label| {
+            self.labels.insert(label);
+        });
+    }
+}
+
+impl Default for InstructionLabels {
+    fn default() -> Self {
+        Self {
+            labels: BTreeSet::default(),
+        }
+    }
+}
+
+impl fmt::Display for InstructionLabels {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.labels.is_empty() {
+            return Ok(());
+        }
+        write!(f, "[")?;
+        let mut is_first = true;
+        for label in &self.labels {
+            if !is_first {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", label)?;
+            is_first = false;
+        }
+        write!(f, "]")
+    }
+}
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Instruction {
@@ -11,6 +73,7 @@ pub struct Instruction {
     operations: Vec<Operation>,
     effects: Vec<Effect>,
     address: Option<u64>,
+    labels: InstructionLabels,
 }
 
 impl Instruction {
@@ -20,6 +83,7 @@ impl Instruction {
             operations: vec![operation],
             effects: vec![],
             address: None,
+            labels: InstructionLabels::default(),
         }
     }
 
@@ -116,6 +180,16 @@ impl Instruction {
     /// Returns whether this `Instruction` has effects or not.
     pub fn has_effects(&self) -> bool {
         !self.effects.is_empty()
+    }
+
+    /// Retrieve the labels of this `Instruction`.
+    pub fn labels(&self) -> &InstructionLabels {
+        &self.labels
+    }
+
+    /// Retrieve a mutable reference to the labels of this `Instruction`.
+    pub fn labels_mut(&mut self) -> &mut InstructionLabels {
+        &mut self.labels
     }
 
     /// Get the optional address for this `Instruction`

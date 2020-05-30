@@ -115,6 +115,14 @@ impl Block {
         self.instructions.len()
     }
 
+    /// Returns the number of real instructions (i.e. instructions not marked as pseudo) in this `Block`.
+    pub fn real_instruction_count(&self) -> usize {
+        self.instructions
+            .iter()
+            .filter(|inst| !inst.labels().is_pseudo())
+            .count()
+    }
+
     /// Returns the number of instructions with distinct addresses in this `Block`.
     /// Meaning that two consecutive instructions with same address are actually counted as one instruction.
     pub fn instruction_count_by_address(&self) -> usize {
