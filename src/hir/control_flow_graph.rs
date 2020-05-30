@@ -184,10 +184,10 @@ impl ControlFlowGraph {
     /// Removes an `Block` by its index.
     pub fn remove_block(&mut self, index: usize) -> Result<Block> {
         if self.entry == Some(index) {
-            return Err("Cannot remove entry block".into());
+            self.entry = None;
         }
         if self.exit == Some(index) {
-            return Err("Cannot remove exit block".into());
+            self.exit = None;
         }
         let block = self.block(index)?.clone();
         self.graph.remove_vertex(index)?;

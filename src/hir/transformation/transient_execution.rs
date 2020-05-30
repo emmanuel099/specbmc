@@ -39,6 +39,7 @@ pub struct TransientExecution {
     spectre_stl: bool,
     predictor_strategy: PredictorStrategy,
     transient_encoding_strategy: TransientEncodingStrategy,
+    speculation_window: usize,
 }
 
 impl TransientExecution {
@@ -48,6 +49,7 @@ impl TransientExecution {
             spectre_stl: false,
             predictor_strategy: PredictorStrategy::default(),
             transient_encoding_strategy: TransientEncodingStrategy::default(),
+            speculation_window: 100,
         }
     }
 
@@ -57,6 +59,7 @@ impl TransientExecution {
             spectre_stl: env.analysis.spectre_stl,
             predictor_strategy: env.analysis.predictor_strategy,
             transient_encoding_strategy: env.analysis.transient_encoding_strategy,
+            speculation_window: env.architecture.speculation_window,
         }
     }
 
@@ -205,8 +208,15 @@ impl TransientExecution {
         let (mut cfg, transient_start_rollback_points) =
             self.build_default_cfg(program.control_flow_graph())?;
 
-        let (transient_cfg, transient_entry_points) =
+        let (mut transient_cfg, transient_entry_points) =
             self.build_transient_cfg(program.control_flow_graph())?;
+
+        // Reduce the size of the transient graph (depth limit by max. speculation window)
+        remove_unreachable_transient_edges(
+            &mut transient_cfg,
+            &transient_entry_points.values().cloned().collect(),
+            self.speculation_window,
+        )?;
 
         // Add single copy
         let block_map = cfg.insert(&transient_cfg)?;
@@ -242,11 +252,20 @@ impl TransientExecution {
             self.build_transient_cfg(program.control_flow_graph())?;
 
         for (inst_ref, (start, rollback)) in transient_start_rollback_points {
-            let block_map = cfg.insert(&transient_cfg)?;
-            // TODO reduce the size of the inserted graph (depth limit)
+            let transient_entry_point = transient_entry_points.get(&inst_ref).cloned().unwrap();
 
-            let transient_entry = block_map[transient_entry_points.get(&inst_ref).unwrap()];
-            let transient_resolve = block_map[&transient_cfg.exit().unwrap()];
+            // Reduce the size of the transient graph (depth limit by max. speculation window)
+            let mut reduced_transient_cfg = transient_cfg.clone();
+            remove_unreachable_transient_edges(
+                &mut reduced_transient_cfg,
+                &vec![transient_entry_point],
+                self.speculation_window,
+            )?;
+
+            let block_map = cfg.insert(&reduced_transient_cfg)?;
+
+            let transient_entry = block_map[&transient_entry_point];
+            let transient_resolve = block_map[&reduced_transient_cfg.exit().unwrap()];
 
             cfg.unconditional_edge(start, transient_entry).unwrap();
             cfg.unconditional_edge(transient_resolve, rollback)
@@ -312,6 +331,9 @@ fn add_transient_execution_start(
             BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
         )?;
         transient_start.assign(spec_win(), spec_window)?;
+
+        let zero = BitVector::constant_u64(0, SPECULATION_WINDOW_SIZE);
+        transient_start.assume(BitVector::sgt(spec_win().into(), zero.clone())?)?;
 
         transient_start.index()
     };
@@ -594,6 +616,79 @@ fn append_spec_win_decrease_to_all_transient_blocks(cfg: &mut ControlFlowGraph) 
                 BitVector::constant_u64(count.try_into().unwrap(), SPECULATION_WINDOW_SIZE),
             )?,
         )?;
+    }
+
+    Ok(())
+}
+
+/// Removes all statically unreachable transient edges.
+///
+/// As the length of the speculative execution is limited by the speculation window,
+/// we can simply compute the maximum remaining speculation window for each transient block
+/// and remove all transient edges which can never be taken (i.e. remaining window is zero).
+///
+/// The algorithm works as follows:
+///   1. The remaining speculation window of all transient entry points are set to the initial speculation window.
+///   2. The remaining speculation window of each transient block is maximized (i.e. maximize remaining_spec_window_in).
+///   3. The set of transient blocks `S` which have an empty speculation window after they are executed
+///      (i.e. remaining_spec_window_out = 0) is determined.
+///   4. For each transient block in the set `S` all outgoing edges, expect the resolve edge, are removed.
+///
+/// This function may yield unreachable blocks which can be removed by simplifying the CFG.
+fn remove_unreachable_transient_edges(
+    cfg: &mut ControlFlowGraph,
+    transient_entries: &Vec<usize>,
+    init_spec_window: usize,
+) -> Result<()> {
+    let resolve_block_index = cfg.exit().unwrap();
+
+    let mut remaining_spec_window_in: BTreeMap<usize, usize> = BTreeMap::new();
+    let mut remaining_spec_window_out: BTreeMap<usize, usize> = BTreeMap::new();
+
+    // Initialize remaining speculation window for transient entry points
+    let mut queue = transient_entries.clone();
+    transient_entries.iter().for_each(|&index| {
+        remaining_spec_window_in.insert(index, init_spec_window);
+    });
+
+    // Maximize remaining speculation window
+    while let Some(index) = queue.pop() {
+        let block = cfg.block(index)?;
+        let inst_count = block.instruction_count_by_address();
+
+        let spec_win_in = remaining_spec_window_in.get(&index).cloned().unwrap();
+        let spec_win_out = spec_win_in.checked_sub(inst_count).unwrap_or(0);
+        remaining_spec_window_out.insert(index, spec_win_out);
+
+        for successor in cfg.successor_indices(index)? {
+            let succ_spec_win_in = remaining_spec_window_in.entry(successor).or_default();
+            if spec_win_out > *succ_spec_win_in {
+                *succ_spec_win_in = spec_win_out;
+                queue.push(successor);
+            }
+        }
+    }
+
+    let transient_blocks_rollback: Vec<usize> = cfg
+        .blocks()
+        .iter()
+        .filter(|block| {
+            let remaining_spec_window = remaining_spec_window_out
+                .get(&block.index())
+                .cloned()
+                .unwrap_or_default();
+            remaining_spec_window == 0
+        })
+        .map(|block| block.index())
+        .collect();
+
+    for index in transient_blocks_rollback {
+        for successor in cfg.successor_indices(index)? {
+            if successor == resolve_block_index {
+                continue;
+            }
+            cfg.remove_edge(index, successor)?;
+        }
     }
 
     Ok(())
