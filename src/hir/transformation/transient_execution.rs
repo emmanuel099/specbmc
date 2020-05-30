@@ -577,7 +577,8 @@ fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
         .blocks()
         .iter()
         .filter(|block| {
-            block.index() != resolve_block_index && block.instruction_count_by_address() > 0
+            block.index() != resolve_block_index
+                && block.instruction_count_ignoring_pseudo_instructions() > 0
         })
         .map(|block| block.index())
         .collect();
@@ -604,7 +605,7 @@ fn append_spec_win_decrease_to_all_transient_blocks(cfg: &mut ControlFlowGraph) 
             continue;
         }
 
-        let count = block.instruction_count_by_address();
+        let count = block.instruction_count_ignoring_pseudo_instructions();
         if count == 0 {
             continue; // Avoid adding useless decrease by zero instructions
         }
@@ -654,7 +655,7 @@ fn remove_unreachable_transient_edges(
     // Maximize remaining speculation window
     while let Some(index) = queue.pop() {
         let block = cfg.block(index)?;
-        let inst_count = block.instruction_count_by_address();
+        let inst_count = block.instruction_count_ignoring_pseudo_instructions();
 
         let spec_win_in = remaining_spec_window_in.get(&index).cloned().unwrap();
         let spec_win_out = spec_win_in.checked_sub(inst_count).unwrap_or(0);

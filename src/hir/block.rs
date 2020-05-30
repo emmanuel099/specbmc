@@ -116,23 +116,11 @@ impl Block {
     }
 
     /// Returns the number of real instructions (i.e. instructions not marked as pseudo) in this `Block`.
-    pub fn real_instruction_count(&self) -> usize {
+    pub fn instruction_count_ignoring_pseudo_instructions(&self) -> usize {
         self.instructions
             .iter()
             .filter(|inst| !inst.labels().is_pseudo())
             .count()
-    }
-
-    /// Returns the number of instructions with distinct addresses in this `Block`.
-    /// Meaning that two consecutive instructions with same address are actually counted as one instruction.
-    pub fn instruction_count_by_address(&self) -> usize {
-        let mut addresses: Vec<u64> = self
-            .instructions
-            .iter()
-            .map(|inst| inst.address().unwrap_or_default())
-            .collect();
-        addresses.dedup();
-        addresses.len()
     }
 
     /// Returns phi nodes of this `Block`

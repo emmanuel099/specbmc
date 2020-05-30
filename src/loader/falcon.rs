@@ -146,7 +146,24 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
         }
     }
 
+    label_pseudo_instructions(&mut block);
+
     Ok(block)
+}
+
+/// If multiple consecutive instructions have the same address, then all but the first
+/// instruction will be labeled as pseudo instructions.
+///
+/// This is necessary because Falcon may add multiple IL instructions for a single assembly instruction,
+/// e.g. to encode the status register modifications.
+fn label_pseudo_instructions(block: &mut hir::Block) {
+    let mut last_address: Option<u64> = None;
+    for inst in block.instructions_mut() {
+        if last_address == inst.address() {
+            inst.labels_mut().pseudo();
+        }
+        last_address = inst.address();
+    }
 }
 
 fn maybe_cast(expr: expr::Expression, target_sort: &expr::Sort) -> Result<expr::Expression> {
