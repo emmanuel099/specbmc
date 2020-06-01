@@ -3,7 +3,7 @@ use crate::environment::{
 };
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Expression, Predictor, Sort, Variable};
-use crate::hir::{ControlFlowGraph, Edge, Operation, Program};
+use crate::hir::{ControlFlowGraph, Edge, Operation, Program, RemovedEdgeGuard};
 use crate::util::Transform;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
@@ -194,6 +194,7 @@ impl TransientExecution {
         }
 
         add_transient_resolve_edges(&mut transient_cfg)?;
+        append_spec_win_decrease_to_all_blocks(&mut transient_cfg)?;
 
         // Mark all blocks as transient
         for block in transient_cfg.blocks_mut() {
@@ -294,8 +295,6 @@ impl Transform<Program> for TransientExecution {
         };
 
         cfg.simplify()?;
-
-        append_spec_win_decrease_to_all_transient_blocks(&mut cfg)?;
 
         program.set_control_flow_graph(cfg);
 
@@ -617,12 +616,8 @@ fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
 }
 
 /// Appends "_spec_win := _spec_win - |instructions in BB|" to the end of each transient basic block.
-fn append_spec_win_decrease_to_all_transient_blocks(cfg: &mut ControlFlowGraph) -> Result<()> {
+fn append_spec_win_decrease_to_all_blocks(cfg: &mut ControlFlowGraph) -> Result<()> {
     for block in cfg.blocks_mut() {
-        if !block.is_transient() {
-            continue;
-        }
-
         let count = block.instruction_count_ignoring_pseudo_instructions();
         if count == 0 {
             continue; // Avoid adding useless decrease by zero instructions
@@ -709,7 +704,7 @@ fn remove_unreachable_transient_edges(
             if successor == resolve_block_index {
                 continue;
             }
-            cfg.remove_edge(index, successor)?;
+            cfg.remove_edge(index, successor, RemovedEdgeGuard::AssumeEdgeNotTaken)?;
         }
     }
 

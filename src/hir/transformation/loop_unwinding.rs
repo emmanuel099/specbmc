@@ -1,6 +1,5 @@
 use crate::environment::{Environment, UnwindingGuard};
 use crate::error::*;
-use crate::expr::Boolean;
 use crate::hir::{ControlFlowGraph, Program, RemovedEdgeGuard};
 use crate::util::Transform;
 use std::collections::{BTreeMap, BTreeSet};
@@ -51,13 +50,7 @@ impl LoopUnwinding {
         if self.unwinding_bound == 0 {
             // No unwinding, only delete back edges to get rid of the loop and we are done
             for &back_node in &back_nodes {
-                let edge = cfg.remove_edge(back_node, loop_header)?;
-                if let Some(condition) = edge.condition() {
-                    cfg.block_mut(back_node)?
-                        .assume(Boolean::not(condition.clone())?)?
-                        .labels_mut()
-                        .pseudo();
-                }
+                cfg.remove_edge(back_node, loop_header, self.removed_edge_guard())?;
             }
             return Ok(loop_nodes.clone());
         }
@@ -74,15 +67,7 @@ impl LoopUnwinding {
             // Remove back edges
             for back_node in &back_nodes {
                 let back_node = new_block_indices[back_node];
-                let edge = cfg.remove_edge(back_node, last_loop_header)?;
-
-                // Add unwinding assumption
-                if let Some(condition) = edge.condition() {
-                    cfg.block_mut(back_node)?
-                        .assume(Boolean::not(condition.clone())?)?
-                        .labels_mut()
-                        .pseudo();
-                }
+                cfg.remove_edge(back_node, last_loop_header, self.removed_edge_guard())?;
             }
 
             // Collect the newly created nodes
@@ -162,13 +147,16 @@ impl LoopUnwinding {
         // Loop unwinding may leave behind blocks which are dead ends,
         // meaning that no path from the block to the CFG exit exists.
         // Remove all of them and add unwinding assumptions/assertions instead.
-        let removed_edge_guard = match self.unwinding_guard {
-            UnwindingGuard::Assumption => RemovedEdgeGuard::AssumeEdgeNotTaken,
-            UnwindingGuard::Assertion => RemovedEdgeGuard::AssertEdgeNotTaken,
-        };
-        cfg.remove_dead_end_blocks(removed_edge_guard)?;
+        cfg.remove_dead_end_blocks(self.removed_edge_guard())?;
 
         Ok(())
+    }
+
+    fn removed_edge_guard(&self) -> RemovedEdgeGuard {
+        match self.unwinding_guard {
+            UnwindingGuard::Assumption => RemovedEdgeGuard::AssumeEdgeNotTaken,
+            UnwindingGuard::Assertion => RemovedEdgeGuard::AssertEdgeNotTaken,
+        }
     }
 }
 
@@ -192,7 +180,7 @@ impl Transform<Program> for LoopUnwinding {
 mod tests {
     use super::*;
 
-    use crate::expr::{Expression, Sort, Variable};
+    use crate::expr::{Boolean, Expression, Sort, Variable};
     use crate::util::RenderGraph;
 
     use std::path::Path;
@@ -620,7 +608,8 @@ mod tests {
             let block3_index = add_block_with_id(&mut cfg, "c3");
 
             // block2 is dead end -> remove
-            cfg.remove_block(block2_index).unwrap();
+            cfg.remove_block(block2_index, RemovedEdgeGuard::AssumeEdgeNotTaken)
+                .unwrap();
 
             cfg.conditional_edge(block1_index, block3_index, not_l)
                 .unwrap();
@@ -748,7 +737,8 @@ mod tests {
             let block4_index = add_block_with_id(&mut cfg, "c4");
 
             // block3 is dead end -> remove
-            cfg.remove_block(block3_index).unwrap();
+            cfg.remove_block(block3_index, RemovedEdgeGuard::AssumeEdgeNotTaken)
+                .unwrap();
 
             cfg.unconditional_edge(block1_index, block2_index).unwrap();
             cfg.conditional_edge(block2_index, block4_index, not_l)

@@ -9,7 +9,9 @@ use std::cmp;
 use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt;
 
+#[derive(Clone, Copy, Debug)]
 pub enum RemovedEdgeGuard {
+    Ignore,
     AssumeEdgeNotTaken,
     AssertEdgeNotTaken,
 }
@@ -182,13 +184,23 @@ impl ControlFlowGraph {
     }
 
     /// Removes an `Block` by its index.
-    pub fn remove_block(&mut self, index: usize) -> Result<Block> {
+    pub fn remove_block(
+        &mut self,
+        index: usize,
+        removed_edge_guard: RemovedEdgeGuard,
+    ) -> Result<Block> {
         if self.entry == Some(index) {
             self.entry = None;
         }
         if self.exit == Some(index) {
             self.exit = None;
         }
+
+        // Remove all incoming edges
+        for predecessor in self.predecessor_indices(index)? {
+            self.remove_edge(predecessor, index, removed_edge_guard)?;
+        }
+
         let block = self.block(index)?.clone();
         self.graph.remove_vertex(index)?;
         Ok(block)
@@ -222,9 +234,7 @@ impl ControlFlowGraph {
         };
 
         for successor in self.successor_indices(block_index)? {
-            let edge = self.remove_edge(block_index, successor)?;
-            self.graph
-                .insert_edge(edge.clone_new_head_tail(tail_block_index, successor))?;
+            self.rewire_edge(block_index, successor, tail_block_index, successor)?;
         }
 
         if self.exit == Some(block_index) {
@@ -302,8 +312,30 @@ impl ControlFlowGraph {
     }
 
     /// Removes an `Edge` by its head and tail `Block` indices.
-    pub fn remove_edge(&mut self, head: usize, tail: usize) -> Result<Edge> {
+    pub fn remove_edge(
+        &mut self,
+        head: usize,
+        tail: usize,
+        removed_edge_guard: RemovedEdgeGuard,
+    ) -> Result<Edge> {
         let edge = self.edge(head, tail)?.clone();
+
+        // Add "negated condition" assumption/assertion for removed conditional edges
+        // to make sure that the conditional edges aren't taken anymore.
+        if let Some(condition) = edge.condition() {
+            let predecessor = self.block_mut(head)?;
+            let negated_condition = Boolean::not(condition.clone())?;
+            match removed_edge_guard {
+                RemovedEdgeGuard::AssumeEdgeNotTaken => {
+                    predecessor.assume(negated_condition)?.labels_mut().pseudo();
+                }
+                RemovedEdgeGuard::AssertEdgeNotTaken => {
+                    predecessor.assert(negated_condition)?.labels_mut().pseudo();
+                }
+                RemovedEdgeGuard::Ignore => {}
+            }
+        }
+
         self.graph.remove_edge(head, tail)?;
         Ok(edge)
     }
@@ -318,7 +350,7 @@ impl ControlFlowGraph {
     ) -> Result<()> {
         let edge = self.edge(head, tail)?;
         let new_edge = edge.clone_new_head_tail(new_head, new_tail);
-        self.remove_edge(head, tail)?;
+        self.remove_edge(head, tail, RemovedEdgeGuard::Ignore)?;
         self.graph.insert_edge(new_edge)?;
         Ok(())
     }
@@ -500,7 +532,7 @@ impl ControlFlowGraph {
                     .merge(&outgoing_edge_labels);
             }
 
-            self.remove_block(block_index)?;
+            self.remove_block(block_index, RemovedEdgeGuard::Ignore)?;
         }
 
         Ok(())
@@ -547,30 +579,13 @@ impl ControlFlowGraph {
             assert!(block_index != exit);
             assert!(self.successor_indices(block_index)?.is_empty());
 
-            let incoming_edges: Vec<Edge> =
-                self.edges_in(block_index)?.into_iter().cloned().collect();
-            self.remove_block(block_index)?;
+            let predecessors = self.predecessor_indices(block_index)?;
 
-            for edge in incoming_edges {
-                let predecessor_index = edge.head();
+            self.remove_block(block_index, removed_edge_guard)?;
 
-                // Add "negated condition" assumption/assertion for removed conditional edges
-                // to make sure that the conditional edges aren't taken anymore.
-                if let Some(condition) = edge.condition() {
-                    let predecessor = self.block_mut(predecessor_index)?;
-                    let negated_condition = Boolean::not(condition.clone())?;
-                    match removed_edge_guard {
-                        RemovedEdgeGuard::AssumeEdgeNotTaken => {
-                            predecessor.assume(negated_condition)?.labels_mut().pseudo();
-                        }
-                        RemovedEdgeGuard::AssertEdgeNotTaken => {
-                            predecessor.assert(negated_condition)?.labels_mut().pseudo();
-                        }
-                    }
-                }
-
-                if self.successor_indices(predecessor_index)?.is_empty() {
-                    queue.push(predecessor_index);
+            for predecessor in predecessors {
+                if self.successor_indices(predecessor)?.is_empty() {
+                    queue.push(predecessor);
                 }
             }
         }
