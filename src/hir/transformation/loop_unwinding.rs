@@ -4,34 +4,18 @@ use crate::hir::{ControlFlowGraph, Program, RemovedEdgeGuard};
 use crate::util::Transform;
 use std::collections::{BTreeMap, BTreeSet};
 
+#[derive(Default, Builder, Debug)]
 pub struct LoopUnwinding {
     unwinding_bound: usize,
     unwinding_guard: UnwindingGuard,
 }
 
 impl LoopUnwinding {
-    pub fn new() -> Self {
-        Self {
-            unwinding_bound: 0,
-            unwinding_guard: UnwindingGuard::default(),
-        }
-    }
-
     pub fn new_from_env(env: &Environment) -> Self {
         Self {
             unwinding_bound: env.analysis.unwind,
             unwinding_guard: env.analysis.unwinding_guard,
         }
-    }
-
-    pub fn with_unwinding_bound(&mut self, bound: usize) -> &mut Self {
-        self.unwinding_bound = bound;
-        self
-    }
-
-    pub fn with_unwinding_guard(&mut self, guard: UnwindingGuard) -> &mut Self {
-        self.unwinding_guard = guard;
-        self
     }
 
     fn unwind_loop(

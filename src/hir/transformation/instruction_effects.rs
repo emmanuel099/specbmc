@@ -4,6 +4,7 @@ use crate::expr::BitVector;
 use crate::hir::{Effect, Instruction, Operation, Program};
 use crate::util::Transform;
 
+#[derive(Default, Builder, Debug)]
 pub struct InstructionEffects {
     cache_available: bool,
     btb_available: bool,
@@ -11,14 +12,6 @@ pub struct InstructionEffects {
 }
 
 impl InstructionEffects {
-    pub fn new() -> Self {
-        Self {
-            cache_available: false,
-            btb_available: false,
-            pht_available: false,
-        }
-    }
-
     pub fn new_from_env(env: &Environment) -> Self {
         Self {
             cache_available: env.architecture.cache,

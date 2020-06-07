@@ -8,7 +8,7 @@ use crate::util::Transform;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Builder)]
 struct InstructionRef {
     block: usize,
     index: usize,
@@ -16,13 +16,6 @@ struct InstructionRef {
 }
 
 impl InstructionRef {
-    pub fn new(block: usize, index: usize, address: u64) -> Self {
-        Self {
-            block,
-            index,
-            address,
-        }
-    }
     pub fn block(&self) -> usize {
         self.block
     }
@@ -34,6 +27,7 @@ impl InstructionRef {
     }
 }
 
+#[derive(Builder, Debug)]
 pub struct TransientExecution {
     spectre_pht: bool,
     spectre_stl: bool,
@@ -43,16 +37,6 @@ pub struct TransientExecution {
 }
 
 impl TransientExecution {
-    pub fn new() -> Self {
-        Self {
-            spectre_pht: false,
-            spectre_stl: false,
-            predictor_strategy: PredictorStrategy::default(),
-            transient_encoding_strategy: TransientEncodingStrategy::default(),
-            speculation_window: 100,
-        }
-    }
-
     pub fn new_from_env(env: &Environment) -> Self {
         Self {
             spectre_pht: env.analysis.spectre_pht,
@@ -108,7 +92,12 @@ impl TransientExecution {
         for block in cfg.blocks() {
             for (inst_index, inst) in block.instructions().iter().enumerate().rev() {
                 let address = inst.address().unwrap_or_default();
-                let inst_ref = InstructionRef::new(block.index(), inst_index, address);
+                let inst_ref = InstructionRefBuilder::default()
+                    .block(block.index())
+                    .index(inst_index)
+                    .address(address)
+                    .build()
+                    .unwrap();
 
                 for operation in inst.operations() {
                     match operation {
@@ -161,7 +150,12 @@ impl TransientExecution {
         for block in cfg.blocks() {
             for (inst_index, inst) in block.instructions().iter().enumerate().rev() {
                 let address = inst.address().unwrap_or_default();
-                let inst_ref = InstructionRef::new(block.index(), inst_index, address);
+                let inst_ref = InstructionRefBuilder::default()
+                    .block(block.index())
+                    .index(inst_index)
+                    .address(address)
+                    .build()
+                    .unwrap();
 
                 for operation in inst.operations() {
                     match operation {
@@ -276,6 +270,18 @@ impl TransientExecution {
         }
 
         Ok(cfg)
+    }
+}
+
+impl Default for TransientExecution {
+    fn default() -> Self {
+        Self {
+            spectre_pht: false,
+            spectre_stl: false,
+            predictor_strategy: PredictorStrategy::default(),
+            transient_encoding_strategy: TransientEncodingStrategy::default(),
+            speculation_window: 100,
+        }
     }
 }
 

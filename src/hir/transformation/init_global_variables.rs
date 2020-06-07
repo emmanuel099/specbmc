@@ -8,6 +8,7 @@ use crate::hir::{analysis, Block, Program};
 use crate::util::Transform;
 use std::collections::HashSet;
 
+#[derive(Builder, Debug)]
 pub struct InitGlobalVariables {
     cache_available: bool,
     btb_available: bool,
@@ -21,20 +22,6 @@ pub struct InitGlobalVariables {
 }
 
 impl InitGlobalVariables {
-    pub fn new() -> Self {
-        Self {
-            cache_available: false,
-            btb_available: false,
-            pht_available: false,
-            memory_default_low: false,
-            low_memory_addresses: HashSet::new(),
-            high_memory_addresses: HashSet::new(),
-            registers_default_low: true,
-            low_registers: HashSet::new(),
-            high_registers: HashSet::new(),
-        }
-    }
-
     pub fn new_from_env(env: &Environment) -> Self {
         let memory_policy = &env.policy.memory;
         let register_policy = &env.policy.registers;
@@ -171,6 +158,22 @@ impl InitGlobalVariables {
         }
 
         Ok(())
+    }
+}
+
+impl Default for InitGlobalVariables {
+    fn default() -> Self {
+        Self {
+            cache_available: false,
+            btb_available: false,
+            pht_available: false,
+            memory_default_low: false,
+            low_memory_addresses: HashSet::new(),
+            high_memory_addresses: HashSet::new(),
+            registers_default_low: true,
+            low_registers: HashSet::new(),
+            high_registers: HashSet::new(),
+        }
     }
 }
 

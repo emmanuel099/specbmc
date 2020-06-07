@@ -8,13 +8,8 @@ use crate::util::Transform;
 use falcon::graph::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
+#[derive(Default, Builder, Debug)]
 pub struct SSATransformation {}
-
-impl SSATransformation {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
 
 impl Transform<Program> for SSATransformation {
     fn name(&self) -> &'static str {

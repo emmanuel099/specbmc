@@ -4,6 +4,9 @@ extern crate error_chain;
 #[macro_use]
 extern crate derivative;
 
+#[macro_use]
+extern crate derive_builder;
+
 pub mod cex;
 pub mod environment;
 pub mod expr;

@@ -3,13 +3,8 @@ use crate::expr;
 use crate::hir::{Effect, Instruction, Operation, Program};
 use crate::util::Transform;
 
+#[derive(Default, Builder, Debug)]
 pub struct ExplicitEffects {}
-
-impl ExplicitEffects {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
 
 impl Transform<Program> for ExplicitEffects {
     fn name(&self) -> &'static str {

@@ -339,12 +339,12 @@ fn hir_transformations(env: &environment::Environment, program: &mut hir::Progra
         }
         steps.push(Box::new(InitGlobalVariables::new_from_env(env)));
         steps.push(Box::new(Observations::new_from_env(env)));
-        steps.push(Box::new(ExplicitEffects::new()));
-        steps.push(Box::new(ExplicitMemory::new()));
+        steps.push(Box::new(ExplicitEffects::default()));
+        steps.push(Box::new(ExplicitMemory::default()));
         if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
             steps.push(Box::new(NonSpecObsEquivalence::new_from_env(env)));
         }
-        steps.push(Box::new(SSATransformation::new()));
+        steps.push(Box::new(SSATransformation::default()));
         steps
     };
 

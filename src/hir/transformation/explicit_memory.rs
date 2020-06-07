@@ -3,13 +3,8 @@ use crate::expr::Memory;
 use crate::hir::{Operation, Program};
 use crate::util::Transform;
 
+#[derive(Default, Builder, Debug)]
 pub struct ExplicitMemory {}
-
-impl ExplicitMemory {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
 
 impl Transform<Program> for ExplicitMemory {
     fn name(&self) -> &'static str {
