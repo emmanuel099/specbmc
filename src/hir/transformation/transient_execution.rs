@@ -716,3 +716,598 @@ fn remove_unreachable_transient_edges(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::expr::{BitVector, Boolean, Sort, Variable};
+    use crate::util::RenderGraph;
+
+    use std::path::Path;
+
+    fn debug_cfg(
+        test_name: &str,
+        given_cfg: &ControlFlowGraph,
+        encoded_cfg: &ControlFlowGraph,
+        expected_cfg: &ControlFlowGraph,
+    ) {
+        given_cfg
+            .render_to_file(Path::new(&format!("{}_given.dot", test_name)))
+            .unwrap();
+        encoded_cfg
+            .render_to_file(Path::new(&format!("{}_encoded.dot", test_name)))
+            .unwrap();
+        expected_cfg
+            .render_to_file(Path::new(&format!("{}_expected.dot", test_name)))
+            .unwrap();
+    }
+
+    #[test]
+    fn test_transient_store() {
+        let addr = BitVector::constant_u64(42, WORD_SIZE);
+        let var = Variable::new("x", Sort::bit_vector(WORD_SIZE));
+
+        // Given:
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block = cfg.new_block().unwrap();
+            block
+                .assign(var.clone(), BitVector::constant_u64(0, WORD_SIZE))
+                .unwrap()
+                .set_address(Some(1));
+            block
+                .store(addr.clone(), var.clone().into())
+                .unwrap()
+                .set_address(Some(2));
+            block
+                .load(var.clone(), addr.clone())
+                .unwrap()
+                .set_address(Some(3));
+
+            cfg
+        };
+
+        let inst_ref = InstructionRefBuilder::default()
+            .block(0)
+            .index(1)
+            .address(2)
+            .build()
+            .unwrap();
+
+        // When:
+        let mut encoded_cfg = given_cfg.clone();
+        let mut transient_entry_points = BTreeMap::new();
+        transient_store(&mut encoded_cfg, &mut transient_entry_points, &inst_ref).unwrap();
+
+        // Then:
+        let expected_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block0_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .assign(var.clone(), BitVector::constant_u64(0, WORD_SIZE))
+                    .unwrap()
+                    .set_address(Some(1));
+                block.index()
+            };
+
+            let block1_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .store(addr.clone(), var.clone().into())
+                    .unwrap()
+                    .set_address(Some(2));
+                block.index()
+            };
+
+            let block2_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .load(var.clone(), addr.clone())
+                    .unwrap()
+                    .set_address(Some(3));
+                block.index()
+            };
+
+            let store_bypass = Predictor::speculate(
+                Predictor::variable().into(),
+                BitVector::constant_u64(2, WORD_SIZE),
+            )
+            .unwrap();
+            let store_exec = Boolean::not(store_bypass.clone()).unwrap();
+
+            cfg.conditional_edge(block0_index, block1_index, store_exec)
+                .unwrap();
+            cfg.conditional_edge(block0_index, block2_index, store_bypass)
+                .unwrap()
+                .labels_mut()
+                .speculate();
+            cfg.unconditional_edge(block1_index, block2_index).unwrap();
+
+            cfg
+        };
+
+        let mut expected_transient_entry_points = BTreeMap::new();
+        expected_transient_entry_points.insert(inst_ref.clone(), 2); // should bypass store and therefore start in block 2
+
+        /*debug_cfg(
+            "transient_execution_test_transient_store",
+            &given_cfg,
+            &encoded_cfg,
+            &expected_cfg,
+        );*/
+
+        assert_eq!(expected_cfg, encoded_cfg);
+        assert_eq!(expected_transient_entry_points, transient_entry_points);
+    }
+
+    #[test]
+    fn test_transient_conditional_branch_with_choose_path_predictor() {
+        let cond: Expression = Boolean::variable("c").into();
+        let neg_cond = Boolean::not(cond.clone()).unwrap();
+
+        // Given:
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block0_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .conditional_branch(cond.clone(), BitVector::constant_u64(4, WORD_SIZE))
+                    .unwrap()
+                    .set_address(Some(4));
+                block.index()
+            };
+
+            let block1_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
+                    .unwrap()
+                    .set_address(Some(4));
+                block.index()
+            };
+
+            let block2_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .assign(
+                        Variable::new("x", Sort::boolean()),
+                        Boolean::constant(false),
+                    )
+                    .unwrap()
+                    .set_address(Some(2));
+                block
+                    .branch(BitVector::constant_u64(5, WORD_SIZE))
+                    .unwrap()
+                    .set_address(Some(3));
+                block.index()
+            };
+
+            let block3_index = {
+                let block = cfg.new_block().unwrap();
+                block.index()
+            };
+
+            cfg.conditional_edge(block0_index, block1_index, cond.clone())
+                .unwrap()
+                .labels_mut()
+                .taken();
+            cfg.conditional_edge(block0_index, block2_index, neg_cond.clone())
+                .unwrap();
+            cfg.unconditional_edge(block1_index, block3_index).unwrap();
+            cfg.unconditional_edge(block2_index, block3_index).unwrap();
+
+            cfg
+        };
+
+        let inst_ref = InstructionRefBuilder::default()
+            .block(0)
+            .index(0)
+            .address(1)
+            .build()
+            .unwrap();
+
+        // When:
+        let mut encoded_cfg = given_cfg.clone();
+        let mut transient_entry_points = BTreeMap::new();
+        transient_conditional_branch(
+            &mut encoded_cfg,
+            &mut transient_entry_points,
+            &inst_ref,
+            PredictorStrategy::ChoosePath,
+        )
+        .unwrap();
+
+        // Then:
+        let expected_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block0_index = {
+                let block = cfg.new_block().unwrap();
+                block.index()
+            };
+
+            let block1_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
+                    .unwrap()
+                    .set_address(Some(4));
+                block.index()
+            };
+
+            let block2_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .assign(
+                        Variable::new("x", Sort::boolean()),
+                        Boolean::constant(false),
+                    )
+                    .unwrap()
+                    .set_address(Some(2));
+                block
+                    .branch(BitVector::constant_u64(5, WORD_SIZE))
+                    .unwrap()
+                    .set_address(Some(3));
+                block.index()
+            };
+
+            let block3_index = {
+                let block = cfg.new_block().unwrap();
+                block.index()
+            };
+
+            let block4_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .conditional_branch(cond.clone(), BitVector::constant_u64(4, WORD_SIZE))
+                    .unwrap()
+                    .set_address(Some(4));
+                block.index()
+            };
+
+            let block5_index = {
+                let block = cfg.new_block().unwrap();
+                block.index()
+            };
+
+            cfg.conditional_edge(block4_index, block1_index, cond.clone())
+                .unwrap()
+                .labels_mut()
+                .taken();
+            cfg.conditional_edge(block4_index, block2_index, neg_cond.clone())
+                .unwrap();
+            cfg.unconditional_edge(block1_index, block3_index).unwrap();
+            cfg.unconditional_edge(block2_index, block3_index).unwrap();
+
+            let speculate = Predictor::speculate(
+                Predictor::variable().into(),
+                BitVector::constant_u64(1, WORD_SIZE),
+            )
+            .unwrap();
+            let not_speculate = Boolean::not(speculate.clone()).unwrap();
+
+            let speculate_taken = Predictor::taken(
+                Predictor::variable().into(),
+                BitVector::constant_u64(1, WORD_SIZE),
+            )
+            .unwrap();
+            let speculate_not_taken = Boolean::not(speculate_taken.clone()).unwrap();
+
+            cfg.conditional_edge(block0_index, block4_index, not_speculate)
+                .unwrap();
+            cfg.conditional_edge(block0_index, block5_index, speculate)
+                .unwrap()
+                .labels_mut()
+                .speculate();
+            cfg.conditional_edge(block5_index, block1_index, speculate_taken)
+                .unwrap()
+                .labels_mut()
+                .taken();
+            cfg.conditional_edge(block5_index, block2_index, speculate_not_taken)
+                .unwrap();
+
+            cfg
+        };
+
+        let mut expected_transient_entry_points = BTreeMap::new();
+        expected_transient_entry_points.insert(inst_ref.clone(), 5); // block 5 encodes the speculative behavior
+
+        /*debug_cfg(
+            "transient_execution_test_transient_conditional_branch_with_choose_path_predictor",
+            &given_cfg,
+            &encoded_cfg,
+            &expected_cfg,
+        );*/
+
+        assert_eq!(expected_cfg, encoded_cfg);
+        assert_eq!(expected_transient_entry_points, transient_entry_points);
+    }
+
+    #[test]
+    fn test_transient_conditional_branch_with_invert_condition_predictor() {
+        let cond: Expression = Boolean::variable("c").into();
+        let neg_cond = Boolean::not(cond.clone()).unwrap();
+
+        // Given:
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block0_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .conditional_branch(cond.clone(), BitVector::constant_u64(4, WORD_SIZE))
+                    .unwrap()
+                    .set_address(Some(4));
+                block.index()
+            };
+
+            let block1_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
+                    .unwrap()
+                    .set_address(Some(4));
+                block.index()
+            };
+
+            let block2_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .assign(
+                        Variable::new("x", Sort::boolean()),
+                        Boolean::constant(false),
+                    )
+                    .unwrap()
+                    .set_address(Some(2));
+                block
+                    .branch(BitVector::constant_u64(5, WORD_SIZE))
+                    .unwrap()
+                    .set_address(Some(3));
+                block.index()
+            };
+
+            let block3_index = {
+                let block = cfg.new_block().unwrap();
+                block.index()
+            };
+
+            cfg.conditional_edge(block0_index, block1_index, cond.clone())
+                .unwrap()
+                .labels_mut()
+                .taken();
+            cfg.conditional_edge(block0_index, block2_index, neg_cond.clone())
+                .unwrap();
+            cfg.unconditional_edge(block1_index, block3_index).unwrap();
+            cfg.unconditional_edge(block2_index, block3_index).unwrap();
+
+            cfg
+        };
+
+        let inst_ref = InstructionRefBuilder::default()
+            .block(0)
+            .index(0)
+            .address(1)
+            .build()
+            .unwrap();
+
+        // When:
+        let mut encoded_cfg = given_cfg.clone();
+        let mut transient_entry_points = BTreeMap::new();
+        transient_conditional_branch(
+            &mut encoded_cfg,
+            &mut transient_entry_points,
+            &inst_ref,
+            PredictorStrategy::InvertCondition,
+        )
+        .unwrap();
+
+        // Then:
+        let expected_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block0_index = {
+                let block = cfg.new_block().unwrap();
+                block.index()
+            };
+
+            let block1_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
+                    .unwrap()
+                    .set_address(Some(4));
+                block.index()
+            };
+
+            let block2_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .assign(
+                        Variable::new("x", Sort::boolean()),
+                        Boolean::constant(false),
+                    )
+                    .unwrap()
+                    .set_address(Some(2));
+                block
+                    .branch(BitVector::constant_u64(5, WORD_SIZE))
+                    .unwrap()
+                    .set_address(Some(3));
+                block.index()
+            };
+
+            let block3_index = {
+                let block = cfg.new_block().unwrap();
+                block.index()
+            };
+
+            let block4_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .conditional_branch(cond.clone(), BitVector::constant_u64(4, WORD_SIZE))
+                    .unwrap()
+                    .set_address(Some(4));
+                block.index()
+            };
+
+            let block5_index = {
+                let block = cfg.new_block().unwrap();
+                block.index()
+            };
+
+            cfg.conditional_edge(block4_index, block1_index, cond.clone())
+                .unwrap()
+                .labels_mut()
+                .taken();
+            cfg.conditional_edge(block4_index, block2_index, neg_cond.clone())
+                .unwrap();
+            cfg.unconditional_edge(block1_index, block3_index).unwrap();
+            cfg.unconditional_edge(block2_index, block3_index).unwrap();
+
+            let speculate = Predictor::speculate(
+                Predictor::variable().into(),
+                BitVector::constant_u64(1, WORD_SIZE),
+            )
+            .unwrap();
+            let not_speculate = Boolean::not(speculate.clone()).unwrap();
+
+            let speculate_neg_cond = Boolean::not(cond.clone()).unwrap();
+            let speculate_neg_neg_cond = Boolean::not(neg_cond.clone()).unwrap();
+
+            cfg.conditional_edge(block0_index, block4_index, not_speculate)
+                .unwrap();
+            cfg.conditional_edge(block0_index, block5_index, speculate)
+                .unwrap()
+                .labels_mut()
+                .speculate();
+            cfg.conditional_edge(block5_index, block1_index, speculate_neg_cond.clone())
+                .unwrap()
+                .labels_mut()
+                .taken();
+            cfg.conditional_edge(block5_index, block2_index, speculate_neg_neg_cond.clone())
+                .unwrap();
+
+            cfg
+        };
+
+        let mut expected_transient_entry_points = BTreeMap::new();
+        expected_transient_entry_points.insert(inst_ref.clone(), 5); // block 5 encodes the speculative behavior
+
+        /*debug_cfg(
+            "transient_execution_test_transient_conditional_branch_with_invert_condition_predictor",
+            &given_cfg,
+            &encoded_cfg,
+            &expected_cfg,
+        );*/
+
+        assert_eq!(expected_cfg, encoded_cfg);
+        assert_eq!(expected_transient_entry_points, transient_entry_points);
+    }
+
+    #[test]
+    fn test_transient_barrier() {
+        let var = Variable::new("x", Sort::boolean());
+
+        // Given:
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block0_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .assign(var.clone(), Boolean::constant(false))
+                    .unwrap()
+                    .set_address(Some(1));
+                block.barrier().set_address(Some(2));
+                block
+                    .assign(var.clone(), Boolean::constant(true))
+                    .unwrap()
+                    .set_address(Some(3));
+                block.index()
+            };
+
+            let block1_index = {
+                let block = cfg.new_block().unwrap();
+                block.index()
+            };
+
+            let block2_index = {
+                let block = cfg.new_block().unwrap();
+                block.index()
+            };
+
+            cfg.set_exit(block2_index).unwrap();
+
+            cfg.unconditional_edge(block0_index, block1_index).unwrap();
+            cfg.unconditional_edge(block1_index, block2_index).unwrap();
+
+            cfg
+        };
+
+        let inst_ref = InstructionRefBuilder::default()
+            .block(0)
+            .index(1)
+            .address(2)
+            .build()
+            .unwrap();
+
+        // When:
+        let mut encoded_cfg = given_cfg.clone();
+        transient_barrier(&mut encoded_cfg, &inst_ref).unwrap();
+
+        // Then:
+        let expected_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block0_index = {
+                let block = cfg.new_block().unwrap();
+                block
+                    .assign(var.clone(), Boolean::constant(false))
+                    .unwrap()
+                    .set_address(Some(1));
+                block.index()
+            };
+
+            let block1_index = {
+                let block = cfg.new_block().unwrap();
+                block.index()
+            };
+
+            let block2_index = {
+                let block = cfg.new_block().unwrap();
+                block.index()
+            };
+
+            let block3_index = {
+                let block = cfg.new_block().unwrap();
+                block.barrier().set_address(Some(2));
+                block
+                    .assign(var.clone(), Boolean::constant(true))
+                    .unwrap()
+                    .set_address(Some(3));
+                block.index()
+            };
+
+            cfg.set_exit(block2_index).unwrap();
+
+            cfg.unconditional_edge(block0_index, block2_index).unwrap(); // resolve
+            cfg.unconditional_edge(block1_index, block2_index).unwrap();
+            cfg.unconditional_edge(block3_index, block1_index).unwrap();
+
+            cfg
+        };
+
+        /*debug_cfg(
+            "transient_execution_test_transient_barrier",
+            &given_cfg,
+            &encoded_cfg,
+            &expected_cfg,
+        );*/
+
+        assert_eq!(expected_cfg, encoded_cfg);
+    }
+}
