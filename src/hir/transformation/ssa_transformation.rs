@@ -881,7 +881,9 @@ mod tests {
             Program::new(cfg)
         };
 
-        SSATransformation::new().transform(&mut program).unwrap();
+        SSATransformation::default()
+            .transform(&mut program)
+            .unwrap();
 
         // Expected:
         //           block 5
