@@ -234,11 +234,14 @@ mod tests {
         };
 
         // When: Unwind with k=0
-        let mut unwound_cfg = given_cfg;
-        LoopUnwinding::new()
-            .with_unwinding_bound(0)
-            .unwind_cfg(&mut unwound_cfg)
+        let unwinder = LoopUnwindingBuilder::default()
+            .unwinding_bound(0)
+            .unwinding_guard(UnwindingGuard::Assumption)
+            .build()
             .unwrap();
+
+        let mut unwound_cfg = given_cfg;
+        unwinder.unwind_cfg(&mut unwound_cfg).unwrap();
 
         // Then:
         let expected_cfg = {
@@ -290,11 +293,14 @@ mod tests {
         };
 
         // When: Unwind with k=3
-        let mut unwound_cfg = given_cfg;
-        LoopUnwinding::new()
-            .with_unwinding_bound(3)
-            .unwind_cfg(&mut unwound_cfg)
+        let unwinder = LoopUnwindingBuilder::default()
+            .unwinding_bound(3)
+            .unwinding_guard(UnwindingGuard::Assumption)
+            .build()
             .unwrap();
+
+        let mut unwound_cfg = given_cfg;
+        unwinder.unwind_cfg(&mut unwound_cfg).unwrap();
 
         // Then:
         let expected_cfg = {
@@ -372,11 +378,14 @@ mod tests {
         };
 
         // When: Unwind with k=1
-        let mut unwound_cfg = given_cfg;
-        LoopUnwinding::new()
-            .with_unwinding_bound(1)
-            .unwind_cfg(&mut unwound_cfg)
+        let unwinder = LoopUnwindingBuilder::default()
+            .unwinding_bound(1)
+            .unwinding_guard(UnwindingGuard::Assumption)
+            .build()
             .unwrap();
+
+        let mut unwound_cfg = given_cfg;
+        unwinder.unwind_cfg(&mut unwound_cfg).unwrap();
 
         // Then:
         let expected_cfg = {
@@ -452,11 +461,14 @@ mod tests {
         };
 
         // When: Unwind with k=0
-        let mut unwound_cfg = given_cfg;
-        LoopUnwinding::new()
-            .with_unwinding_bound(0)
-            .unwind_cfg(&mut unwound_cfg)
+        let unwinder = LoopUnwindingBuilder::default()
+            .unwinding_bound(0)
+            .unwinding_guard(UnwindingGuard::Assumption)
+            .build()
             .unwrap();
+
+        let mut unwound_cfg = given_cfg;
+        unwinder.unwind_cfg(&mut unwound_cfg).unwrap();
 
         // Then:
         let expected_cfg = {
@@ -512,11 +524,14 @@ mod tests {
         };
 
         // When: Unwind with k=1
-        let mut unwound_cfg = given_cfg;
-        LoopUnwinding::new()
-            .with_unwinding_bound(1)
-            .unwind_cfg(&mut unwound_cfg)
+        let unwinder = LoopUnwindingBuilder::default()
+            .unwinding_bound(1)
+            .unwinding_guard(UnwindingGuard::Assumption)
+            .build()
             .unwrap();
+
+        let mut unwound_cfg = given_cfg;
+        unwinder.unwind_cfg(&mut unwound_cfg).unwrap();
 
         // Then:
         let expected_cfg = {
@@ -577,11 +592,14 @@ mod tests {
         };
 
         // When: Unwind with k=0
-        let mut unwound_cfg = given_cfg;
-        LoopUnwinding::new()
-            .with_unwinding_bound(0)
-            .unwind_cfg(&mut unwound_cfg)
+        let unwinder = LoopUnwindingBuilder::default()
+            .unwinding_bound(0)
+            .unwinding_guard(UnwindingGuard::Assumption)
+            .build()
             .unwrap();
+
+        let mut unwound_cfg = given_cfg;
+        unwinder.unwind_cfg(&mut unwound_cfg).unwrap();
 
         // Then:
         let expected_cfg = {
@@ -640,11 +658,14 @@ mod tests {
         };
 
         // When: Unwind with k=1
-        let mut unwound_cfg = given_cfg;
-        LoopUnwinding::new()
-            .with_unwinding_bound(1)
-            .unwind_cfg(&mut unwound_cfg)
+        let unwinder = LoopUnwindingBuilder::default()
+            .unwinding_bound(1)
+            .unwinding_guard(UnwindingGuard::Assumption)
+            .build()
             .unwrap();
+
+        let mut unwound_cfg = given_cfg;
+        unwinder.unwind_cfg(&mut unwound_cfg).unwrap();
 
         // Then:
         let expected_cfg = {
@@ -705,11 +726,14 @@ mod tests {
         };
 
         // When: Unwind with k=0
-        let mut unwound_cfg = given_cfg;
-        LoopUnwinding::new()
-            .with_unwinding_bound(0)
-            .unwind_cfg(&mut unwound_cfg)
+        let unwinder = LoopUnwindingBuilder::default()
+            .unwinding_bound(0)
+            .unwinding_guard(UnwindingGuard::Assumption)
+            .build()
             .unwrap();
+
+        let mut unwound_cfg = given_cfg;
+        unwinder.unwind_cfg(&mut unwound_cfg).unwrap();
 
         // Then:
         let expected_cfg = {
@@ -772,11 +796,14 @@ mod tests {
         };
 
         // When: Unwind with k=1
-        let mut unwound_cfg = given_cfg;
-        LoopUnwinding::new()
-            .with_unwinding_bound(1)
-            .unwind_cfg(&mut unwound_cfg)
+        let unwinder = LoopUnwindingBuilder::default()
+            .unwinding_bound(1)
+            .unwinding_guard(UnwindingGuard::Assumption)
+            .build()
             .unwrap();
+
+        let mut unwound_cfg = given_cfg;
+        unwinder.unwind_cfg(&mut unwound_cfg).unwrap();
 
         // Then:
         let expected_cfg = {
