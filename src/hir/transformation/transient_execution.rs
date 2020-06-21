@@ -1,6 +1,6 @@
 use crate::environment::{Environment, PredictorStrategy, SPECULATION_WINDOW_SIZE, WORD_SIZE};
 use crate::error::Result;
-use crate::expr::{BitVector, Boolean, Expression, Predictor, Sort, Variable};
+use crate::expr::{BitVector, Boolean, Predictor, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Edge, Operation, Program, RemovedEdgeGuard};
 use crate::util::Transform;
 use std::collections::BTreeMap;
@@ -269,8 +269,8 @@ fn add_transient_execution_start(
         transient_start.index()
     };
 
-    let transient_exec = Expression::equal(
-        Predictor::transient_start(Predictor::variable().into())?,
+    let transient_exec = Predictor::speculate(
+        Predictor::variable().into(),
         BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
     )?;
 
@@ -641,7 +641,7 @@ fn remove_unreachable_transient_edges(
 mod tests {
     use super::*;
 
-    use crate::expr::{BitVector, Boolean, Sort, Variable};
+    use crate::expr::{BitVector, Boolean, Expression, Sort, Variable};
     use crate::util::RenderGraph;
 
     use std::path::Path;

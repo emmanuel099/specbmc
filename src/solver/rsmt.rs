@@ -349,7 +349,6 @@ impl Expr2Smt<()> for expr::Predictor {
         Writer: ::std::io::Write,
     {
         match self {
-            Self::TransientStart => write!(w, "transient-start")?,
             Self::SpeculationWindow => write!(w, "speculation-window")?,
             Self::Speculate => write!(w, "predictor-speculate")?,
             Self::Taken => write!(w, "predictor-taken")?,
@@ -492,12 +491,6 @@ fn define_memory<T>(solver: &mut Solver<T>, access_widths: &[usize]) -> Result<(
 
 fn define_predictor<T>(solver: &mut Solver<T>) -> Result<()> {
     solver.declare_sort(&expr::Sort::predictor(), 0)?;
-
-    solver.declare_fun(
-        "transient-start",
-        &[expr::Sort::predictor()],
-        &expr::Sort::word(),
-    )?;
 
     solver.declare_fun(
         "speculation-window",
