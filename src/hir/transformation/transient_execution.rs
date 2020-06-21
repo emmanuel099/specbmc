@@ -1,6 +1,4 @@
-use crate::environment::{
-    Environment, PredictorStrategy, TransientEncodingStrategy, SPECULATION_WINDOW_SIZE, WORD_SIZE,
-};
+use crate::environment::{Environment, PredictorStrategy, SPECULATION_WINDOW_SIZE, WORD_SIZE};
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Expression, Predictor, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Edge, Operation, Program, RemovedEdgeGuard};
@@ -32,7 +30,6 @@ pub struct TransientExecution {
     spectre_pht: bool,
     spectre_stl: bool,
     predictor_strategy: PredictorStrategy,
-    transient_encoding_strategy: TransientEncodingStrategy,
     speculation_window: usize,
 }
 
@@ -42,7 +39,6 @@ impl TransientExecution {
             spectre_pht: env.analysis.spectre_pht,
             spectre_stl: env.analysis.spectre_stl,
             predictor_strategy: env.analysis.predictor_strategy,
-            transient_encoding_strategy: env.analysis.transient_encoding_strategy,
             speculation_window: env.architecture.speculation_window,
         }
     }
@@ -166,80 +162,6 @@ impl TransientExecution {
 
         Ok((transient_cfg, transient_entry_points))
     }
-
-    /// All transient behavior is encoded into a single transient graph
-    fn encode_unified(&self, program: &mut Program) -> Result<ControlFlowGraph> {
-        let (mut cfg, transient_start_rollback_points) =
-            self.build_default_cfg(program.control_flow_graph())?;
-
-        let (mut transient_cfg, transient_entry_points) =
-            self.build_transient_cfg(program.control_flow_graph())?;
-
-        // Reduce the size of the transient graph (depth limit by max. speculation window)
-        remove_unreachable_transient_edges(
-            &mut transient_cfg,
-            &transient_entry_points.values().cloned().collect(),
-            self.speculation_window,
-        )?;
-
-        // Add single copy
-        let block_map = cfg.insert(&transient_cfg)?;
-
-        // Wire the default and transient CFG together.
-        for (inst_ref, (start, rollback)) in transient_start_rollback_points {
-            let transient_entry = block_map[transient_entry_points.get(&inst_ref).unwrap()];
-            let transient_resolve = block_map[&transient_cfg.exit().unwrap()];
-            cfg.unconditional_edge(start, transient_entry).unwrap();
-
-            // The rollback edge is conditional, because transient_resolve contains multiple outgoing rollback edges.
-            // Therefore, rollback for the current instruction should only be done if the transient execution was
-            // started by the current instruction.
-            let transient_exec = Expression::equal(
-                Predictor::transient_start(Predictor::variable().into())?,
-                BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
-            )?;
-            cfg.conditional_edge(transient_resolve, rollback, transient_exec)
-                .unwrap()
-                .labels_mut()
-                .rollback();
-        }
-
-        Ok(cfg)
-    }
-
-    /// One transient graph for each (speculating) instruction
-    fn encode_several(&self, program: &mut Program) -> Result<ControlFlowGraph> {
-        let (mut cfg, transient_start_rollback_points) =
-            self.build_default_cfg(program.control_flow_graph())?;
-
-        let (transient_cfg, transient_entry_points) =
-            self.build_transient_cfg(program.control_flow_graph())?;
-
-        for (inst_ref, (start, rollback)) in transient_start_rollback_points {
-            let transient_entry_point = transient_entry_points.get(&inst_ref).cloned().unwrap();
-
-            // Reduce the size of the transient graph (depth limit by max. speculation window)
-            let mut reduced_transient_cfg = transient_cfg.clone();
-            remove_unreachable_transient_edges(
-                &mut reduced_transient_cfg,
-                &vec![transient_entry_point],
-                self.speculation_window,
-            )?;
-
-            let block_map = cfg.insert(&reduced_transient_cfg)?;
-
-            let transient_entry = block_map[&transient_entry_point];
-            let transient_resolve = block_map[&reduced_transient_cfg.exit().unwrap()];
-
-            cfg.unconditional_edge(start, transient_entry).unwrap();
-            cfg.unconditional_edge(transient_resolve, rollback)
-                .unwrap()
-                .labels_mut()
-                .rollback();
-        }
-
-        Ok(cfg)
-    }
 }
 
 impl Default for TransientExecution {
@@ -248,7 +170,6 @@ impl Default for TransientExecution {
             spectre_pht: false,
             spectre_stl: false,
             predictor_strategy: PredictorStrategy::default(),
-            transient_encoding_strategy: TransientEncodingStrategy::default(),
             speculation_window: 100,
         }
     }
@@ -264,14 +185,44 @@ impl Transform<Program> for TransientExecution {
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {
-        let mut cfg = match self.transient_encoding_strategy {
-            TransientEncodingStrategy::Unified => self.encode_unified(program)?,
-            TransientEncodingStrategy::Several => self.encode_several(program)?,
-        };
+        let (mut default_cfg, transient_start_rollback_points) =
+            self.build_default_cfg(program.control_flow_graph())?;
 
-        cfg.simplify()?;
+        let (transient_cfg, transient_entry_points) =
+            self.build_transient_cfg(program.control_flow_graph())?;
 
-        program.set_control_flow_graph(cfg);
+        // Add copy of the transient graph for each speculating instruction into the default graph.
+        // The transient graph is embedded into the default graph by adding transient start and
+        // resolve edges between the transient and default graph.
+        for (inst_ref, (start, rollback)) in transient_start_rollback_points {
+            let transient_entry_point = transient_entry_points.get(&inst_ref).cloned().unwrap();
+
+            // Reduce the size of the transient graph (depth limit by max. speculation window)
+            let mut reduced_transient_cfg = transient_cfg.clone();
+            remove_unreachable_transient_edges(
+                &mut reduced_transient_cfg,
+                &vec![transient_entry_point],
+                self.speculation_window,
+            )?;
+
+            let block_map = default_cfg.insert(&reduced_transient_cfg)?;
+
+            let transient_entry = block_map[&transient_entry_point];
+            let transient_resolve = block_map[&reduced_transient_cfg.exit().unwrap()];
+
+            default_cfg
+                .unconditional_edge(start, transient_entry)
+                .unwrap();
+            default_cfg
+                .unconditional_edge(transient_resolve, rollback)
+                .unwrap()
+                .labels_mut()
+                .rollback();
+        }
+
+        default_cfg.simplify()?;
+
+        program.set_control_flow_graph(default_cfg);
 
         Ok(())
     }

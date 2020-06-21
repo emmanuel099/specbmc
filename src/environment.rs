@@ -73,20 +73,6 @@ impl Default for PredictorStrategy {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
-pub enum TransientEncodingStrategy {
-    #[serde(rename = "unified")]
-    Unified, // all transient behavior is encoded into a single transient graph
-    #[serde(rename = "several")]
-    Several, // one transient graph for each (speculating) instruction
-}
-
-impl Default for TransientEncodingStrategy {
-    fn default() -> Self {
-        Self::Unified
-    }
-}
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum UnwindingGuard {
     #[serde(rename = "assumption")]
     Assumption, // add unwinding assumptions
@@ -110,8 +96,6 @@ pub struct Analysis {
     pub check: Check,
     #[serde(default)]
     pub predictor_strategy: PredictorStrategy,
-    #[serde(default, rename = "transient_encoding")]
-    pub transient_encoding_strategy: TransientEncodingStrategy,
     #[serde(default)]
     pub unwind: usize,
     #[serde(default)]
@@ -125,7 +109,6 @@ impl Default for Analysis {
             spectre_stl: false,
             check: Check::default(),
             predictor_strategy: PredictorStrategy::default(),
-            transient_encoding_strategy: TransientEncodingStrategy::default(),
             unwind: 0,
             unwinding_guard: UnwindingGuard::default(),
         }
