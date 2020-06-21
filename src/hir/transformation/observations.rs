@@ -20,24 +20,6 @@ impl Observations {
         }
     }
 
-    /// Enable or disable Cache observations.
-    pub fn with_cache(&mut self, available: bool) -> &mut Self {
-        self.cache_available = available;
-        self
-    }
-
-    /// Enable or disable Branch Target Buffer observations.
-    pub fn with_branch_target_buffer(&mut self, available: bool) -> &mut Self {
-        self.btb_available = available;
-        self
-    }
-
-    /// Enable or disable Pattern History Table observations.
-    pub fn with_pattern_history_table(&mut self, available: bool) -> &mut Self {
-        self.pht_available = available;
-        self
-    }
-
     fn observable_variables(&self) -> Vec<expr::Variable> {
         let mut variables = Vec::new();
 

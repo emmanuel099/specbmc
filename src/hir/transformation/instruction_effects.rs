@@ -20,24 +20,6 @@ impl InstructionEffects {
         }
     }
 
-    /// Enable or disable Cache effects.
-    pub fn with_cache(&mut self, available: bool) -> &mut Self {
-        self.cache_available = available;
-        self
-    }
-
-    /// Enable or disable Branch Target Buffer effects.
-    pub fn with_branch_target_buffer(&mut self, available: bool) -> &mut Self {
-        self.btb_available = available;
-        self
-    }
-
-    /// Enable or disable Pattern History Table effects.
-    pub fn with_pattern_history_table(&mut self, available: bool) -> &mut Self {
-        self.pht_available = available;
-        self
-    }
-
     fn instruction_effects(&self, instruction: &Instruction) -> Vec<Effect> {
         let mut effects = Vec::new();
 

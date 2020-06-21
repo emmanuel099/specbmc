@@ -47,37 +47,6 @@ impl TransientExecution {
         }
     }
 
-    /// Enable or disable Spectre-PHT encoding.
-    ///
-    /// If enabled, speculative branch mis-prediction will be encoded.
-    pub fn with_spectre_pht(&mut self, enabled: bool) -> &mut Self {
-        self.spectre_pht = enabled;
-        self
-    }
-
-    /// Enable or disable Spectre-STL encoding.
-    ///
-    /// If enabled, speculative store-bypass will be encoded.
-    pub fn with_spectre_stl(&mut self, enabled: bool) -> &mut Self {
-        self.spectre_stl = enabled;
-        self
-    }
-
-    /// Set the predictor strategy.
-    pub fn with_predictor_strategy(&mut self, strategy: PredictorStrategy) -> &mut Self {
-        self.predictor_strategy = strategy;
-        self
-    }
-
-    /// Set the transient encoding strategy.
-    pub fn with_transient_encoding_strategy(
-        &mut self,
-        strategy: TransientEncodingStrategy,
-    ) -> &mut Self {
-        self.transient_encoding_strategy = strategy;
-        self
-    }
-
     fn build_default_cfg(
         &self,
         cfg: &ControlFlowGraph,
