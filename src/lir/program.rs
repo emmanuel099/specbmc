@@ -102,3 +102,63 @@ impl Validate for Program {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::expr::{Boolean, Sort, Variable};
+
+    #[test]
+    fn test_validate_should_return_error_when_variable_is_redefined() {
+        // GIVEN
+        let mut program = Program::new();
+        program
+            .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
+            .unwrap();
+        program
+            .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
+            .unwrap();
+
+        // WHEN
+        let result = program.validate();
+
+        // THEN
+        assert_eq!(result.is_err(), true);
+    }
+
+    #[test]
+    fn test_validate_should_return_error_when_undefined_variable_is_used() {
+        // GIVEN
+        let mut program = Program::new();
+        program
+            .assume(Variable::new("x", Sort::boolean()).into())
+            .unwrap();
+
+        // WHEN
+        let result = program.validate();
+
+        // THEN
+        assert_eq!(result.is_err(), true);
+    }
+
+    #[test]
+    fn test_validate_should_return_ok_when_given_program_is_valid() {
+        // GIVEN
+        let mut program = Program::new();
+        program
+            .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
+            .unwrap();
+        program
+            .assign(Variable::new("y", Sort::boolean()), Boolean::constant(true))
+            .unwrap();
+        program
+            .assume(Variable::new("x", Sort::boolean()).into())
+            .unwrap();
+
+        // WHEN
+        let result = program.validate();
+
+        // THEN
+        assert_eq!(result.is_ok(), true);
+    }
+}
