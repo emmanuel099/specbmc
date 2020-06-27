@@ -99,6 +99,7 @@ impl PropagateConstants for expr::Expression {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use expr::{Boolean, Sort, Variable};
 
     #[test]
     fn test_constant_propagation() {
@@ -110,22 +111,19 @@ mod tests {
 
         let mut program = lir::Program::new();
         program
-            .assign(
-                expr::Variable::new("x", expr::Sort::boolean()),
-                expr::Boolean::constant(true),
-            )
+            .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
             .unwrap();
         program
             .assign(
-                expr::Variable::new("y", expr::Sort::boolean()),
-                expr::Variable::new("x", expr::Sort::boolean()).into(),
+                Variable::new("y", Sort::boolean()),
+                Variable::new("x", Sort::boolean()).into(),
             )
             .unwrap();
         program
             .assume(
-                expr::Boolean::and(
-                    expr::Variable::new("y", expr::Sort::boolean()).into(),
-                    expr::Variable::new("x", expr::Sort::boolean()).into(),
+                Boolean::and(
+                    Variable::new("y", Sort::boolean()).into(),
+                    Variable::new("x", Sort::boolean()).into(),
                 )
                 .unwrap(),
             )
@@ -142,26 +140,20 @@ mod tests {
 
         assert_eq!(
             program.node(0).unwrap(),
-            &lir::Node::assign(
-                expr::Variable::new("x", expr::Sort::boolean()),
-                expr::Boolean::constant(true),
-            )
-            .unwrap()
+            &lir::Node::assign(Variable::new("x", Sort::boolean()), Boolean::constant(true),)
+                .unwrap()
         );
         assert_eq!(
             program.node(1).unwrap(),
-            &lir::Node::assign(
-                expr::Variable::new("y", expr::Sort::boolean()),
-                expr::Boolean::constant(true),
-            )
-            .unwrap()
+            &lir::Node::assign(Variable::new("y", Sort::boolean()), Boolean::constant(true),)
+                .unwrap()
         );
         assert_eq!(
             program.node(2).unwrap(),
             &lir::Node::assume(
-                expr::Boolean::and(
-                    expr::Variable::new("y", expr::Sort::boolean()).into(),
-                    expr::Boolean::constant(true),
+                Boolean::and(
+                    Variable::new("y", Sort::boolean()).into(),
+                    Boolean::constant(true),
                 )
                 .unwrap(),
             )
