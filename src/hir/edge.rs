@@ -4,13 +4,13 @@ use std::collections::BTreeSet;
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
-pub enum EdgeLabel {
+pub enum Label {
     Taken,
     Speculate,
     Rollback,
 }
 
-impl fmt::Display for EdgeLabel {
+impl fmt::Display for Label {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Taken => write!(f, "taken"),
@@ -20,55 +20,47 @@ impl fmt::Display for EdgeLabel {
     }
 }
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub struct EdgeLabels {
-    labels: BTreeSet<EdgeLabel>,
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Default)]
+pub struct Labels {
+    labels: BTreeSet<Label>,
 }
 
-impl EdgeLabels {
+impl Labels {
     pub fn taken(&mut self) -> &mut Self {
-        self.labels.insert(EdgeLabel::Taken);
+        self.labels.insert(Label::Taken);
         self
     }
 
     pub fn is_taken(&self) -> bool {
-        self.labels.contains(&EdgeLabel::Taken)
+        self.labels.contains(&Label::Taken)
     }
 
     pub fn speculate(&mut self) -> &mut Self {
-        self.labels.insert(EdgeLabel::Speculate);
+        self.labels.insert(Label::Speculate);
         self
     }
 
     pub fn is_speculate(&self) -> bool {
-        self.labels.contains(&EdgeLabel::Speculate)
+        self.labels.contains(&Label::Speculate)
     }
 
     pub fn rollback(&mut self) -> &mut Self {
-        self.labels.insert(EdgeLabel::Rollback);
+        self.labels.insert(Label::Rollback);
         self
     }
 
     pub fn is_rollback(&self) -> bool {
-        self.labels.contains(&EdgeLabel::Rollback)
+        self.labels.contains(&Label::Rollback)
     }
 
-    pub fn merge(&mut self, other: &EdgeLabels) {
+    pub fn merge(&mut self, other: &Labels) {
         other.labels.iter().for_each(|&label| {
             self.labels.insert(label);
         });
     }
 }
 
-impl Default for EdgeLabels {
-    fn default() -> Self {
-        Self {
-            labels: BTreeSet::default(),
-        }
-    }
-}
-
-impl fmt::Display for EdgeLabels {
+impl fmt::Display for Labels {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.labels.is_empty() {
             return Ok(());
@@ -91,7 +83,7 @@ pub struct Edge {
     head: usize,
     tail: usize,
     condition: Option<Expression>,
-    labels: EdgeLabels,
+    labels: Labels,
 }
 
 impl Edge {
@@ -100,7 +92,7 @@ impl Edge {
             head,
             tail,
             condition,
-            labels: EdgeLabels::default(),
+            labels: Labels::default(),
         }
     }
 
@@ -123,12 +115,12 @@ impl Edge {
     }
 
     /// Retrieve the labels of this `Edge`.
-    pub fn labels(&self) -> &EdgeLabels {
+    pub fn labels(&self) -> &Labels {
         &self.labels
     }
 
     /// Retrieve a mutable reference to the labels of this `Edge`.
-    pub fn labels_mut(&mut self) -> &mut EdgeLabels {
+    pub fn labels_mut(&mut self) -> &mut Labels {
         &mut self.labels
     }
 

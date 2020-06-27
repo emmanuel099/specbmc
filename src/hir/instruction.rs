@@ -7,11 +7,11 @@ use std::collections::BTreeSet;
 use std::fmt;
 
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
-pub enum InstructionLabel {
+pub enum Label {
     Pseudo, // Instruction isn't part of the assembly
 }
 
-impl fmt::Display for InstructionLabel {
+impl fmt::Display for Label {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Pseudo => write!(f, "pseudo"),
@@ -19,37 +19,29 @@ impl fmt::Display for InstructionLabel {
     }
 }
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
-pub struct InstructionLabels {
-    labels: BTreeSet<InstructionLabel>,
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Default)]
+pub struct Labels {
+    labels: BTreeSet<Label>,
 }
 
-impl InstructionLabels {
+impl Labels {
     pub fn pseudo(&mut self) -> &mut Self {
-        self.labels.insert(InstructionLabel::Pseudo);
+        self.labels.insert(Label::Pseudo);
         self
     }
 
     pub fn is_pseudo(&self) -> bool {
-        self.labels.contains(&InstructionLabel::Pseudo)
+        self.labels.contains(&Label::Pseudo)
     }
 
-    pub fn merge(&mut self, other: &InstructionLabels) {
+    pub fn merge(&mut self, other: &Labels) {
         other.labels.iter().for_each(|&label| {
             self.labels.insert(label);
         });
     }
 }
 
-impl Default for InstructionLabels {
-    fn default() -> Self {
-        Self {
-            labels: BTreeSet::default(),
-        }
-    }
-}
-
-impl fmt::Display for InstructionLabels {
+impl fmt::Display for Labels {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.labels.is_empty() {
             return Ok(());
@@ -73,7 +65,7 @@ pub struct Instruction {
     operations: Vec<Operation>,
     effects: Vec<Effect>,
     address: Option<u64>,
-    labels: InstructionLabels,
+    labels: Labels,
 }
 
 impl Instruction {
@@ -83,7 +75,7 @@ impl Instruction {
             operations: vec![operation],
             effects: vec![],
             address: None,
-            labels: InstructionLabels::default(),
+            labels: Labels::default(),
         }
     }
 
@@ -183,12 +175,12 @@ impl Instruction {
     }
 
     /// Retrieve the labels of this `Instruction`.
-    pub fn labels(&self) -> &InstructionLabels {
+    pub fn labels(&self) -> &Labels {
         &self.labels
     }
 
     /// Retrieve a mutable reference to the labels of this `Instruction`.
-    pub fn labels_mut(&mut self) -> &mut InstructionLabels {
+    pub fn labels_mut(&mut self) -> &mut Labels {
         &mut self.labels
     }
 
