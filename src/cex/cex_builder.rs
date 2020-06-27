@@ -6,10 +6,7 @@ use crate::expr::{Constant, Expression, Variable};
 use crate::hir;
 use crate::solver::Model;
 
-pub fn build_counter_example(
-    program: &hir::Program,
-    model: &Box<dyn Model>,
-) -> Result<CounterExample> {
+pub fn build_counter_example(program: &hir::Program, model: &dyn Model) -> Result<CounterExample> {
     let mut cex = create_cex_from(program)?;
 
     let cfg = program.control_flow_graph();
@@ -24,7 +21,7 @@ pub fn build_counter_example(
 
 fn extract_trace(
     cfg: &hir::ControlFlowGraph,
-    model: &Box<dyn Model>,
+    model: &dyn Model,
     composition: Composition,
 ) -> Result<Vec<usize>> {
     let mut trace = Vec::new();
@@ -37,12 +34,9 @@ fn extract_trace(
             match edge.condition() {
                 Some(expr) => {
                     let executed = expr.evaluate(model, composition);
-                    match executed {
-                        Some(Constant::Boolean(true)) => {
-                            trace.push(edge.tail());
-                            continue 'outer;
-                        }
-                        _ => (),
+                    if let Some(Constant::Boolean(true)) = executed {
+                        trace.push(edge.tail());
+                        continue 'outer;
                     }
                 }
                 None => {
@@ -76,7 +70,7 @@ fn create_cex_from(program: &hir::Program) -> Result<CounterExample> {
 
 fn add_trace_info(
     cex: &mut CounterExample,
-    model: &Box<dyn Model>,
+    model: &dyn Model,
     trace: &[usize],
     composition: Composition,
 ) -> Result<()> {
@@ -110,17 +104,14 @@ fn add_trace_info(
             }
 
             for operation in inst.operations() {
-                match operation {
-                    hir::Operation::Observable { exprs } => {
-                        for expr in exprs {
-                            if let Some(value) = expr.evaluate(model, composition) {
-                                annotated_inst
-                                    .annotation_mut(composition)
-                                    .add_assignment(expr.clone(), value);
-                            }
+                if let hir::Operation::Observable { exprs } = operation {
+                    for expr in exprs {
+                        if let Some(value) = expr.evaluate(model, composition) {
+                            annotated_inst
+                                .annotation_mut(composition)
+                                .add_assignment(expr.clone(), value);
                         }
                     }
-                    _ => (),
                 }
             }
         }
@@ -136,7 +127,7 @@ fn add_trace_info(
 
 fn eval_effect(
     effect: &hir::Effect,
-    model: &Box<dyn Model>,
+    model: &dyn Model,
     composition: Composition,
 ) -> Option<Effect> {
     match effect {
@@ -179,11 +170,11 @@ fn eval_effect(
 }
 
 trait Evaluate {
-    fn evaluate(&self, model: &Box<dyn Model>, composition: Composition) -> Option<Constant>;
+    fn evaluate(&self, model: &dyn Model, composition: Composition) -> Option<Constant>;
 }
 
 impl Evaluate for Variable {
-    fn evaluate(&self, model: &Box<dyn Model>, composition: Composition) -> Option<Constant> {
+    fn evaluate(&self, model: &dyn Model, composition: Composition) -> Option<Constant> {
         if self.sort().is_predictor() {
             // FIXME
             return None;
@@ -193,7 +184,7 @@ impl Evaluate for Variable {
 }
 
 impl Evaluate for Expression {
-    fn evaluate(&self, model: &Box<dyn Model>, composition: Composition) -> Option<Constant> {
+    fn evaluate(&self, model: &dyn Model, composition: Composition) -> Option<Constant> {
         if self.sort().is_predictor() {
             // FIXME
             return None;

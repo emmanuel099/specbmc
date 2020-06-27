@@ -29,7 +29,7 @@ impl BlockGraph {
 
     /// Get the entry `Block` index of this `BlockGraph`.
     pub fn entry(&self) -> Result<usize> {
-        self.entry.ok_or("CFG entry must be set".into())
+        self.entry.ok_or_else(|| "CFG entry must be set".into())
     }
 
     /// Sets the entry point for this `BlockGraph` to the given `Block` index.
@@ -43,7 +43,7 @@ impl BlockGraph {
 
     /// Get the exit `Block` index of this `BlockGraph`.
     pub fn exit(&self) -> Result<usize> {
-        self.exit.ok_or("CFG exit must be set".into())
+        self.exit.ok_or_else(|| "CFG exit must be set".into())
     }
 
     /// Sets the exit point for this `BlockGraph` to the given `Block` index.
@@ -109,6 +109,12 @@ impl BlockGraph {
     pub fn add_edge(&mut self, head: usize, tail: usize) -> Result<()> {
         let edge = Edge::new(head, tail);
         Ok(self.graph.insert_edge(edge)?)
+    }
+}
+
+impl Default for BlockGraph {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

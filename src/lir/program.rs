@@ -6,7 +6,7 @@ use crate::util::Validate;
 use std::collections::HashSet;
 use std::fmt;
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Default)]
 pub struct Program {
     nodes: Vec<Node>,
 }

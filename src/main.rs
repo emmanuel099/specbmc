@@ -431,7 +431,7 @@ fn spec_bmc(arguments: &Arguments) -> Result<()> {
         CheckResult::AssertionViolated { model } => {
             println!("{}", "Leak detected!".bold().red());
 
-            let counter_example = cex::build_counter_example(&hir_program, &model)?;
+            let counter_example = cex::build_counter_example(&hir_program, model.as_ref())?;
             counter_example
                 .control_flow_graph()
                 .render_to_file(Path::new("cex.dot"))?;

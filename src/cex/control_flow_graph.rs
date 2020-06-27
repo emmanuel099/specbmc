@@ -73,6 +73,12 @@ impl ControlFlowGraph {
     }
 }
 
+impl Default for ControlFlowGraph {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl fmt::Display for ControlFlowGraph {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for block in self.blocks() {

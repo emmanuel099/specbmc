@@ -53,7 +53,7 @@ impl ControlFlowGraph {
 
     /// Get the entry `Block` index of this `ControlFlowGraph`.
     pub fn entry(&self) -> Result<usize> {
-        self.entry.ok_or("CFG entry must be set".into())
+        self.entry.ok_or_else(|| "CFG entry must be set".into())
     }
 
     /// Sets the entry point for this `ControlFlowGraph` to the given `Block` index.
@@ -67,7 +67,7 @@ impl ControlFlowGraph {
 
     /// Get the exit `Block` index of this `ControlFlowGraph`.
     pub fn exit(&self) -> Result<usize> {
-        self.exit.ok_or("CFG exit must be set".into())
+        self.exit.ok_or_else(|| "CFG exit must be set".into())
     }
 
     /// Sets the exit point for this `ControlFlowGraph` to the given `Block` index.
@@ -164,8 +164,14 @@ impl ControlFlowGraph {
 
         for &index in block_indices {
             for edge in self.edges_out(index)? {
-                let new_head = block_map.get(&edge.head()).cloned().unwrap_or(edge.head());
-                let new_tail = block_map.get(&edge.tail()).cloned().unwrap_or(edge.tail());
+                let new_head = block_map
+                    .get(&edge.head())
+                    .cloned()
+                    .unwrap_or_else(|| edge.head());
+                let new_tail = block_map
+                    .get(&edge.tail())
+                    .cloned()
+                    .unwrap_or_else(|| edge.tail());
                 new_edges.push(edge.clone_new_head_tail(new_head, new_tail));
             }
         }
@@ -591,6 +597,12 @@ impl ControlFlowGraph {
         }
 
         Ok(())
+    }
+}
+
+impl Default for ControlFlowGraph {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

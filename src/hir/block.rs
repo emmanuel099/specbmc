@@ -72,8 +72,8 @@ impl Block {
     }
 
     /// Overwrites the instructions of this `Block`
-    pub fn set_instructions(&mut self, instructions: &Vec<Instruction>) {
-        self.instructions.clone_from(instructions);
+    pub fn set_instructions(&mut self, instructions: &[Instruction]) {
+        self.instructions = instructions.to_owned();
     }
 
     /// Returns try if this `Block` is empty, meaning it has no `Instruction`

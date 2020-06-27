@@ -123,23 +123,23 @@ fn define_variable<T>(
 }
 
 impl Expr2Smt<()> for expr::Expression {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, i: ()) -> SmtRes<()>
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
         if let Some(lowered_expr) = lower_to_smt(self) {
             // Self has been lowered, encode the lowered expression instead.
-            return lowered_expr.expr_to_smt2(w, i);
+            return lowered_expr.expr_to_smt2(w, ());
         }
 
         if self.operands().is_empty() {
-            self.operator().expr_to_smt2(w, i)
+            self.operator().expr_to_smt2(w, ())
         } else {
             write!(w, "(")?;
-            self.operator().expr_to_smt2(w, i)?;
+            self.operator().expr_to_smt2(w, ())?;
             for operand in self.operands() {
                 write!(w, " ")?;
-                operand.expr_to_smt2(w, i)?;
+                operand.expr_to_smt2(w, ())?;
             }
             write!(w, ")")?;
             Ok(())
@@ -180,13 +180,13 @@ fn lower_to_smt_bitvec(
 }
 
 impl Expr2Smt<()> for expr::Operator {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, i: ()) -> SmtRes<()>
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
         match self {
-            Self::Variable(v) => v.sym_to_smt2(w, i),
-            Self::Constant(c) => c.expr_to_smt2(w, i),
+            Self::Variable(v) => v.sym_to_smt2(w, ()),
+            Self::Constant(c) => c.expr_to_smt2(w, ()),
             Self::Ite => {
                 write!(w, "ite")?;
                 Ok(())
@@ -200,15 +200,15 @@ impl Expr2Smt<()> for expr::Operator {
                 // everywhere else `nondet` is unexpected.
                 Err("Incorrect use of nondet()".into())
             }
-            Self::Boolean(op) => op.expr_to_smt2(w, i),
-            Self::Integer(op) => op.expr_to_smt2(w, i),
-            Self::BitVector(op) => op.expr_to_smt2(w, i),
-            Self::Array(op) => op.expr_to_smt2(w, i),
-            Self::Memory(op) => op.expr_to_smt2(w, i),
-            Self::Predictor(op) => op.expr_to_smt2(w, i),
-            Self::Cache(op) => op.expr_to_smt2(w, i),
-            Self::BranchTargetBuffer(op) => op.expr_to_smt2(w, i),
-            Self::PatternHistoryTable(op) => op.expr_to_smt2(w, i),
+            Self::Boolean(op) => op.expr_to_smt2(w, ()),
+            Self::Integer(op) => op.expr_to_smt2(w, ()),
+            Self::BitVector(op) => op.expr_to_smt2(w, ()),
+            Self::Array(op) => op.expr_to_smt2(w, ()),
+            Self::Memory(op) => op.expr_to_smt2(w, ()),
+            Self::Predictor(op) => op.expr_to_smt2(w, ()),
+            Self::Cache(op) => op.expr_to_smt2(w, ()),
+            Self::BranchTargetBuffer(op) => op.expr_to_smt2(w, ()),
+            Self::PatternHistoryTable(op) => op.expr_to_smt2(w, ()),
         }
     }
 }

@@ -43,6 +43,7 @@ impl TransientExecution {
         }
     }
 
+    #[allow(clippy::clippy::type_complexity)]
     fn build_default_cfg(
         &self,
         cfg: &ControlFlowGraph,
@@ -201,7 +202,7 @@ impl Transform<Program> for TransientExecution {
             let mut reduced_transient_cfg = transient_cfg.clone();
             remove_unreachable_transient_edges(
                 &mut reduced_transient_cfg,
-                &vec![transient_entry_point],
+                &[transient_entry_point],
                 self.speculation_window,
             )?;
 
@@ -262,7 +263,7 @@ fn add_transient_execution_start(
 
         let zero = BitVector::constant_u64(0, SPECULATION_WINDOW_SIZE);
         transient_start
-            .assume(BitVector::sgt(spec_win().into(), zero.clone())?)?
+            .assume(BitVector::sgt(spec_win().into(), zero)?)?
             .labels_mut()
             .pseudo();
 
@@ -580,7 +581,7 @@ fn append_spec_win_decrease_to_all_blocks(cfg: &mut ControlFlowGraph) -> Result<
 /// This function may yield unreachable blocks which can be removed by simplifying the CFG.
 fn remove_unreachable_transient_edges(
     cfg: &mut ControlFlowGraph,
-    transient_entries: &Vec<usize>,
+    transient_entries: &[usize],
     init_spec_window: usize,
 ) -> Result<()> {
     let resolve_block_index = cfg.exit().unwrap();
@@ -589,7 +590,7 @@ fn remove_unreachable_transient_edges(
     let mut remaining_spec_window_out: BTreeMap<usize, usize> = BTreeMap::new();
 
     // Initialize remaining speculation window for transient entry points
-    let mut queue = transient_entries.clone();
+    let mut queue = transient_entries.to_owned();
     transient_entries.iter().for_each(|&index| {
         remaining_spec_window_in.insert(index, init_spec_window);
     });
@@ -600,7 +601,7 @@ fn remove_unreachable_transient_edges(
         let inst_count = block.instruction_count_ignoring_pseudo_instructions();
 
         let spec_win_in = remaining_spec_window_in.get(&index).cloned().unwrap();
-        let spec_win_out = spec_win_in.checked_sub(inst_count).unwrap_or(0);
+        let spec_win_out = spec_win_in.saturating_sub(inst_count);
         remaining_spec_window_out.insert(index, spec_win_out);
 
         for successor in cfg.successor_indices(index)? {

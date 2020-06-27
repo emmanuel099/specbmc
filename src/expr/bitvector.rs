@@ -148,6 +148,7 @@ impl BitVector {
         Self::constant(BitVectorValue::new_big(value, bits))
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub fn to_boolean(expr: Expression) -> Result<Expression> {
         expr.sort().expect_bit_vector()?;
 
