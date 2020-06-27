@@ -22,9 +22,8 @@ impl CopyPropagation {
 impl Optimization for CopyPropagation {
     /// Propagate all simple assignments
     fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
-        let copies = determine_copies(program.nodes());
+        let copies = program.determine_copies();
         if copies.is_empty() {
-            // No copies
             return Ok(OptimizationResult::Unchanged);
         }
 
@@ -36,20 +35,26 @@ impl Optimization for CopyPropagation {
 
 type CopiedVariables = HashMap<expr::Variable, expr::Variable>;
 
-fn determine_copies(nodes: &[lir::Node]) -> CopiedVariables {
-    let mut copies = HashMap::new();
+trait DetermineCopies {
+    fn determine_copies(&self) -> CopiedVariables;
+}
 
-    nodes.iter().for_each(|node| {
-        if let lir::Node::Let { var, expr } = node {
-            if let expr::Operator::Variable(src_var) = expr.operator() {
-                copies.insert(var.clone(), src_var.clone());
+impl DetermineCopies for lir::Program {
+    fn determine_copies(&self) -> CopiedVariables {
+        let mut copies = HashMap::new();
+
+        self.nodes().iter().for_each(|node| {
+            if let lir::Node::Let { var, expr } = node {
+                if let expr::Operator::Variable(src_var) = expr.operator() {
+                    copies.insert(var.clone(), src_var.clone());
+                }
             }
-        }
-    });
+        });
 
-    resolve_copies_of_copies(&mut copies);
+        resolve_copies_of_copies(&mut copies);
 
-    copies
+        copies
+    }
 }
 
 trait PropagateCopies {

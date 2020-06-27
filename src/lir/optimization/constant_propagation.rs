@@ -22,9 +22,8 @@ impl ConstantPropagation {
 impl Optimization for ConstantPropagation {
     /// Propagate all constants
     fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
-        let constants = determine_constants(program.nodes());
+        let constants = program.determine_constants();
         if constants.is_empty() {
-            // No constants
             return Ok(OptimizationResult::Unchanged);
         }
 
@@ -36,18 +35,24 @@ impl Optimization for ConstantPropagation {
 
 type ConstantVariables = HashMap<expr::Variable, expr::Expression>;
 
-fn determine_constants(nodes: &[lir::Node]) -> ConstantVariables {
-    let mut constants = HashMap::new();
+trait DetermineConstants {
+    fn determine_constants(&self) -> ConstantVariables;
+}
 
-    nodes.iter().for_each(|node| {
-        if let lir::Node::Let { var, expr } = node {
-            if expr.is_constant() {
-                constants.insert(var.clone(), expr.clone());
+impl DetermineConstants for lir::Program {
+    fn determine_constants(&self) -> ConstantVariables {
+        let mut constants = HashMap::new();
+
+        self.nodes().iter().for_each(|node| {
+            if let lir::Node::Let { var, expr } = node {
+                if expr.is_constant() {
+                    constants.insert(var.clone(), expr.clone());
+                }
             }
-        }
-    });
+        });
 
-    constants
+        constants
+    }
 }
 
 trait PropagateConstants {
