@@ -116,3 +116,98 @@ fn resolve_copies_of_copies(copies: &mut CopiedVariables) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use expr::{Sort, Variable};
+
+    #[test]
+    fn test_resolve_copies_of_copies() {
+        // GIVEN
+        let a = Variable::new("a", Sort::boolean());
+        let b = Variable::new("b", Sort::boolean());
+        let c = Variable::new("c", Sort::boolean());
+        let d = Variable::new("d", Sort::boolean());
+        let e = Variable::new("e", Sort::boolean());
+        let f = Variable::new("f", Sort::boolean());
+
+        let mut copies = CopiedVariables::new();
+        copies.insert(b.clone(), a.clone());
+        copies.insert(c.clone(), b.clone());
+        copies.insert(d.clone(), c.clone());
+        copies.insert(f.clone(), e.clone());
+
+        // WHEN
+        resolve_copies_of_copies(&mut copies);
+
+        // THEN
+        assert_eq!(copies.get(&b), Some(&a));
+        assert_eq!(copies.get(&c), Some(&a));
+        assert_eq!(copies.get(&d), Some(&a));
+        assert_eq!(copies.get(&f), Some(&e));
+    }
+
+    #[test]
+    fn test_copy_propagation() {
+        // GIVEN
+
+        // v := u
+        // y := x
+        // z := y
+
+        let mut program = lir::Program::new();
+        program
+            .assign(
+                Variable::new("v", Sort::boolean()),
+                Variable::new("u", Sort::boolean()).into(),
+            )
+            .unwrap();
+        program
+            .assign(
+                Variable::new("y", Sort::boolean()),
+                Variable::new("x", Sort::boolean()).into(),
+            )
+            .unwrap();
+        program
+            .assign(
+                Variable::new("z", Sort::boolean()),
+                Variable::new("y", Sort::boolean()).into(),
+            )
+            .unwrap();
+
+        // WHEN
+        CopyPropagation::new().optimize(&mut program).unwrap();
+
+        // THEN
+
+        // v := u
+        // y := x
+        // z := x
+
+        assert_eq!(
+            program.node(0).unwrap(),
+            &lir::Node::assign(
+                Variable::new("v", Sort::boolean()),
+                Variable::new("u", Sort::boolean()).into(),
+            )
+            .unwrap()
+        );
+        assert_eq!(
+            program.node(1).unwrap(),
+            &lir::Node::assign(
+                Variable::new("y", Sort::boolean()),
+                Variable::new("x", Sort::boolean()).into(),
+            )
+            .unwrap()
+        );
+        assert_eq!(
+            program.node(2).unwrap(),
+            &lir::Node::assign(
+                Variable::new("z", Sort::boolean()),
+                Variable::new("x", Sort::boolean()).into(),
+            )
+            .unwrap()
+        );
+    }
+}
