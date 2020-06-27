@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::expr::{ArrayValue, BitVectorValue, CacheValue, MemoryValue};
 use num_bigint::BigUint;
 use std::convert::TryFrom;
+use std::convert::TryInto;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -33,7 +34,7 @@ impl Constant {
     }
 
     pub fn bit_vector_big_uint(value: BigUint) -> Self {
-        let bits = value.bits();
+        let bits: usize = value.bits().try_into().unwrap();
         Self::bit_vector(BitVectorValue::new_big(value, bits))
     }
 

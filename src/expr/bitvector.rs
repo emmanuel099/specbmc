@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::expr::{Constant, Expression, Sort, Variable};
 pub use falcon::il::Constant as BitVectorValue;
 use num_bigint::BigUint;
+use std::convert::TryInto;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -143,7 +144,7 @@ impl BitVector {
     }
 
     pub fn constant_big_uint(value: BigUint) -> Expression {
-        let bits = value.bits();
+        let bits: usize = value.bits().try_into().unwrap();
         Self::constant(BitVectorValue::new_big(value, bits))
     }
 
