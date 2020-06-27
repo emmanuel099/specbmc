@@ -2,7 +2,7 @@ use crate::environment::Environment;
 use crate::error::Result;
 use crate::expr;
 use crate::hir::Program;
-use crate::util::Transform;
+use crate::ir::Transform;
 
 #[derive(Default, Builder, Debug)]
 pub struct Observations {

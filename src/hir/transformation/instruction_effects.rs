@@ -2,7 +2,7 @@ use crate::environment::{Environment, WORD_SIZE};
 use crate::error::*;
 use crate::expr::BitVector;
 use crate::hir::{Effect, Instruction, Operation, Program};
-use crate::util::Transform;
+use crate::ir::Transform;
 
 #[derive(Default, Builder, Debug)]
 pub struct InstructionEffects {

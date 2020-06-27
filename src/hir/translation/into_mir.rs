@@ -1,8 +1,8 @@
 use crate::error::Result;
 use crate::expr;
 use crate::hir;
+use crate::ir::TryTranslateInto;
 use crate::mir;
-use crate::util::TryTranslateInto;
 
 /// We have a 2-safety hyperproperty
 const NUMBER_OF_SELF_COMPOSITIONS: usize = 2;

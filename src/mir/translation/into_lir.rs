@@ -1,8 +1,8 @@
 use crate::error::Result;
 use crate::expr;
+use crate::ir::TryTranslateInto;
 use crate::lir;
 use crate::mir;
-use crate::util::TryTranslateInto;
 
 impl TryTranslateInto<lir::Program> for mir::Program {
     fn try_translate_into(&self) -> Result<lir::Program> {

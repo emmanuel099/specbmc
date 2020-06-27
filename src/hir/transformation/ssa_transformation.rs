@@ -4,7 +4,7 @@ use crate::error::*;
 use crate::expr;
 use crate::hir::analysis;
 use crate::hir::{Block, ControlFlowGraph, Instruction, PhiNode, Program};
-use crate::util::Transform;
+use crate::ir::Transform;
 use falcon::graph::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 

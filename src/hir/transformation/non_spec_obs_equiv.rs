@@ -3,7 +3,7 @@ use crate::error::Result;
 use crate::expr::{BranchTargetBuffer, Cache, Expression, PatternHistoryTable, Sort, Variable};
 use crate::hir::transformation::explicit_effects::InstructionEffectEncoder;
 use crate::hir::{Operation, Program};
-use crate::util::Transform;
+use crate::ir::Transform;
 
 #[derive(Default, Builder, Debug)]
 pub struct NonSpecObsEquivalence {

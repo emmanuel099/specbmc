@@ -1,7 +1,7 @@
 use crate::environment::{Environment, UnwindingGuard};
 use crate::error::*;
 use crate::hir::{ControlFlowGraph, Program, RemovedEdgeGuard};
-use crate::util::Transform;
+use crate::ir::Transform;
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Default, Builder, Debug)]

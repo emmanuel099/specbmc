@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::expr::{Expression, Variable};
+use crate::ir::Validate;
 use crate::lir::Node;
-use crate::util::Validate;
 use std::collections::HashSet;
 use std::fmt;
 

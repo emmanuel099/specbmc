@@ -6,9 +6,10 @@ use console::style;
 
 use specbmc::environment;
 use specbmc::error::Result;
+use specbmc::ir::{Transform, TryTranslateFrom, Validate};
 use specbmc::loader;
 use specbmc::solver::*;
-use specbmc::util::{DumpToFile, RenderGraph, Transform, TryTranslateFrom, Validate};
+use specbmc::util::{DumpToFile, RenderGraph};
 use specbmc::{cex, hir, lir, mir};
 use std::path::Path;
 use std::process;

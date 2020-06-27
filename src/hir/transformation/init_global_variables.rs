@@ -5,7 +5,7 @@ use crate::expr::{
     Variable,
 };
 use crate::hir::{analysis, Block, Program};
-use crate::util::Transform;
+use crate::ir::Transform;
 use std::collections::HashSet;
 
 #[derive(Builder, Debug)]

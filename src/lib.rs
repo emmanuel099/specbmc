@@ -11,6 +11,7 @@ pub mod cex;
 pub mod environment;
 pub mod expr;
 pub mod hir;
+pub mod ir;
 pub mod lir;
 pub mod loader;
 pub mod mir;

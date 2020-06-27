@@ -2,7 +2,7 @@ use crate::environment::{Environment, PredictorStrategy, SPECULATION_WINDOW_SIZE
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Predictor, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Edge, Operation, Program, RemovedEdgeGuard};
-use crate::util::Transform;
+use crate::ir::Transform;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 

@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::expr;
 use crate::hir::{Effect, Instruction, Operation, Program};
-use crate::util::Transform;
+use crate::ir::Transform;
 
 #[derive(Default, Builder, Debug)]
 pub struct ExplicitEffects {}
