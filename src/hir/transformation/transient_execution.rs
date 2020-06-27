@@ -520,11 +520,14 @@ fn add_transient_resolve_edges(cfg: &mut ControlFlowGraph) -> Result<()> {
     let block_indices: Vec<usize> = cfg
         .blocks()
         .iter()
-        .filter(|block| {
-            block.index() != resolve_block_index
-                && block.instruction_count_ignoring_pseudo_instructions() > 0
+        .filter_map(|block| {
+            let has_instructions = block.instruction_count_ignoring_pseudo_instructions() > 0;
+            if has_instructions && block.index() != resolve_block_index {
+                Some(block.index())
+            } else {
+                None
+            }
         })
-        .map(|block| block.index())
         .collect();
 
     for block_index in block_indices {
@@ -573,9 +576,9 @@ fn append_spec_win_decrease_to_all_blocks(cfg: &mut ControlFlowGraph) -> Result<
 ///
 /// The algorithm works as follows:
 ///   1. The remaining speculation window of all transient entry points are set to the initial speculation window.
-///   2. The remaining speculation window of each transient block is maximized (i.e. maximize remaining_spec_window_in).
+///   2. The remaining speculation window of each transient block is maximized (i.e. maximize `remaining_spec_window_in`).
 ///   3. The set of transient blocks `S` which have an empty speculation window after they are executed
-///      (i.e. remaining_spec_window_out = 0) is determined.
+///      (i.e. `remaining_spec_window_out` = 0) is determined.
 ///   4. For each transient block in the set `S` all outgoing edges, expect the resolve edge, are removed.
 ///
 /// This function may yield unreachable blocks which can be removed by simplifying the CFG.
@@ -616,14 +619,18 @@ fn remove_unreachable_transient_edges(
     let transient_blocks_rollback: Vec<usize> = cfg
         .blocks()
         .iter()
-        .filter(|block| {
+        .filter_map(|block| {
             let remaining_spec_window = remaining_spec_window_out
                 .get(&block.index())
                 .cloned()
                 .unwrap_or_default();
-            remaining_spec_window == 0
+
+            if remaining_spec_window == 0 {
+                Some(block.index())
+            } else {
+                None
+            }
         })
-        .map(|block| block.index())
         .collect();
 
     for index in transient_blocks_rollback {

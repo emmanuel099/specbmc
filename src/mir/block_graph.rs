@@ -1,4 +1,4 @@
-use crate::error::*;
+use crate::error::Result;
 use crate::mir::{Block, Edge};
 use crate::util::RenderGraph;
 use falcon::graph::Graph;
