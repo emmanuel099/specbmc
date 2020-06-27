@@ -114,7 +114,7 @@ impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Comment(text) => write!(f, "// {}", text),
-            Self::Let { var, expr } => write!(f, "{} = {}", var, expr),
+            Self::Let { var, expr } => write!(f, "let {} = {}", var, expr),
             Self::Assert { condition } => write!(f, "assert {}", condition),
             Self::Assume { condition } => write!(f, "assume {}", condition),
         }
