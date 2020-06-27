@@ -1,7 +1,6 @@
 use crate::error::Result;
 use crate::expr::{Expression, Variable};
 use crate::lir::Node;
-use crate::util::TranslateInto;
 use crate::util::Validate;
 use std::collections::HashSet;
 use std::fmt;
@@ -12,12 +11,9 @@ pub struct Program {
 }
 
 impl Program {
+    /// Create a new empty `Program`.
     pub fn new() -> Self {
         Self { nodes: vec![] }
-    }
-
-    pub fn from<Src: TranslateInto<Self>>(src: &Src) -> Result<Self> {
-        src.translate_into()
     }
 
     /// Returns a reference to the node at the given index.

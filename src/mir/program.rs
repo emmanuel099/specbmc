@@ -1,6 +1,4 @@
-use crate::error::Result;
 use crate::mir::BlockGraph;
-use crate::util::TranslateInto;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -15,10 +13,6 @@ impl Program {
             block_graph,
             self_compositions,
         }
-    }
-
-    pub fn from<Src: TranslateInto<Self>>(src: &Src) -> Result<Self> {
-        src.translate_into()
     }
 
     pub fn block_graph(&self) -> &BlockGraph {

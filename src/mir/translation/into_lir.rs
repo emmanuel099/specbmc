@@ -2,10 +2,10 @@ use crate::error::Result;
 use crate::expr;
 use crate::lir;
 use crate::mir;
-use crate::util::TranslateInto;
+use crate::util::TryTranslateInto;
 
-impl TranslateInto<lir::Program> for mir::Program {
-    fn translate_into(&self) -> Result<lir::Program> {
+impl TryTranslateInto<lir::Program> for mir::Program {
+    fn try_translate_into(&self) -> Result<lir::Program> {
         let mut program = lir::Program::new();
 
         for composition in 1..=self.self_compositions() {

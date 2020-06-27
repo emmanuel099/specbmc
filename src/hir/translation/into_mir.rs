@@ -2,13 +2,13 @@ use crate::error::Result;
 use crate::expr;
 use crate::hir;
 use crate::mir;
-use crate::util::TranslateInto;
+use crate::util::TryTranslateInto;
 
 /// We have a 2-safety hyperproperty
 const NUMBER_OF_SELF_COMPOSITIONS: usize = 2;
 
-impl TranslateInto<mir::Program> for hir::Program {
-    fn translate_into(&self) -> Result<mir::Program> {
+impl TryTranslateInto<mir::Program> for hir::Program {
+    fn try_translate_into(&self) -> Result<mir::Program> {
         let block_graph = translate_control_flow_graph(self.control_flow_graph())?;
         Ok(mir::Program::new(block_graph, NUMBER_OF_SELF_COMPOSITIONS))
     }

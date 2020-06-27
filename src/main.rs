@@ -8,7 +8,7 @@ use specbmc::environment;
 use specbmc::error::Result;
 use specbmc::loader;
 use specbmc::solver::*;
-use specbmc::util::{DumpToFile, RenderGraph, Transform, Validate};
+use specbmc::util::{DumpToFile, RenderGraph, Transform, TryTranslateFrom, Validate};
 use specbmc::{cex, hir, lir, mir};
 use std::path::Path;
 use std::process;
@@ -394,14 +394,14 @@ fn spec_bmc(arguments: &Arguments) -> Result<()> {
     }
 
     println!("{} Translating into MIR", style("[5/9]").bold().dim());
-    let mir_program = mir::Program::from(&hir_program)?;
+    let mir_program = mir::Program::try_translate_from(&hir_program)?;
 
     if let Some(path) = &arguments.mir_file {
         mir_program.block_graph().render_to_file(Path::new(path))?;
     }
 
     println!("{} Translating into LIR", style("[6/9]").bold().dim());
-    let mut lir_program = lir::Program::from(&mir_program)?;
+    let mut lir_program = lir::Program::try_translate_from(&mir_program)?;
     lir_program.validate()?;
 
     println!("{} Optimizing LIR", style("[7/9]").bold().dim());
