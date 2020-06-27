@@ -47,6 +47,7 @@ impl Node {
         Ok(Self::Assume { condition })
     }
 
+    /// Returns whether this node is a comment.
     pub fn is_comment(&self) -> bool {
         match self {
             Self::Comment(..) => true,
@@ -54,6 +55,7 @@ impl Node {
         }
     }
 
+    /// Returns whether this node is a variable binding.
     pub fn is_let(&self) -> bool {
         match self {
             Self::Let { .. } => true,
@@ -61,6 +63,7 @@ impl Node {
         }
     }
 
+    /// Returns whether this node is an assertion.
     pub fn is_assert(&self) -> bool {
         match self {
             Self::Assert { .. } => true,
@@ -68,6 +71,7 @@ impl Node {
         }
     }
 
+    /// Returns whether this node is an assumption.
     pub fn is_assume(&self) -> bool {
         match self {
             Self::Assume { .. } => true,
