@@ -220,6 +220,24 @@ impl From<BigUint> for Constant {
     }
 }
 
+impl From<ArrayValue> for Constant {
+    fn from(value: ArrayValue) -> Self {
+        Self::array(value)
+    }
+}
+
+impl From<CacheValue> for Constant {
+    fn from(value: CacheValue) -> Self {
+        Self::cache(value)
+    }
+}
+
+impl From<MemoryValue> for Constant {
+    fn from(value: MemoryValue) -> Self {
+        Self::memory(value)
+    }
+}
+
 impl TryFrom<&Constant> for bool {
     type Error = &'static str;
 
