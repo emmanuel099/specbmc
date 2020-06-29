@@ -44,6 +44,7 @@ fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::Program> {
         match instruction.operation() {
             ir::Operation::Skip => semantics::skip(&mut instruction_graph),
             ir::Operation::Barrier => semantics::barrier(&mut instruction_graph),
+            ir::Operation::Flush => semantics::flush(&mut instruction_graph),
             ir::Operation::Assignment { reg, expr } => {
                 semantics::assignment(reg, expr, &mut instruction_graph)
             }
@@ -267,6 +268,23 @@ mod semantics {
             let block = cfg.new_block()?;
 
             block.barrier();
+
+            block.index()
+        };
+
+        cfg.set_entry(block_index)?;
+        cfg.set_exit(block_index)?;
+
+        Ok(())
+    }
+
+    pub fn flush(cfg: &mut hir::ControlFlowGraph) -> Result<()> {
+        let block_index = {
+            let block = cfg.new_block()?;
+
+            let empty_cache =
+                expr::Expression::constant(expr::CacheValue::empty().into(), expr::Sort::cache());
+            block.assign(expr::Cache::variable(), empty_cache)?;
 
             block.index()
         };
