@@ -644,9 +644,9 @@ fn array_to_cache(array: &expr::ArrayValue) -> Result<expr::Constant> {
     };
 
     let mut cache = if default_is_cached {
-        expr::CacheValue::new_full()
+        expr::CacheValue::full()
     } else {
-        expr::CacheValue::new_empty()
+        expr::CacheValue::empty()
     };
     for (address, is_cached) in array.entries() {
         if is_cached.try_into()? {

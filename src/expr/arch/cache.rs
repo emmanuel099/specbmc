@@ -41,14 +41,14 @@ pub struct CacheValue {
 }
 
 impl CacheValue {
-    pub fn new_empty() -> Self {
+    pub fn empty() -> Self {
         Self {
             addresses: BTreeSet::new(),
             default_empty: true,
         }
     }
 
-    pub fn new_full() -> Self {
+    pub fn full() -> Self {
         Self {
             addresses: BTreeSet::new(),
             default_empty: false,
