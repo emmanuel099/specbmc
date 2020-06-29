@@ -619,9 +619,10 @@ impl Model for RSMTModel {
         if let Ok(result) = solver.get_values(&[expr]) {
             if let Some((_, value)) = result.first() {
                 if value.is_array() {
+                    let arr = value.unwrap_array();
                     match expr.sort() {
-                        expr::Sort::Cache => array_to_cache(value.unwrap_array()).ok(),
-                        expr::Sort::Memory => array_to_memory(value.unwrap_array()).ok(),
+                        expr::Sort::Cache => array_to_cache(arr).ok().map(expr::Constant::cache),
+                        expr::Sort::Memory => array_to_memory(arr).ok().map(expr::Constant::memory),
                         _ => Some(value.clone()),
                     }
                 } else {
@@ -636,7 +637,7 @@ impl Model for RSMTModel {
     }
 }
 
-fn array_to_cache(array: &expr::ArrayValue) -> Result<expr::Constant> {
+fn array_to_cache(array: &expr::ArrayValue) -> Result<expr::CacheValue> {
     let default_is_cached: bool = if let Some(value) = array.default_value() {
         value.try_into()?
     } else {
@@ -655,10 +656,10 @@ fn array_to_cache(array: &expr::ArrayValue) -> Result<expr::Constant> {
             cache.evict(address.try_into()?);
         }
     }
-    Ok(expr::Constant::cache(cache))
+    Ok(cache)
 }
 
-fn array_to_memory(array: &expr::ArrayValue) -> Result<expr::Constant> {
+fn array_to_memory(array: &expr::ArrayValue) -> Result<expr::MemoryValue> {
     let default_value: u8 = if let Some(value) = array.default_value() {
         value.try_into()?
     } else {
@@ -669,7 +670,7 @@ fn array_to_memory(array: &expr::ArrayValue) -> Result<expr::Constant> {
     for (address, value) in array.entries() {
         memory.store(address.try_into()?, value.try_into()?)
     }
-    Ok(expr::Constant::memory(memory))
+    Ok(memory)
 }
 
 mod parser {
