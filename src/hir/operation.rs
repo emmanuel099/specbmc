@@ -218,7 +218,7 @@ impl Operation {
         }
     }
 
-    /// Get a Vec of the `Variable`s written by this `Operation`
+    /// Get each `Variable` written by this `Operation`.
     pub fn variables_written(&self) -> Vec<&Variable> {
         match self {
             Self::Assign { variable, .. } | Self::Load { variable, .. } => vec![variable],
@@ -233,7 +233,7 @@ impl Operation {
         }
     }
 
-    /// Get a Vec of mutable referencer to the `Variable`s written by this `Operation`
+    /// Get a mutable reference to each `Variable` written by this `Operation`.
     pub fn variables_written_mut(&mut self) -> Vec<&mut Variable> {
         match self {
             Self::Assign { variable, .. } | Self::Load { variable, .. } => vec![variable],
@@ -246,6 +246,14 @@ impl Operation {
             | Self::Observable { .. }
             | Self::Indistinguishable { .. } => Vec::new(),
         }
+    }
+
+    /// Get each `Variable` used by this `Operation`.
+    pub fn variables(&self) -> Vec<&Variable> {
+        self.variables_read()
+            .into_iter()
+            .chain(self.variables_written().into_iter())
+            .collect()
     }
 }
 
