@@ -167,7 +167,7 @@ impl Node {
         }
     }
 
-    /// Get a Vec of the `Variable`s defined by this `Node`
+    /// Get each `Variable` defined by this `Node`.
     pub fn variables_defined(&self) -> Vec<&Variable> {
         match self {
             Self::Let { var, .. } => vec![var],
@@ -179,7 +179,7 @@ impl Node {
         }
     }
 
-    /// Get a Vec of mutable reference to the `Variable`s defined by this `Node`
+    /// Get a mutable reference to each `Variable` defined by this `Node`.
     pub fn variables_defined_mut(&mut self) -> Vec<&mut Variable> {
         match self {
             Self::Let { var, .. } => vec![var],
@@ -189,6 +189,14 @@ impl Node {
             | Self::HyperAssert { .. }
             | Self::HyperAssume { .. } => Vec::new(),
         }
+    }
+
+    /// Get each `Variable` referenced by this `Operation`.
+    pub fn variables(&self) -> Vec<&Variable> {
+        self.variables_used()
+            .into_iter()
+            .chain(self.variables_defined().into_iter())
+            .collect()
     }
 }
 
