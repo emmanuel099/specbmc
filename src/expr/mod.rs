@@ -26,7 +26,8 @@ pub enum Operator {
     Constant(Constant),
     Ite,
     Equal,
-    Nondet, // Nondeterministic value
+    Nondet,     // Nondeterministic value
+    Cast(Sort), // Type cast
     Boolean(Boolean),
     Integer(Integer),
     BitVector(BitVector),
@@ -67,6 +68,7 @@ impl fmt::Display for Operator {
             Self::Ite => write!(f, "ite"),
             Self::Equal => write!(f, "="),
             Self::Nondet => write!(f, "nondet()"),
+            Self::Cast(sort) => write!(f, "(cast {})", sort),
             Self::Boolean(op) => op.fmt(f),
             Self::Integer(op) => op.fmt(f),
             Self::BitVector(op) => op.fmt(f),
@@ -167,6 +169,10 @@ impl Expression {
 
     pub fn nondet(sort: Sort) -> Expression {
         Expression::new(Operator::Nondet, vec![], sort)
+    }
+
+    pub fn cast(sort: Sort, expr: Expression) -> Expression {
+        Expression::new(Operator::Cast(sort.clone()), vec![expr], sort)
     }
 
     /// Returns all `Variables` used in this `Expression`

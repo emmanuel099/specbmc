@@ -200,6 +200,12 @@ impl Expr2Smt<()> for expr::Operator {
                 // everywhere else `nondet` is unexpected.
                 Err("Incorrect use of nondet()".into())
             }
+            Self::Cast(sort) => {
+                write!(w, "(as const ")?;
+                sort.sort_to_smt2(w)?;
+                write!(w, ")")?;
+                Ok(())
+            }
             Self::Boolean(op) => op.expr_to_smt2(w, ()),
             Self::Integer(op) => op.expr_to_smt2(w, ()),
             Self::BitVector(op) => op.expr_to_smt2(w, ()),
