@@ -225,13 +225,66 @@ impl Expr2Smt<()> for expr::Constant {
         Writer: ::std::io::Write,
     {
         match self {
-            Self::Boolean(true) => write!(w, "true")?,
-            Self::Boolean(false) => write!(w, "false")?,
-            Self::Integer(value) => write!(w, "{}", value)?,
-            Self::BitVector(bv) => write!(w, "(_ bv{} {})", bv.value(), bv.bits())?,
+            Self::Boolean(true) => {
+                write!(w, "true")?;
+                Ok(())
+            }
+            Self::Boolean(false) => {
+                write!(w, "false")?;
+                Ok(())
+            }
+            Self::Integer(value) => {
+                write!(w, "{}", value)?;
+                Ok(())
+            }
+            Self::BitVector(bv) => {
+                write!(w, "(_ bv{} {})", bv.value(), bv.bits())?;
+                Ok(())
+            }
+            Self::Cache(value) => value.expr_to_smt2(w, ()),
             _ => unimplemented!(),
+        }
+    }
+}
+
+impl Expr2Smt<()> for expr::CacheValue {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+    where
+        Writer: ::std::io::Write,
+    {
+        let cache = match self.addresses() {
+            expr::CacheAddresses::EvictedFromFullCache(addresses) => {
+                let mut cache = expr::Expression::cast(
+                    expr::Sort::cache(),
+                    expr::Boolean::constant(true), // full cache
+                );
+
+                for address in addresses {
+                    //cache = expr::Cache::evict(8, cache, expr::BitVector::constant_u64(address, environment::WORD_SIZE)).unwrap();
+                }
+
+                cache
+            }
+            expr::CacheAddresses::FetchedIntoEmptyCache(addresses) => {
+                let mut cache = expr::Expression::cast(
+                    expr::Sort::cache(),
+                    expr::Boolean::constant(false), // empty cache
+                );
+
+                for address in addresses {
+                    cache = expr::Cache::fetch(
+                        8,
+                        cache,
+                        expr::BitVector::constant_u64(address, environment::WORD_SIZE),
+                    )
+                    .unwrap();
+                }
+
+                cache
+            }
         };
-        Ok(())
+
+        cache.expr_to_smt2(w, ())
     }
 }
 

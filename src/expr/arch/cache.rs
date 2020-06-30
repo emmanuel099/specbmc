@@ -34,6 +34,11 @@ impl Cache {
     }
 }
 
+pub enum CacheAddresses {
+    EvictedFromFullCache(BTreeSet<u64>),
+    FetchedIntoEmptyCache(BTreeSet<u64>),
+}
+
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct CacheValue {
     addresses: BTreeSet<u64>, // Holds evicted addresses if default is cached, or fetched addresses if default is not cached.
@@ -82,6 +87,14 @@ impl CacheValue {
         } else {
             let fetched = self.addresses.contains(&addr);
             fetched
+        }
+    }
+
+    pub fn addresses(&self) -> CacheAddresses {
+        if self.default_is_cached {
+            CacheAddresses::EvictedFromFullCache(self.addresses.clone())
+        } else {
+            CacheAddresses::FetchedIntoEmptyCache(self.addresses.clone())
         }
     }
 }
