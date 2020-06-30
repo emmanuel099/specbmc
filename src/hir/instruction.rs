@@ -194,7 +194,7 @@ impl Instruction {
         self.address = address;
     }
 
-    /// Get the variables which will be written by this `Instruction`.
+    /// Get the variables written by this `Instruction`.
     pub fn variables_written(&self) -> Vec<&Variable> {
         self.operations
             .iter()
@@ -202,7 +202,7 @@ impl Instruction {
             .collect()
     }
 
-    /// Get a mutable reference to the variables which will be written by this `Instruction`.
+    /// Get a mutable reference to the variables written by this `Instruction`.
     pub fn variables_written_mut(&mut self) -> Vec<&mut Variable> {
         self.operations
             .iter_mut()
@@ -225,6 +225,14 @@ impl Instruction {
             .iter_mut()
             .flat_map(Operation::variables_read_mut)
             .chain(self.effects.iter_mut().flat_map(Effect::variables_mut))
+            .collect()
+    }
+
+    /// Get each `Variable` used by this `Instruction`.
+    pub fn variables(&self) -> Vec<&Variable> {
+        self.variables_read()
+            .into_iter()
+            .chain(self.variables_written().into_iter())
             .collect()
     }
 }
