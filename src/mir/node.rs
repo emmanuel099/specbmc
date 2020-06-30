@@ -4,34 +4,24 @@ use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Node {
+    /// A simple comment.
     Comment(String),
-    // Bind the expression to a variable.
-    Let {
-        var: Variable,
-        expr: Expression,
-    },
+    /// Bind the expression to a variable.
+    Let { var: Variable, expr: Expression },
     /// Assert that the condition is true in each composition.
-    Assert {
-        condition: Expression,
-    },
+    Assert { condition: Expression },
     /// Assume that the condition is true in each composition.
-    Assume {
-        condition: Expression,
-    },
+    Assume { condition: Expression },
     /// Assert that the condition is true.
     /// The condition may refer to variables from different compositions.
-    HyperAssert {
-        condition: Expression,
-    },
+    HyperAssert { condition: Expression },
     /// Assume that the condition is true.
     /// The condition may refer to variables from different compositions.
-    HyperAssume {
-        condition: Expression,
-    },
+    HyperAssume { condition: Expression },
 }
 
 impl Node {
-    /// Create a new `Node::Comment`.
+    /// Create a new comment.
     pub fn comment<S>(text: S) -> Self
     where
         S: Into<String>,
@@ -39,72 +29,66 @@ impl Node {
         Self::Comment(text.into())
     }
 
-    /// Create a new `Node::Let`.
+    /// Create a new variable binding.
     pub fn assign(var: Variable, expr: Expression) -> Result<Self> {
         expr.sort().expect_sort(var.sort())?;
+
+        if var.composition().is_some() {
+            return Err("Target variable must not refer to a composition.".into());
+        }
+        if has_variables_with_composition(&expr) {
+            return Err("Expression variables must not refer to a composition.".into());
+        }
+
         Ok(Self::Let { var, expr })
     }
 
-    /// Create a new `Node::Assert`.
+    /// Create a new assertion.
     pub fn assert(condition: Expression) -> Result<Self> {
         condition.sort().expect_boolean()?;
 
-        if condition
-            .variables()
-            .iter()
-            .any(|variable| variable.composition().is_some())
-        {
+        if has_variables_with_composition(&condition) {
             return Err(
-                "Condition variables must not refer to a composition, use hyper_assert instead."
-                    .into(),
+                "Condition variables must not refer to a composition, use hyper_assert.".into(),
             );
         }
 
         Ok(Self::Assert { condition })
     }
 
-    /// Create a new `Node::Assume`.
+    /// Create a new assumption.
     pub fn assume(condition: Expression) -> Result<Self> {
         condition.sort().expect_boolean()?;
 
-        if condition
-            .variables()
-            .iter()
-            .any(|variable| variable.composition().is_some())
-        {
+        if has_variables_with_composition(&condition) {
             return Err(
-                "Condition variables must not refer to a composition, use hyper_assume instead."
-                    .into(),
+                "Condition variables must not refer to a composition, use hyper_assume.".into(),
             );
         }
 
         Ok(Self::Assume { condition })
     }
 
-    /// Create a new `Node::HyperAssert`.
+    /// Create a new hyper-assertion.
+    ///
+    /// The condition may refer to variables from different compositions.
     pub fn hyper_assert(condition: Expression) -> Result<Self> {
         condition.sort().expect_boolean()?;
 
-        if condition
-            .variables()
-            .iter()
-            .any(|variable| variable.composition().is_none())
-        {
+        if has_variables_without_composition(&condition) {
             return Err("All condition variables must refer to a composition.".into());
         }
 
         Ok(Self::HyperAssert { condition })
     }
 
-    /// Create a new `Node::HyperAssume`.
+    // Create a new hyper-assumption.
+    ///
+    /// The condition may refer to variables from different compositions.
     pub fn hyper_assume(condition: Expression) -> Result<Self> {
         condition.sort().expect_boolean()?;
 
-        if condition
-            .variables()
-            .iter()
-            .any(|variable| variable.composition().is_none())
-        {
+        if has_variables_without_composition(&condition) {
             return Err("All condition variables must refer to a composition.".into());
         }
 
@@ -219,4 +203,16 @@ impl fmt::Display for Node {
             Self::HyperAssume { condition } => write!(f, "hyper-assume {}", condition),
         }
     }
+}
+
+fn has_variables_with_composition(expr: &Expression) -> bool {
+    expr.variables()
+        .iter()
+        .any(|var| var.composition().is_some())
+}
+
+fn has_variables_without_composition(expr: &Expression) -> bool {
+    expr.variables()
+        .iter()
+        .any(|var| var.composition().is_none())
 }

@@ -4,24 +4,18 @@ use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Node {
+    /// A simple comment.
     Comment(String),
-    // Bind the expression to a variable.
-    Let {
-        var: Variable,
-        expr: Expression,
-    },
+    /// Bind the expression to a variable.
+    Let { var: Variable, expr: Expression },
     /// Assert that the condition is true.
-    Assert {
-        condition: Expression,
-    },
+    Assert { condition: Expression },
     /// Assume that the condition is true.
-    Assume {
-        condition: Expression,
-    },
+    Assume { condition: Expression },
 }
 
 impl Node {
-    /// Create a new `Node::Comment`.
+    /// Create a new comment.
     pub fn comment<S>(text: S) -> Self
     where
         S: Into<String>,
@@ -29,19 +23,19 @@ impl Node {
         Self::Comment(text.into())
     }
 
-    /// Create a new `Node::Let`.
+    /// Create a new variable binding.
     pub fn assign(var: Variable, expr: Expression) -> Result<Self> {
         expr.sort().expect_sort(var.sort())?;
         Ok(Self::Let { var, expr })
     }
 
-    /// Create a new `Node::Assert`.
+    /// Create a new assertion.
     pub fn assert(condition: Expression) -> Result<Self> {
         condition.sort().expect_boolean()?;
         Ok(Self::Assert { condition })
     }
 
-    /// Create a new `Node::Assume`.
+    /// Create a new assumption.
     pub fn assume(condition: Expression) -> Result<Self> {
         condition.sort().expect_boolean()?;
         Ok(Self::Assume { condition })
