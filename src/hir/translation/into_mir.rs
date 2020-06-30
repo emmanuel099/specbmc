@@ -47,8 +47,7 @@ fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Resul
 
     for instruction in src_block.instructions() {
         for operation in instruction.operations() {
-            if let Some(mut node) = translate_operation(operation)? {
-                node.set_address(instruction.address());
+            if let Some(node) = translate_operation(operation)? {
                 block.add_node(node);
             }
         }
@@ -59,7 +58,7 @@ fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Resul
 
 fn translate_operation(operation: &hir::Operation) -> Result<Option<mir::Node>> {
     use hir::Operation::*;
-    let op = match operation {
+    let node = match operation {
         Assign { variable, expr } => Some(mir::Node::assign(variable.clone(), expr.clone())?),
         Assert { condition } => Some(mir::Node::assert(condition.clone())?),
         Assume { condition } => Some(mir::Node::assume(condition.clone())?),
@@ -76,7 +75,7 @@ fn translate_operation(operation: &hir::Operation) -> Result<Option<mir::Node>> 
             None
         }
     };
-    Ok(op)
+    Ok(node)
 }
 
 /// Gives the transition condition of edge (p, q) which is defined as:

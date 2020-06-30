@@ -45,14 +45,14 @@ fn translate_block(
     )?;
 
     for node in block.nodes() {
-        match node.operation() {
-            mir::Operation::Let { var, expr } => {
+        match node {
+            mir::Node::Let { var, expr } => {
                 program.assign(
                     var.self_compose(composition),
                     expr.self_compose(composition),
                 )?;
             }
-            mir::Operation::Assert { condition } => {
+            mir::Node::Assert { condition } => {
                 program.assert(expr::Boolean::imply(
                     block
                         .execution_condition_variable()
@@ -61,7 +61,7 @@ fn translate_block(
                     condition.self_compose(composition),
                 )?)?;
             }
-            mir::Operation::Assume { condition } => {
+            mir::Node::Assume { condition } => {
                 program.assume(expr::Boolean::imply(
                     block
                         .execution_condition_variable()
@@ -85,15 +85,15 @@ fn add_self_composition_constraints(
 
     for block in mir_program.block_graph().blocks() {
         for node in block.nodes() {
-            match node.operation() {
-                mir::Operation::HyperAssert { condition } => {
+            match node {
+                mir::Node::HyperAssert { condition } => {
                     let compositions = involved_compositions(condition)?;
                     lir_program.assert(expr::Boolean::imply(
                         hyper_execution_condition(&block, &compositions)?, // only if executed
                         condition.clone(),
                     )?)?;
                 }
-                mir::Operation::HyperAssume { condition } => {
+                mir::Node::HyperAssume { condition } => {
                     let compositions = involved_compositions(condition)?;
                     lir_program.assume(expr::Boolean::imply(
                         hyper_execution_condition(&block, &compositions)?, // only if executed

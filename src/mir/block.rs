@@ -7,7 +7,7 @@ use std::fmt;
 pub struct Block {
     /// The index of this block.
     index: usize,
-    /// The instructions for this block.
+    /// The nodes for this block.
     nodes: Vec<Node>,
     /// The execution condition of this block.
     execution_condition: Expression,
