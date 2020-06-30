@@ -19,8 +19,8 @@ pub use self::effect::Effect;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Composition {
-    A = 1,
-    B = 2,
+    A = 0,
+    B = 1,
 }
 
 impl Composition {
