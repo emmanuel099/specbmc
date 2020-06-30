@@ -101,6 +101,90 @@ impl Node {
 
         Ok(Self::HyperAssume { condition })
     }
+
+    /// Returns whether this node is a variable binding.
+    pub fn is_let(&self) -> bool {
+        match self {
+            Self::Let { .. } => true,
+            _ => false,
+        }
+    }
+
+    /// Returns whether this node is an assertion.
+    pub fn is_assert(&self) -> bool {
+        match self {
+            Self::Assert { .. } => true,
+            _ => false,
+        }
+    }
+
+    /// Returns whether this node is an assumption.
+    pub fn is_assume(&self) -> bool {
+        match self {
+            Self::Assume { .. } => true,
+            _ => false,
+        }
+    }
+
+    /// Returns whether this node is a hyper-assertion.
+    pub fn is_hyper_assert(&self) -> bool {
+        match self {
+            Self::HyperAssert { .. } => true,
+            _ => false,
+        }
+    }
+
+    /// Returns whether this node is a hyper-assumption.
+    pub fn is_hyper_assume(&self) -> bool {
+        match self {
+            Self::HyperAssume { .. } => true,
+            _ => false,
+        }
+    }
+
+    /// Get each `Variable` used by this `Node`.
+    pub fn variables_used(&self) -> Vec<&Variable> {
+        match self {
+            Self::Let { expr, .. } => expr.variables(),
+            Self::Assert { condition }
+            | Self::Assume { condition }
+            | Self::HyperAssert { condition }
+            | Self::HyperAssume { condition } => condition.variables(),
+        }
+    }
+
+    /// Get a mutable reference to each `Variable` used by this `Node`.
+    pub fn variables_used_mut(&mut self) -> Vec<&mut Variable> {
+        match self {
+            Self::Let { expr, .. } => expr.variables_mut(),
+            Self::Assert { condition }
+            | Self::Assume { condition }
+            | Self::HyperAssert { condition }
+            | Self::HyperAssume { condition } => condition.variables_mut(),
+        }
+    }
+
+    /// Get a Vec of the `Variable`s defined by this `Node`
+    pub fn variables_defined(&self) -> Vec<&Variable> {
+        match self {
+            Self::Let { var, .. } => vec![var],
+            Self::Assert { .. }
+            | Self::Assume { .. }
+            | Self::HyperAssert { .. }
+            | Self::HyperAssume { .. } => Vec::new(),
+        }
+    }
+
+    /// Get a Vec of mutable reference to the `Variable`s defined by this `Node`
+    pub fn variables_defined_mut(&mut self) -> Vec<&mut Variable> {
+        match self {
+            Self::Let { var, .. } => vec![var],
+            Self::Assert { .. }
+            | Self::Assume { .. }
+            | Self::HyperAssert { .. }
+            | Self::HyperAssume { .. } => Vec::new(),
+        }
+    }
 }
 
 impl fmt::Display for Node {
