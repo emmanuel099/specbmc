@@ -46,6 +46,9 @@ fn translate_block(
 
     for node in block.nodes() {
         match node {
+            mir::Node::Comment(text) => {
+                program.comment(text);
+            }
             mir::Node::Let { var, expr } => {
                 program.assign(
                     var.self_compose(composition),

@@ -4,6 +4,7 @@ use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Node {
+    Comment(String),
     // Bind the expression to a variable.
     Let {
         var: Variable,
@@ -30,6 +31,14 @@ pub enum Node {
 }
 
 impl Node {
+    /// Create a new `Node::Comment`.
+    pub fn comment<S>(text: S) -> Self
+    where
+        S: Into<String>,
+    {
+        Self::Comment(text.into())
+    }
+
     /// Create a new `Node::Let`.
     pub fn assign(var: Variable, expr: Expression) -> Result<Self> {
         expr.sort().expect_sort(var.sort())?;
@@ -102,6 +111,14 @@ impl Node {
         Ok(Self::HyperAssume { condition })
     }
 
+    /// Returns whether this node is a comment.
+    pub fn is_comment(&self) -> bool {
+        match self {
+            Self::Comment(..) => true,
+            _ => false,
+        }
+    }
+
     /// Returns whether this node is a variable binding.
     pub fn is_let(&self) -> bool {
         match self {
@@ -150,6 +167,7 @@ impl Node {
             | Self::Assume { condition }
             | Self::HyperAssert { condition }
             | Self::HyperAssume { condition } => condition.variables(),
+            Self::Comment(_) => Vec::new(),
         }
     }
 
@@ -161,6 +179,7 @@ impl Node {
             | Self::Assume { condition }
             | Self::HyperAssert { condition }
             | Self::HyperAssume { condition } => condition.variables_mut(),
+            Self::Comment(_) => Vec::new(),
         }
     }
 
@@ -168,7 +187,8 @@ impl Node {
     pub fn variables_defined(&self) -> Vec<&Variable> {
         match self {
             Self::Let { var, .. } => vec![var],
-            Self::Assert { .. }
+            Self::Comment(_)
+            | Self::Assert { .. }
             | Self::Assume { .. }
             | Self::HyperAssert { .. }
             | Self::HyperAssume { .. } => Vec::new(),
@@ -179,7 +199,8 @@ impl Node {
     pub fn variables_defined_mut(&mut self) -> Vec<&mut Variable> {
         match self {
             Self::Let { var, .. } => vec![var],
-            Self::Assert { .. }
+            Self::Comment(_)
+            | Self::Assert { .. }
             | Self::Assume { .. }
             | Self::HyperAssert { .. }
             | Self::HyperAssume { .. } => Vec::new(),
@@ -190,6 +211,7 @@ impl Node {
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Comment(text) => write!(f, "// {}", text),
             Self::Let { var, expr } => write!(f, "let {} = {}", var, expr),
             Self::Assert { condition } => write!(f, "assert {}", condition),
             Self::Assume { condition } => write!(f, "assume {}", condition),
