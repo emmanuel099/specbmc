@@ -260,7 +260,12 @@ impl Expr2Smt<()> for expr::CacheValue {
                 );
 
                 for address in addresses {
-                    //cache = expr::Cache::evict(8, cache, expr::BitVector::constant_u64(address, environment::WORD_SIZE)).unwrap();
+                    cache = expr::Cache::evict(
+                        8,
+                        cache,
+                        expr::BitVector::constant_u64(address, environment::WORD_SIZE),
+                    )
+                    .unwrap();
                 }
 
                 cache
@@ -423,6 +428,7 @@ impl Expr2Smt<()> for expr::Cache {
     {
         match self {
             Self::Fetch(width) => write!(w, "cache-fetch{}", width)?,
+            Self::Evict(width) => write!(w, "cache-evict{}", width)?,
         };
         Ok(())
     }
@@ -577,7 +583,7 @@ fn define_cache<T>(solver: &mut Solver<T>, access_widths: &[usize]) -> Result<()
     let cache_set_sort = expr::Sort::array(&expr::Sort::word(), &expr::Sort::boolean());
     solver.define_null_sort(&expr::Sort::cache(), &cache_set_sort)?;
 
-    // cache functions
+    // cache fetch
     for width in access_widths {
         let mut insert_expr: expr::Expression =
             expr::Variable::new("cache", cache_set_sort.clone()).into();
@@ -593,6 +599,28 @@ fn define_cache<T>(solver: &mut Solver<T>, access_widths: &[usize]) -> Result<()
         }
         solver.define_fun(
             &format!("cache-fetch{}", width),
+            &[("cache", expr::Sort::cache()), ("addr", expr::Sort::word())],
+            &expr::Sort::cache(),
+            &insert_expr,
+        )?;
+    }
+
+    // cache evict
+    for width in access_widths {
+        let mut insert_expr: expr::Expression =
+            expr::Variable::new("cache", cache_set_sort.clone()).into();
+        for byte in 0..(width / 8) {
+            insert_expr = expr::Array::store(
+                insert_expr,
+                expr::BitVector::add(
+                    expr::Variable::new("addr", expr::Sort::word()).into(),
+                    expr::BitVector::constant_u64(byte.try_into().unwrap(), environment::WORD_SIZE),
+                )?,
+                expr::Boolean::constant(false),
+            )?;
+        }
+        solver.define_fun(
+            &format!("cache-evict{}", width),
             &[("cache", expr::Sort::cache()), ("addr", expr::Sort::word())],
             &expr::Sort::cache(),
             &insert_expr,

@@ -7,12 +7,14 @@ use std::fmt;
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Cache {
     Fetch(usize), // Fetch N bits into the cache
+    Evict(usize), // Evict N bits from the cache
 }
 
 impl fmt::Display for Cache {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Fetch(bit_width) => write!(f, "(cache-fetch {})", bit_width),
+            Self::Evict(bit_width) => write!(f, "(cache-evict {})", bit_width),
         }
     }
 }
@@ -28,6 +30,17 @@ impl Cache {
 
         Ok(Expression::new(
             Self::Fetch(bit_width).into(),
+            vec![cache, addr],
+            Sort::cache(),
+        ))
+    }
+
+    pub fn evict(bit_width: usize, cache: Expression, addr: Expression) -> Result<Expression> {
+        cache.sort().expect_cache()?;
+        addr.sort().expect_word()?;
+
+        Ok(Expression::new(
+            Self::Evict(bit_width).into(),
             vec![cache, addr],
             Sort::cache(),
         ))
