@@ -153,12 +153,12 @@ fn compute_phi_expr(
 }
 
 /// Create an expression to enforce equality of all given expression under 2-way self composition.
-/// For example, let `exprs` be `[x, y]` then this function will produce `x.1 == x.2 /\ y.1 == y.2`.
+/// For example, let `exprs` be `[x, y]` then this function will produce `x@0 == x@1 /\ y@0 == y@1`.
 fn equal_under_self_composition(exprs: &[expr::Expression]) -> expr::Expression {
     expr::Boolean::conjunction(
         &exprs
             .iter()
-            .map(|e| expr::Expression::equal(e.self_compose(1), e.self_compose(2)).unwrap())
+            .map(|e| expr::Expression::equal(e.self_compose(0), e.self_compose(1)).unwrap())
             .collect::<Vec<expr::Expression>>(),
     )
     .unwrap()

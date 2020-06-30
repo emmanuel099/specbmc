@@ -8,7 +8,7 @@ impl TryTranslateInto<lir::Program> for mir::Program {
     fn try_translate_into(&self) -> Result<lir::Program> {
         let mut program = lir::Program::new();
 
-        for composition in 1..=self.self_compositions() {
+        for composition in 0..self.self_compositions() {
             translate_program_composition(&mut program, self, composition)?;
         }
 
