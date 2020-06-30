@@ -36,54 +36,59 @@ impl Cache {
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct CacheValue {
-    addresses: BTreeSet<u64>,
-    default_empty: bool,
+    addresses: BTreeSet<u64>, // Holds evicted addresses if default is cached, or fetched addresses if default is not cached.
+    default_is_cached: bool,
 }
 
 impl CacheValue {
     pub fn empty() -> Self {
         Self {
             addresses: BTreeSet::new(),
-            default_empty: true,
+            default_is_cached: false,
         }
     }
 
     pub fn full() -> Self {
         Self {
             addresses: BTreeSet::new(),
-            default_empty: false,
+            default_is_cached: true,
         }
     }
 
     pub fn fetch(&mut self, addr: u64) {
-        if self.default_empty {
-            self.addresses.insert(addr);
-        } else {
+        if self.default_is_cached {
+            // Remove evicted
             self.addresses.remove(&addr);
+        } else {
+            // Add fetched
+            self.addresses.insert(addr);
         }
     }
 
     pub fn evict(&mut self, addr: u64) {
-        if self.default_empty {
-            self.addresses.remove(&addr);
-        } else {
+        if self.default_is_cached {
+            // Add evicted
             self.addresses.insert(addr);
+        } else {
+            // Removed fetched
+            self.addresses.remove(&addr);
         }
     }
 
     pub fn is_cached(&self, addr: u64) -> bool {
-        let present = self.addresses.contains(&addr);
-        if self.default_empty {
-            present
+        if self.default_is_cached {
+            let evicted = self.addresses.contains(&addr);
+            !evicted
         } else {
-            !present
+            let fetched = self.addresses.contains(&addr);
+            fetched
         }
     }
 }
 
 impl fmt::Display for CacheValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if !self.default_empty {
+        if self.default_is_cached {
             write!(f, "⊤ ∖ ")?;
         }
         write!(f, "{{")?;
