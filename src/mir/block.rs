@@ -76,8 +76,8 @@ impl fmt::Display for Block {
             self.execution_condition_variable(),
             self.execution_condition
         )?;
-        for node in self.nodes() {
-            writeln!(f, "{}", node)?;
+        for (index, node) in self.nodes().iter().enumerate() {
+            writeln!(f, "{}: {}", index, node)?;
         }
         Ok(())
     }
