@@ -2,9 +2,9 @@ use crate::environment::{Environment, SecurityLevel, WORD_SIZE};
 use crate::error::Result;
 use crate::expr::{
     BitVector, BranchTargetBuffer, Cache, CacheValue, Expression, Memory, PatternHistoryTable,
-    Predictor, Sort, Variable,
+    Predictor, Sort,
 };
-use crate::hir::{analysis, Block, Program};
+use crate::hir::{analysis, Program};
 use crate::ir::Transform;
 use std::collections::HashSet;
 
@@ -42,8 +42,12 @@ impl InitGlobalVariables {
     }
 
     /// Havoc registers and make low-registers indistinguishable
-    fn init_registers(&self, regs: &HashSet<Variable>, entry_block: &mut Block) -> Result<()> {
-        for reg in regs {
+    fn init_registers(&self, program: &mut Program) -> Result<()> {
+        let global_regs = analysis::global_variables(&program);
+
+        let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
+
+        for reg in global_regs {
             entry_block
                 .assign(reg.clone(), Expression::nondet(reg.sort().clone()))?
                 .labels_mut()
@@ -63,7 +67,9 @@ impl InitGlobalVariables {
     }
 
     /// Havoc memory and make low-addresses indistinguishable
-    fn init_memory(&self, entry_block: &mut Block) -> Result<()> {
+    fn init_memory(&self, program: &mut Program) -> Result<()> {
+        let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
+
         entry_block
             .assign(Memory::variable(), Expression::nondet(Sort::memory()))?
             .labels_mut()
@@ -88,7 +94,9 @@ impl InitGlobalVariables {
         Ok(())
     }
 
-    fn init_predictor(&self, entry_block: &mut Block) -> Result<()> {
+    fn init_predictor(&self, program: &mut Program) -> Result<()> {
+        let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
+
         entry_block
             .assign(Predictor::variable(), Expression::nondet(Sort::predictor()))?
             .labels_mut()
@@ -101,10 +109,12 @@ impl InitGlobalVariables {
         Ok(())
     }
 
-    fn init_cache(&self, entry_block: &mut Block) -> Result<()> {
+    fn init_cache(&self, program: &mut Program) -> Result<()> {
         if !self.cache_available {
             return Ok(());
         }
+
+        let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
 
         let initial_content = if self.start_with_empty_cache {
             Expression::constant(CacheValue::empty().into(), Sort::cache())
@@ -124,10 +134,12 @@ impl InitGlobalVariables {
         Ok(())
     }
 
-    fn init_btb(&self, entry_block: &mut Block) -> Result<()> {
+    fn init_btb(&self, program: &mut Program) -> Result<()> {
         if !self.btb_available {
             return Ok(());
         }
+
+        let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
 
         entry_block
             .assign(
@@ -144,10 +156,12 @@ impl InitGlobalVariables {
         Ok(())
     }
 
-    fn init_pht(&self, entry_block: &mut Block) -> Result<()> {
+    fn init_pht(&self, program: &mut Program) -> Result<()> {
         if !self.pht_available {
             return Ok(());
         }
+
+        let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
 
         entry_block
             .assign(
@@ -192,17 +206,12 @@ impl Transform<Program> for InitGlobalVariables {
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {
-        let global_variables = analysis::global_variables(&program);
-
-        let cfg = program.control_flow_graph_mut();
-        let entry_block = cfg.entry_block_mut()?;
-
-        self.init_memory(entry_block)?;
-        self.init_predictor(entry_block)?;
-        self.init_cache(entry_block)?;
-        self.init_btb(entry_block)?;
-        self.init_pht(entry_block)?;
-        self.init_registers(&global_variables, entry_block)?;
+        self.init_memory(program)?;
+        self.init_predictor(program)?;
+        self.init_cache(program)?;
+        self.init_btb(program)?;
+        self.init_pht(program)?;
+        self.init_registers(program)?;
 
         Ok(())
     }
