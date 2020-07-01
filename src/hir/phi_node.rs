@@ -34,6 +34,10 @@ impl PhiNode {
         self.incoming.contains_key(&block_index)
     }
 
+    pub fn incoming_variables(&self) -> Vec<&Variable> {
+        self.incoming.values().collect()
+    }
+
     pub fn out(&self) -> &Variable {
         &self.out
     }
