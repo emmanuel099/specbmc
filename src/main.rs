@@ -323,7 +323,7 @@ fn hir_transformations(env: &environment::Environment, program: &mut hir::Progra
         if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
             steps.push(Box::new(NonSpecObsEquivalence::new_from_env(env)));
         }
-        steps.push(Box::new(SSATransformation::default()));
+        steps.push(Box::new(SSATransformation::new(SSAForm::Pruned)));
         steps
     };
 
