@@ -8,8 +8,29 @@ use crate::ir::Transform;
 use falcon::graph::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-#[derive(Default, Builder, Debug)]
-pub struct SSATransformation {}
+#[derive(Clone, Copy, Debug)]
+pub enum SSAForm {
+    Minimal,
+    SemiPruned,
+    Pruned,
+}
+
+#[derive(Builder, Debug)]
+pub struct SSATransformation {
+    form: SSAForm,
+}
+
+impl SSATransformation {
+    pub fn new(form: SSAForm) -> Self {
+        Self { form }
+    }
+}
+
+impl Default for SSATransformation {
+    fn default() -> Self {
+        Self::new(SSAForm::SemiPruned)
+    }
+}
 
 impl Transform<Program> for SSATransformation {
     fn name(&self) -> &'static str {
@@ -22,7 +43,7 @@ impl Transform<Program> for SSATransformation {
 
     /// Transform the HIR program into SSA form.
     fn transform(&self, program: &mut Program) -> Result<()> {
-        insert_phi_nodes(program)?;
+        insert_phi_nodes(program, self.form)?;
         rename_variables(program)?;
 
         Ok(())
@@ -31,9 +52,9 @@ impl Transform<Program> for SSATransformation {
 
 /// Inserts phi nodes where necessary.
 ///
-/// Implements the algorithm for constructing Semi-Pruned SSA form,
+/// Implements the algorithm for constructing Standard, Semi-Pruned or Pruned SSA form,
 /// see Algorithm 3.1 in "SSA-based Compiler Design" book for more details.
-fn insert_phi_nodes(program: &mut Program) -> Result<()> {
+fn insert_phi_nodes(program: &mut Program, form: SSAForm) -> Result<()> {
     let cfg = program.control_flow_graph();
     let entry = cfg.entry()?;
 
@@ -42,17 +63,30 @@ fn insert_phi_nodes(program: &mut Program) -> Result<()> {
     }
 
     let dominance_frontiers = cfg.graph().compute_dominance_frontiers(entry)?;
-    let global_variables = analysis::global_variables(&program);
+
+    let (global_variables, live_variables) = match form {
+        SSAForm::Minimal => (None, None),
+        SSAForm::SemiPruned => (Some(analysis::global_variables(&program)), None),
+        SSAForm::Pruned => (None, Some(analysis::live_variables(&program)?)),
+    };
 
     for (variable, defs) in variables_mutated_in_blocks(cfg) {
-        if !global_variables.contains(&variable) {
-            continue; // ignore local variables
+        if let Some(global_vars) = &global_variables {
+            if !global_vars.contains(&variable) {
+                continue; // ignore local variables
+            }
         }
 
         let mut phi_insertions: HashSet<usize> = HashSet::new();
         let mut queue: VecDeque<usize> = defs.iter().cloned().collect();
         while let Some(block_index) = queue.pop_front() {
             for df_index in &dominance_frontiers[&block_index] {
+                if let Some(live_vars) = &live_variables {
+                    if !live_vars.live_at_entry(*df_index)?.contains(&variable) {
+                        continue; // ignore dead variables
+                    }
+                }
+
                 if phi_insertions.contains(df_index) {
                     continue;
                 }
@@ -668,7 +702,7 @@ mod tests {
     }
 
     #[test]
-    fn test_insert_phi_nodes() {
+    fn test_insert_phi_nodes_semi_pruned() {
         // Given:
         //           block 0
         //             |
@@ -733,7 +767,7 @@ mod tests {
             Program::new(cfg)
         };
 
-        insert_phi_nodes(&mut program).unwrap();
+        insert_phi_nodes(&mut program, SSAForm::SemiPruned).unwrap();
 
         // Expected:
         //           block 0
