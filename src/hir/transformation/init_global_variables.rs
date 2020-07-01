@@ -43,11 +43,15 @@ impl InitGlobalVariables {
 
     /// Havoc registers and make low-registers indistinguishable
     fn init_registers(&self, program: &mut Program) -> Result<()> {
-        let global_regs = analysis::global_variables(&program);
+        // All variables which are live at the entry block are considered uninitialized and
+        // will therefore be havoced.
+        let live_variables = analysis::live_variables(&program)?;
+        let entry_block_index = program.control_flow_graph().entry()?;
+        let uninitialized_regs = live_variables.live_at_entry(entry_block_index)?;
 
         let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
 
-        for reg in global_regs {
+        for reg in uninitialized_regs {
             entry_block
                 .assign(reg.clone(), Expression::nondet(reg.sort().clone()))?
                 .labels_mut()
