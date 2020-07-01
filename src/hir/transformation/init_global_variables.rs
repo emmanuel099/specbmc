@@ -1,8 +1,8 @@
 use crate::environment::{Environment, SecurityLevel, WORD_SIZE};
 use crate::error::Result;
 use crate::expr::{
-    BitVector, BranchTargetBuffer, Cache, Expression, Memory, PatternHistoryTable, Predictor, Sort,
-    Variable,
+    BitVector, BranchTargetBuffer, Cache, CacheValue, Expression, Memory, PatternHistoryTable,
+    Predictor, Sort, Variable,
 };
 use crate::hir::{analysis, Block, Program};
 use crate::ir::Transform;
@@ -19,6 +19,7 @@ pub struct InitGlobalVariables {
     registers_default_low: bool,
     low_registers: HashSet<String>,
     high_registers: HashSet<String>,
+    start_with_empty_cache: bool,
 }
 
 impl InitGlobalVariables {
@@ -36,6 +37,7 @@ impl InitGlobalVariables {
             registers_default_low: register_policy.default_level == SecurityLevel::Low,
             low_registers: register_policy.low.clone(),
             high_registers: register_policy.high.clone(),
+            start_with_empty_cache: env.analysis.start_with_empty_cache,
         }
     }
 
@@ -99,45 +101,65 @@ impl InitGlobalVariables {
         Ok(())
     }
 
-    fn init_microarchitectual_components(&self, entry_block: &mut Block) -> Result<()> {
-        if self.cache_available {
-            entry_block
-                .assign(Cache::variable(), Expression::nondet(Sort::cache()))?
-                .labels_mut()
-                .pseudo();
-            entry_block
-                .indistinguishable(vec![Cache::variable().into()])
-                .labels_mut()
-                .pseudo();
+    fn init_cache(&self, entry_block: &mut Block) -> Result<()> {
+        if !self.cache_available {
+            return Ok(());
         }
 
-        if self.btb_available {
-            entry_block
-                .assign(
-                    BranchTargetBuffer::variable(),
-                    Expression::nondet(Sort::branch_target_buffer()),
-                )?
-                .labels_mut()
-                .pseudo();
-            entry_block
-                .indistinguishable(vec![BranchTargetBuffer::variable().into()])
-                .labels_mut()
-                .pseudo();
+        let initial_content = if self.start_with_empty_cache {
+            Expression::constant(CacheValue::empty().into(), Sort::cache())
+        } else {
+            Expression::nondet(Sort::cache())
+        };
+
+        entry_block
+            .assign(Cache::variable(), initial_content)?
+            .labels_mut()
+            .pseudo();
+        entry_block
+            .indistinguishable(vec![Cache::variable().into()])
+            .labels_mut()
+            .pseudo();
+
+        Ok(())
+    }
+
+    fn init_btb(&self, entry_block: &mut Block) -> Result<()> {
+        if !self.btb_available {
+            return Ok(());
         }
 
-        if self.pht_available {
-            entry_block
-                .assign(
-                    PatternHistoryTable::variable(),
-                    Expression::nondet(Sort::pattern_history_table()),
-                )?
-                .labels_mut()
-                .pseudo();
-            entry_block
-                .indistinguishable(vec![PatternHistoryTable::variable().into()])
-                .labels_mut()
-                .pseudo();
+        entry_block
+            .assign(
+                BranchTargetBuffer::variable(),
+                Expression::nondet(Sort::branch_target_buffer()),
+            )?
+            .labels_mut()
+            .pseudo();
+        entry_block
+            .indistinguishable(vec![BranchTargetBuffer::variable().into()])
+            .labels_mut()
+            .pseudo();
+
+        Ok(())
+    }
+
+    fn init_pht(&self, entry_block: &mut Block) -> Result<()> {
+        if !self.pht_available {
+            return Ok(());
         }
+
+        entry_block
+            .assign(
+                PatternHistoryTable::variable(),
+                Expression::nondet(Sort::pattern_history_table()),
+            )?
+            .labels_mut()
+            .pseudo();
+        entry_block
+            .indistinguishable(vec![PatternHistoryTable::variable().into()])
+            .labels_mut()
+            .pseudo();
 
         Ok(())
     }
@@ -155,6 +177,7 @@ impl Default for InitGlobalVariables {
             registers_default_low: true,
             low_registers: HashSet::new(),
             high_registers: HashSet::new(),
+            start_with_empty_cache: false,
         }
     }
 }
@@ -176,7 +199,9 @@ impl Transform<Program> for InitGlobalVariables {
 
         self.init_memory(entry_block)?;
         self.init_predictor(entry_block)?;
-        self.init_microarchitectual_components(entry_block)?;
+        self.init_cache(entry_block)?;
+        self.init_btb(entry_block)?;
+        self.init_pht(entry_block)?;
         self.init_registers(&global_variables, entry_block)?;
 
         Ok(())

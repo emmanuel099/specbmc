@@ -100,6 +100,8 @@ pub struct Analysis {
     pub unwind: usize,
     #[serde(default)]
     pub unwinding_guard: UnwindingGuard,
+    #[serde(default = "disabled")]
+    pub start_with_empty_cache: bool,
 }
 
 impl Default for Analysis {
@@ -111,6 +113,7 @@ impl Default for Analysis {
             predictor_strategy: PredictorStrategy::default(),
             unwind: 0,
             unwinding_guard: UnwindingGuard::default(),
+            start_with_empty_cache: false,
         }
     }
 }
