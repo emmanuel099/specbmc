@@ -70,6 +70,7 @@ fn translate_operation(operation: &hir::Operation) -> Result<Option<mir::Node>> 
         )?),
         Store { .. } => panic!("Unexpected store operation, should have been made explicit"),
         Load { .. } => panic!("Unexpected load operation, should have been made explicit"),
+        Skip { .. } => None,
         Branch { .. } | ConditionalBranch { .. } | Barrier => {
             // Ignore because they are already implicitly encoded into the CFG
             None

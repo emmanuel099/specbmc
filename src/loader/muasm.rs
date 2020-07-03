@@ -254,6 +254,8 @@ mod semantics {
         let block_index = {
             let block = cfg.new_block()?;
 
+            block.skip();
+
             block.index()
         };
 

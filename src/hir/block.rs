@@ -186,6 +186,12 @@ impl Block {
         Ok(self.instructions.last_mut().unwrap())
     }
 
+    /// Adds a skip operation to the end of this block.
+    pub fn skip(&mut self) -> &mut Instruction {
+        self.instructions.push(Instruction::skip());
+        self.instructions.last_mut().unwrap()
+    }
+
     /// Adds a barrier operation to the end of this block.
     pub fn barrier(&mut self) -> &mut Instruction {
         self.instructions.push(Instruction::barrier());

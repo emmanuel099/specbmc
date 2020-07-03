@@ -142,7 +142,10 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
                     inst.set_address(instruction.address());
                 }
             }
-            il::Operation::Nop => (),
+            il::Operation::Nop => {
+                let inst = block.skip();
+                inst.set_address(instruction.address());
+            }
         }
     }
 

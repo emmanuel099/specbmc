@@ -104,6 +104,11 @@ impl Instruction {
         Ok(Self::new(Operation::conditional_branch(condition, target)?))
     }
 
+    /// Create a new `Skip` instruction.
+    pub fn skip() -> Self {
+        Self::new(Operation::skip())
+    }
+
     /// Create a new `Barrier` instruction.
     pub fn barrier() -> Self {
         Self::new(Operation::barrier())

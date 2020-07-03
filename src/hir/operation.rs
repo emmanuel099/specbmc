@@ -26,6 +26,8 @@ pub enum Operation {
         condition: Expression,
         target: Expression,
     },
+    /// Does nothing aka. no operation.
+    Skip,
     /// Speculation Barrier
     Barrier,
     /// Assert that the condition is true.
@@ -70,6 +72,11 @@ impl Operation {
         condition.sort().expect_boolean()?;
         target.sort().expect_word()?;
         Ok(Self::ConditionalBranch { condition, target })
+    }
+
+    /// Create a new `Operation::Skip`
+    pub fn skip() -> Self {
+        Self::Skip
     }
 
     /// Create a new `Operation::Barrier`
@@ -134,6 +141,13 @@ impl Operation {
         }
     }
 
+    pub fn is_skip(&self) -> bool {
+        match self {
+            Self::Skip => true,
+            _ => false,
+        }
+    }
+
     pub fn is_barrier(&self) -> bool {
         match self {
             Self::Barrier => true,
@@ -186,7 +200,7 @@ impl Operation {
                 .chain(target.variables().into_iter())
                 .collect(),
             Self::Assert { condition } | Self::Assume { condition } => condition.variables(),
-            Self::Barrier => Vec::new(),
+            Self::Skip | Self::Barrier => Vec::new(),
             Self::Observable { exprs } | Self::Indistinguishable { exprs } => {
                 exprs.iter().flat_map(Expression::variables).collect()
             }
@@ -210,7 +224,7 @@ impl Operation {
                 .chain(target.variables_mut().into_iter())
                 .collect(),
             Self::Assert { condition } | Self::Assume { condition } => condition.variables_mut(),
-            Self::Barrier => Vec::new(),
+            Self::Skip | Self::Barrier => Vec::new(),
             Self::Observable { exprs } | Self::Indistinguishable { exprs } => exprs
                 .iter_mut()
                 .flat_map(Expression::variables_mut)
@@ -225,6 +239,7 @@ impl Operation {
             Self::Store { .. }
             | Self::Branch { .. }
             | Self::ConditionalBranch { .. }
+            | Self::Skip
             | Self::Barrier
             | Self::Assert { .. }
             | Self::Assume { .. }
@@ -240,6 +255,7 @@ impl Operation {
             Self::Store { .. }
             | Self::Branch { .. }
             | Self::ConditionalBranch { .. }
+            | Self::Skip
             | Self::Barrier
             | Self::Assert { .. }
             | Self::Assume { .. }
@@ -269,6 +285,7 @@ impl fmt::Display for Operation {
             }
             Self::Assert { condition } => write!(f, "assert {}", condition),
             Self::Assume { condition } => write!(f, "assume {}", condition),
+            Self::Skip => write!(f, "skip"),
             Self::Barrier => write!(f, "barrier"),
             Self::Observable { exprs } => {
                 write!(f, "observable(")?;
