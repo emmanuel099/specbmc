@@ -189,6 +189,11 @@ impl ControlFlowGraph {
         Ok(self.graph.insert_vertex(block)?)
     }
 
+    /// Returns true if the block with the given index exists.
+    pub fn has_block(&self, index: usize) -> bool {
+        self.graph.has_vertex(index)
+    }
+
     /// Removes an `Block` by its index.
     pub fn remove_block(
         &mut self,
@@ -315,6 +320,11 @@ impl ControlFlowGraph {
         let edge = Edge::new(head, tail, Some(condition));
         self.graph.insert_edge(edge)?;
         Ok(self.graph.edge_mut(head, tail)?)
+    }
+
+    /// Returns true if the edge with the given head and tail index exists.
+    pub fn has_edge(&self, head: usize, tail: usize) -> bool {
+        self.graph.has_edge(head, tail)
     }
 
     /// Removes an `Edge` by its head and tail `Block` indices.
@@ -524,15 +534,32 @@ impl ControlFlowGraph {
                 continue;
             }
 
-            // Merge the labels of the outgoing edge into the rewired edges
+            // The labels of the outgoing edge will be merged into all the rewired edges
             let outgoing_edge_labels = self.edge(block_index, successor)?.labels().clone();
 
             // Rewire predecessor's outgoing edges from self to successor
             for predecessor in predecessors {
-                // Ignore error because an edge may already exist
-                self.rewire_edge(predecessor, block_index, predecessor, successor)
-                    .ok();
+                if !self.has_edge(predecessor, successor) {
+                    self.rewire_edge(predecessor, block_index, predecessor, successor)?;
+                } else {
+                    // If the edge exists already, merge their conditions and labels instead
+                    let removed_edge =
+                        self.remove_edge(predecessor, block_index, RemovedEdgeGuard::Ignore)?;
+                    let existing_edge = self.edge_mut(predecessor, successor)?;
 
+                    let combined_condition =
+                        match (existing_edge.condition(), removed_edge.condition()) {
+                            (Some(c1), Some(c2)) => {
+                                Some(Boolean::or(c1.to_owned(), c2.to_owned())?)
+                            }
+                            (_, _) => None,
+                        };
+                    existing_edge.set_condition(combined_condition);
+
+                    existing_edge.labels_mut().merge(removed_edge.labels());
+                }
+
+                // Finally merge the outgoing edge labels with the rewired edge
                 self.edge_mut(predecessor, successor)?
                     .labels_mut()
                     .merge(&outgoing_edge_labels);
@@ -770,5 +797,101 @@ mod tests {
 
         // Then: Should change exit to new tail block
         assert_eq!(cfg.exit().unwrap(), tail_index);
+    }
+
+    #[test]
+    fn test_simplify_remove_empty_blocks_with_single_successor_should_combine_existing_edges() {
+        // GIVEN
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block0 = cfg.new_block().index();
+
+            let block1 = {
+                let block = cfg.new_block();
+                block
+                    .assign(Boolean::variable("c"), Boolean::constant(true))
+                    .unwrap();
+                block.index()
+            };
+
+            let block2 = cfg.new_block().index(); // empty -> should remove block2 and rewire edge
+
+            let block3 = cfg.new_block().index();
+
+            cfg.conditional_edge(block0, block1, Boolean::variable("a").into())
+                .unwrap();
+
+            cfg.conditional_edge(
+                block0,
+                block3,
+                Boolean::not(Boolean::variable("a").into()).unwrap(),
+            )
+            .unwrap();
+
+            cfg.conditional_edge(block1, block3, Boolean::variable("b").into())
+                .unwrap();
+
+            cfg.conditional_edge(
+                block1,
+                block2,
+                Boolean::not(Boolean::variable("b").into()).unwrap(),
+            )
+            .unwrap();
+
+            cfg.unconditional_edge(block2, block3).unwrap();
+
+            cfg.set_entry(block0).unwrap();
+            cfg.set_exit(block3).unwrap();
+
+            cfg
+        };
+
+        let mut simplified_cfg = given_cfg.clone();
+
+        // WHEN
+        simplified_cfg.simplify().unwrap();
+
+        // THEN
+        let expected_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            cfg.add_block(Block::new(0)).unwrap();
+
+            cfg.add_block({
+                let mut block = Block::new(1);
+                block
+                    .assign(Boolean::variable("c"), Boolean::constant(true))
+                    .unwrap();
+                block
+            })
+            .unwrap();
+
+            cfg.add_block(Block::new(3)).unwrap();
+
+            cfg.conditional_edge(0, 1, Boolean::variable("a").into())
+                .unwrap();
+
+            cfg.conditional_edge(0, 3, Boolean::not(Boolean::variable("a").into()).unwrap())
+                .unwrap();
+
+            cfg.conditional_edge(
+                1,
+                3,
+                Boolean::or(
+                    Boolean::variable("b").into(),
+                    Boolean::not(Boolean::variable("b").into()).unwrap(),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+
+            cfg.set_entry(0).unwrap();
+            cfg.set_exit(3).unwrap();
+
+            cfg
+        };
+
+        assert_eq!(expected_cfg, simplified_cfg);
     }
 }
