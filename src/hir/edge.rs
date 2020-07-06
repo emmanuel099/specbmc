@@ -114,6 +114,11 @@ impl Edge {
         self.condition.as_mut()
     }
 
+    /// Sets the condition of this `Edge`.
+    pub fn set_condition(&mut self, condition: Option<Expression>) {
+        self.condition = condition;
+    }
+
     /// Retrieve the labels of this `Edge`.
     pub fn labels(&self) -> &Labels {
         &self.labels
