@@ -170,7 +170,7 @@ mod tests {
     use std::path::Path;
 
     fn add_block_with_id(cfg: &mut ControlFlowGraph, id: &str) -> usize {
-        let block = cfg.new_block().unwrap();
+        let block = cfg.new_block();
         block
             .assign(Variable::new(id, Sort::boolean()), Boolean::constant(true))
             .unwrap()
@@ -184,7 +184,7 @@ mod tests {
         id: &str,
         assumption: Expression,
     ) -> usize {
-        let block = cfg.new_block().unwrap();
+        let block = cfg.new_block();
         block
             .assign(Variable::new(id, Sort::boolean()), Boolean::constant(true))
             .unwrap()

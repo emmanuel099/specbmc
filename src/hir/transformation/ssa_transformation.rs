@@ -348,13 +348,13 @@ mod tests {
         let cfg = {
             let mut cfg = ControlFlowGraph::new();
 
-            let block0 = cfg.new_block().unwrap();
+            let block0 = cfg.new_block();
             block0.assign(variable("x"), expr_const(1)).unwrap();
 
-            let block1 = cfg.new_block().unwrap();
+            let block1 = cfg.new_block();
             block1.load(variable("y"), variable("z").into()).unwrap();
 
-            let block2 = cfg.new_block().unwrap();
+            let block2 = cfg.new_block();
             block2.assign(variable("x"), variable("y").into()).unwrap();
 
             cfg
@@ -550,15 +550,15 @@ mod tests {
         // x = x <---+
         let mut cfg = ControlFlowGraph::new();
 
-        let block0 = cfg.new_block().unwrap();
+        let block0 = cfg.new_block();
         block0.assign(variable("x"), expr_const(1)).unwrap();
         block0.barrier();
 
-        let block1 = cfg.new_block().unwrap();
+        let block1 = cfg.new_block();
         block1.assign(variable("x"), variable("x").into()).unwrap();
         block1.barrier();
 
-        let block2 = cfg.new_block().unwrap();
+        let block2 = cfg.new_block();
         block2.assign(variable("x"), variable("x").into()).unwrap();
 
         cfg.set_entry(0).unwrap();
@@ -628,14 +628,14 @@ mod tests {
         // y = phi [y, 1] [y, 2]
         let mut cfg = ControlFlowGraph::new();
 
-        let block0 = cfg.new_block().unwrap();
+        let block0 = cfg.new_block();
         block0.assign(variable("y"), expr_const(1)).unwrap();
 
-        let block1 = cfg.new_block().unwrap();
+        let block1 = cfg.new_block();
         block1.assign(variable("x"), expr_const(2)).unwrap();
         block1.assign(variable("y"), expr_const(3)).unwrap();
 
-        let block2 = cfg.new_block().unwrap();
+        let block2 = cfg.new_block();
         block2.assign(variable("x"), expr_const(4)).unwrap();
 
         let mut phi_node_x = PhiNode::new(variable("x"));
@@ -646,7 +646,7 @@ mod tests {
         phi_node_y.add_incoming(variable("y"), 1);
         phi_node_y.add_incoming(variable("y"), 2);
 
-        let block3 = cfg.new_block().unwrap();
+        let block3 = cfg.new_block();
         block3.add_phi_node(phi_node_x);
         block3.add_phi_node(phi_node_y);
 
@@ -728,28 +728,28 @@ mod tests {
 
             // block0
             {
-                cfg.new_block().unwrap();
+                cfg.new_block();
             }
             // block1
             {
-                cfg.new_block().unwrap();
+                cfg.new_block();
             }
             // block2
             {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.assign(variable("x"), expr_const(0)).unwrap();
             }
             // block3
             {
-                cfg.new_block().unwrap();
+                cfg.new_block();
             }
             // block4
             {
-                cfg.new_block().unwrap();
+                cfg.new_block();
             }
             // block5
             {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.assign(variable("y"), variable("x").into()).unwrap();
             }
 
@@ -868,22 +868,22 @@ mod tests {
 
             // block0
             {
-                cfg.new_block().unwrap();
+                cfg.new_block();
             }
             // block1
             {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.assign(variable("x"), expr_const(0)).unwrap();
             }
             // block2
             {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.assign(variable("tmp"), variable("x").into()).unwrap();
                 block.assign(variable("x"), variable("tmp").into()).unwrap();
             }
             // block3
             {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(
                         variable("x"),
@@ -893,12 +893,12 @@ mod tests {
             }
             // block4
             {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.assign(variable("res"), variable("x").into()).unwrap();
             }
             // block5
             {
-                cfg.new_block().unwrap();
+                cfg.new_block();
             }
 
             cfg.unconditional_edge(5, 0).unwrap();
@@ -949,7 +949,7 @@ mod tests {
 
             // block0
             {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.add_phi_node({
                     let mut phi_node = PhiNode::new(variable_ssa("x", 1));
                     phi_node.add_incoming(variable_ssa("x", 5), 3);
@@ -959,12 +959,12 @@ mod tests {
             }
             // block1
             {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.assign(variable_ssa("x", 2), expr_const(0)).unwrap();
             }
             // block2
             {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(variable_ssa("tmp", 1), variable_ssa("x", 1).into())
                     .unwrap();
@@ -974,7 +974,7 @@ mod tests {
             }
             // block3
             {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(
                         variable_ssa("x", 5),
@@ -994,7 +994,7 @@ mod tests {
             }
             // block4
             {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(variable_ssa("res", 1), variable_ssa("x", 6).into())
                     .unwrap();
@@ -1007,7 +1007,7 @@ mod tests {
             }
             // block5
             {
-                cfg.new_block().unwrap();
+                cfg.new_block();
             }
 
             cfg.unconditional_edge(5, 0).unwrap();

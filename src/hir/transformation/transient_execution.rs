@@ -680,7 +680,7 @@ mod tests {
         let given_cfg = {
             let mut cfg = ControlFlowGraph::new();
 
-            let block = cfg.new_block().unwrap();
+            let block = cfg.new_block();
             block
                 .assign(var.clone(), BitVector::constant_u64(0, WORD_SIZE))
                 .unwrap()
@@ -714,7 +714,7 @@ mod tests {
             let mut cfg = ControlFlowGraph::new();
 
             let block0_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(var.clone(), BitVector::constant_u64(0, WORD_SIZE))
                     .unwrap()
@@ -723,7 +723,7 @@ mod tests {
             };
 
             let block1_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .store(addr.clone(), var.clone().into())
                     .unwrap()
@@ -732,7 +732,7 @@ mod tests {
             };
 
             let block2_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .load(var.clone(), addr.clone())
                     .unwrap()
@@ -782,7 +782,7 @@ mod tests {
             let mut cfg = ControlFlowGraph::new();
 
             let block0_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .conditional_branch(cond.clone(), BitVector::constant_u64(4, WORD_SIZE))
                     .unwrap()
@@ -791,7 +791,7 @@ mod tests {
             };
 
             let block1_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
                     .unwrap()
@@ -800,7 +800,7 @@ mod tests {
             };
 
             let block2_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(
                         Variable::new("x", Sort::boolean()),
@@ -816,7 +816,7 @@ mod tests {
             };
 
             let block3_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.index()
             };
 
@@ -855,12 +855,12 @@ mod tests {
             let mut cfg = ControlFlowGraph::new();
 
             let block0_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.index()
             };
 
             let block1_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
                     .unwrap()
@@ -869,7 +869,7 @@ mod tests {
             };
 
             let block2_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(
                         Variable::new("x", Sort::boolean()),
@@ -885,12 +885,12 @@ mod tests {
             };
 
             let block3_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.index()
             };
 
             let block4_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .conditional_branch(cond.clone(), BitVector::constant_u64(4, WORD_SIZE))
                     .unwrap()
@@ -899,7 +899,7 @@ mod tests {
             };
 
             let block5_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.index()
             };
 
@@ -966,7 +966,7 @@ mod tests {
             let mut cfg = ControlFlowGraph::new();
 
             let block0_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .conditional_branch(cond.clone(), BitVector::constant_u64(4, WORD_SIZE))
                     .unwrap()
@@ -975,7 +975,7 @@ mod tests {
             };
 
             let block1_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
                     .unwrap()
@@ -984,7 +984,7 @@ mod tests {
             };
 
             let block2_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(
                         Variable::new("x", Sort::boolean()),
@@ -1000,7 +1000,7 @@ mod tests {
             };
 
             let block3_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.index()
             };
 
@@ -1039,12 +1039,12 @@ mod tests {
             let mut cfg = ControlFlowGraph::new();
 
             let block0_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.index()
             };
 
             let block1_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
                     .unwrap()
@@ -1053,7 +1053,7 @@ mod tests {
             };
 
             let block2_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(
                         Variable::new("x", Sort::boolean()),
@@ -1069,12 +1069,12 @@ mod tests {
             };
 
             let block3_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.index()
             };
 
             let block4_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .conditional_branch(cond.clone(), BitVector::constant_u64(4, WORD_SIZE))
                     .unwrap()
@@ -1083,7 +1083,7 @@ mod tests {
             };
 
             let block5_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.index()
             };
 
@@ -1145,7 +1145,7 @@ mod tests {
             let mut cfg = ControlFlowGraph::new();
 
             let block0_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(var.clone(), Boolean::constant(false))
                     .unwrap()
@@ -1159,12 +1159,12 @@ mod tests {
             };
 
             let block1_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.index()
             };
 
             let block2_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.index()
             };
 
@@ -1192,7 +1192,7 @@ mod tests {
             let mut cfg = ControlFlowGraph::new();
 
             let block0_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block
                     .assign(var.clone(), Boolean::constant(false))
                     .unwrap()
@@ -1201,17 +1201,17 @@ mod tests {
             };
 
             let block1_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.index()
             };
 
             let block2_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.index()
             };
 
             let block3_index = {
-                let block = cfg.new_block().unwrap();
+                let block = cfg.new_block();
                 block.barrier().set_address(Some(2));
                 block
                     .assign(var.clone(), Boolean::constant(true))

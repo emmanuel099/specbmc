@@ -43,16 +43,16 @@ mod tests {
         let program = {
             let mut cfg = hir::ControlFlowGraph::new();
 
-            let block0 = cfg.new_block().unwrap();
+            let block0 = cfg.new_block();
             block0.assign(variable("x"), expr_const(1)).unwrap();
 
-            let block1 = cfg.new_block().unwrap();
+            let block1 = cfg.new_block();
             block1.assign(variable("tmp"), expr_const(1)).unwrap();
             block1
                 .assign(variable("x"), variable("tmp").into())
                 .unwrap();
 
-            let block2 = cfg.new_block().unwrap();
+            let block2 = cfg.new_block();
             block2.load(variable("y"), variable("x").into()).unwrap();
 
             hir::Program::new(cfg)

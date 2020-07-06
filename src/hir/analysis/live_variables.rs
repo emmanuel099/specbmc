@@ -162,12 +162,12 @@ mod tests {
         //         z = x
         let mut cfg = ControlFlowGraph::new();
 
-        let block0 = cfg.new_block().unwrap();
+        let block0 = cfg.new_block();
         block0
             .assign(Boolean::variable("a"), Boolean::variable("y").into())
             .unwrap();
 
-        let block1 = cfg.new_block().unwrap();
+        let block1 = cfg.new_block();
         block1
             .assign(Boolean::variable("x"), Boolean::variable("a").into())
             .unwrap();
@@ -175,12 +175,12 @@ mod tests {
             .assign(Boolean::variable("y"), Boolean::variable("x").into())
             .unwrap();
 
-        let block2 = cfg.new_block().unwrap();
+        let block2 = cfg.new_block();
         block2
             .assign(Boolean::variable("x"), Boolean::variable("b").into())
             .unwrap();
 
-        let block3 = cfg.new_block().unwrap();
+        let block3 = cfg.new_block();
         block3
             .assign(Boolean::variable("y"), Boolean::variable("c").into())
             .unwrap();

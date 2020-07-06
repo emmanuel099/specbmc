@@ -634,18 +634,18 @@ mod tests {
         // Given: Block with two incoming and two outgoing edges.
         let mut cfg = ControlFlowGraph::new();
 
-        let pred1 = cfg.new_block().unwrap().index();
-        let pred2 = cfg.new_block().unwrap().index();
+        let pred1 = cfg.new_block().index();
+        let pred2 = cfg.new_block().index();
 
         let block_index = {
-            let block = cfg.new_block().unwrap();
+            let block = cfg.new_block();
             block.barrier(); // inst 0
             block.barrier(); // inst 1
             block.index()
         };
 
-        let succ1 = cfg.new_block().unwrap().index();
-        let succ2 = cfg.new_block().unwrap().index();
+        let succ1 = cfg.new_block().index();
+        let succ2 = cfg.new_block().index();
 
         cfg.unconditional_edge(pred1, block_index).unwrap();
         cfg.unconditional_edge(pred2, block_index).unwrap();
@@ -685,7 +685,7 @@ mod tests {
         let mut cfg = ControlFlowGraph::new();
 
         let block_index = {
-            let block = cfg.new_block().unwrap();
+            let block = cfg.new_block();
             block.barrier().set_address(Some(0)); // inst 0
             block.barrier().set_address(Some(1)); // inst 1
             block.barrier().set_address(Some(2)); // inst 2
@@ -713,7 +713,7 @@ mod tests {
         let mut cfg = ControlFlowGraph::new();
 
         let block_index = {
-            let block = cfg.new_block().unwrap();
+            let block = cfg.new_block();
             block.barrier(); // inst 0
             block.barrier(); // inst 1
             block.index()
@@ -735,7 +735,7 @@ mod tests {
         let mut cfg = ControlFlowGraph::new();
 
         let block_index = {
-            let block = cfg.new_block().unwrap();
+            let block = cfg.new_block();
             block.barrier(); // inst 0
             block.barrier(); // inst 1
             block.index()
@@ -757,7 +757,7 @@ mod tests {
         let mut cfg = ControlFlowGraph::new();
 
         let block_index = {
-            let block = cfg.new_block().unwrap();
+            let block = cfg.new_block();
             block.barrier(); // inst 0
             block.barrier(); // inst 1
             block.index()
