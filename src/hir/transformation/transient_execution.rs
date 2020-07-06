@@ -109,7 +109,7 @@ impl TransientExecution {
         let mut transient_entry_points = BTreeMap::new();
 
         // Add resolve block as exit
-        let resolve_block_index = transient_cfg.new_block()?.index();
+        let resolve_block_index = transient_cfg.new_block().index();
         transient_cfg.unconditional_edge(cfg.exit().unwrap(), resolve_block_index)?; // end of program -> resolve
         transient_cfg.set_exit(resolve_block_index)?;
 
@@ -248,7 +248,7 @@ fn add_transient_execution_start(
     let tail_index = cfg.split_block_at(head_index, inst_ref.index())?;
 
     let transient_start_index = {
-        let transient_start = cfg.new_block()?;
+        let transient_start = cfg.new_block();
         transient_start.set_transient();
 
         // initial speculation window size
@@ -337,7 +337,7 @@ fn transient_conditional_branch(
 ) -> Result<()> {
     let head_index = inst_ref.block();
     let branch_index = cfg.split_block_at(head_index, inst_ref.index())?;
-    let speculate_index = cfg.new_block()?.index();
+    let speculate_index = cfg.new_block().index();
 
     let speculate = Predictor::speculate(
         Predictor::variable().into(),

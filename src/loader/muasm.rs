@@ -124,7 +124,7 @@ fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::Program> {
 
     // Add a dedicated entry block.
     // This makes sure that the entry block has no predecessors.
-    let entry = cfg.new_block()?.index();
+    let entry = cfg.new_block().index();
     cfg.unconditional_edge(entry, 0)?;
     cfg.set_entry(entry)?;
 
@@ -136,7 +136,7 @@ fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::Program> {
         .iter()
         .map(|block| block.index())
         .collect();
-    let exit = cfg.new_block()?.index();
+    let exit = cfg.new_block().index();
     for end_block in end_blocks {
         cfg.unconditional_edge(end_block, exit)?;
     }
@@ -252,7 +252,7 @@ mod semantics {
 
     pub fn skip(cfg: &mut hir::ControlFlowGraph) -> Result<()> {
         let block_index = {
-            let block = cfg.new_block()?;
+            let block = cfg.new_block();
 
             block.skip();
 
@@ -267,7 +267,7 @@ mod semantics {
 
     pub fn barrier(cfg: &mut hir::ControlFlowGraph) -> Result<()> {
         let block_index = {
-            let block = cfg.new_block()?;
+            let block = cfg.new_block();
 
             block.barrier();
 
@@ -282,7 +282,7 @@ mod semantics {
 
     pub fn flush(cfg: &mut hir::ControlFlowGraph) -> Result<()> {
         let block_index = {
-            let block = cfg.new_block()?;
+            let block = cfg.new_block();
 
             let empty_cache =
                 expr::Expression::constant(expr::CacheValue::empty().into(), expr::Sort::cache());
@@ -306,7 +306,7 @@ mod semantics {
         let expr = expr.to_hir_expr()?;
 
         let block_index = {
-            let block = cfg.new_block()?;
+            let block = cfg.new_block();
 
             block.assign(reg, expr)?;
 
@@ -333,7 +333,7 @@ mod semantics {
         )?;
 
         let block_index = {
-            let block = cfg.new_block()?;
+            let block = cfg.new_block();
 
             block.assign(var, cond_expr)?;
 
@@ -355,7 +355,7 @@ mod semantics {
         let address = addr.to_hir_expr()?;
 
         let block_index = {
-            let block = cfg.new_block()?;
+            let block = cfg.new_block();
 
             block.load(var, address)?;
 
@@ -377,7 +377,7 @@ mod semantics {
         let address = addr.to_hir_expr()?;
 
         let block_index = {
-            let block = cfg.new_block()?;
+            let block = cfg.new_block();
 
             block.store(address, expr)?;
 
@@ -394,7 +394,7 @@ mod semantics {
         let target = target_address.to_hir_expr()?;
 
         let block_index = {
-            let block = cfg.new_block()?;
+            let block = cfg.new_block();
 
             block.branch(target)?;
 
@@ -417,7 +417,7 @@ mod semantics {
         let target = target_address.to_hir_expr()?;
 
         let block_index = {
-            let block = cfg.new_block()?;
+            let block = cfg.new_block();
 
             block.conditional_branch(cond, target)?;
 

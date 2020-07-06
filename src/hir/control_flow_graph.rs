@@ -130,12 +130,12 @@ impl ControlFlowGraph {
     }
 
     /// Creates a new basic block, adds it to the graph, and returns it
-    pub fn new_block(&mut self) -> Result<&mut Block> {
+    pub fn new_block(&mut self) -> &mut Block {
         let next_index = self.next_index;
         self.next_index += 1;
         let block = Block::new(next_index);
-        self.graph.insert_vertex(block)?;
-        Ok(self.graph.vertex_mut(next_index).unwrap())
+        self.graph.insert_vertex(block).unwrap();
+        self.graph.vertex_mut(next_index).unwrap()
     }
 
     /// Clones an existing basic block, adds it to the graph, and returns it
@@ -234,7 +234,7 @@ impl ControlFlowGraph {
         };
 
         let tail_block_index = {
-            let tail_block = self.new_block()?;
+            let tail_block = self.new_block();
             tail_block.set_instructions(&tail_instructions);
             tail_block.index()
         };
