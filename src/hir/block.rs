@@ -101,6 +101,15 @@ impl Block {
         Ok(())
     }
 
+    /// Inserts an `Instruction` at the given index.
+    pub fn insert_instruction(&mut self, index: usize, instruction: Instruction) -> Result<()> {
+        if index > self.instructions.len() {
+            return Err(format!("Index {} is invalid", index).into());
+        }
+        self.instructions.insert(index, instruction);
+        Ok(())
+    }
+
     /// Splits off the instructions at the given index.
     /// Only instructions with smaller index will remain in this `Block`.
     pub fn split_off_instructions_at(&mut self, index: usize) -> Result<Vec<Instruction>> {
