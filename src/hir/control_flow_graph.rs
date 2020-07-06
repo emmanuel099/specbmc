@@ -574,8 +574,20 @@ impl ControlFlowGraph {
     /// Simplifies the control flow graph by removing as well as merging blocks.
     pub fn simplify(&mut self) -> Result<()> {
         self.remove_unreachable_blocks()?;
-        self.merge_consecutive_blocks_with_single_successor_and_predecessor()?;
-        self.remove_empty_blocks_with_single_successor()?;
+
+        loop {
+            let block_count_before = self.blocks().len();
+
+            self.merge_consecutive_blocks_with_single_successor_and_predecessor()?;
+            self.remove_empty_blocks_with_single_successor()?;
+
+            let block_count_after = self.blocks().len();
+            if block_count_before == block_count_after {
+                // Fixed-point reached
+                break;
+            }
+        }
+
         Ok(())
     }
 
@@ -797,6 +809,114 @@ mod tests {
 
         // Then: Should change exit to new tail block
         assert_eq!(cfg.exit().unwrap(), tail_index);
+    }
+
+    #[test]
+    fn test_simplify() {
+        // GIVEN
+        let given_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let block0 = cfg.new_block().index();
+
+            let block1 = cfg.new_block().index(); // unreachable block
+
+            let block2 = {
+                let block = cfg.new_block();
+                block
+                    .assign(Boolean::variable("b2"), Boolean::constant(true))
+                    .unwrap();
+                block.index()
+            };
+
+            let block3 = cfg.new_block().index();
+
+            let block4 = cfg.new_block().index();
+
+            let block5 = cfg.new_block().index();
+
+            let block6 = {
+                let block = cfg.new_block();
+                block
+                    .assign(Boolean::variable("b6"), Boolean::constant(true))
+                    .unwrap();
+                block.index()
+            };
+
+            let block7 = {
+                let block = cfg.new_block();
+                block
+                    .assign(Boolean::variable("b7"), Boolean::constant(true))
+                    .unwrap();
+                block.index()
+            };
+
+            let block8 = cfg.new_block().index();
+
+            cfg.unconditional_edge(block0, block2).unwrap();
+            cfg.unconditional_edge(block0, block6).unwrap();
+            cfg.unconditional_edge(block1, block2).unwrap();
+            cfg.unconditional_edge(block2, block3).unwrap();
+            cfg.unconditional_edge(block2, block5).unwrap();
+            cfg.unconditional_edge(block3, block4).unwrap();
+            cfg.unconditional_edge(block3, block5).unwrap();
+            cfg.unconditional_edge(block4, block5).unwrap();
+            cfg.unconditional_edge(block5, block6).unwrap();
+            cfg.unconditional_edge(block6, block7).unwrap();
+            cfg.unconditional_edge(block7, block8).unwrap();
+
+            cfg.set_entry(block0).unwrap();
+            cfg.set_exit(block8).unwrap();
+
+            cfg
+        };
+
+        let mut simplified_cfg = given_cfg.clone();
+
+        // WHEN
+        simplified_cfg.simplify().unwrap();
+
+        // THEN
+        let expected_cfg = {
+            let mut cfg = ControlFlowGraph::new();
+
+            cfg.add_block(Block::new(0)).unwrap();
+
+            cfg.add_block({
+                let mut block = Block::new(2);
+                block
+                    .assign(Boolean::variable("b2"), Boolean::constant(true))
+                    .unwrap();
+                block
+            })
+            .unwrap();
+
+            cfg.add_block({
+                let mut block = Block::new(6);
+                block
+                    .assign(Boolean::variable("b6"), Boolean::constant(true))
+                    .unwrap();
+                block
+                    .assign(Boolean::variable("b7"), Boolean::constant(true))
+                    .unwrap();
+                block
+            })
+            .unwrap();
+
+            cfg.add_block(Block::new(8)).unwrap();
+
+            cfg.unconditional_edge(0, 2).unwrap();
+            cfg.unconditional_edge(0, 6).unwrap();
+            cfg.unconditional_edge(2, 6).unwrap();
+            cfg.unconditional_edge(6, 8).unwrap();
+
+            cfg.set_entry(0).unwrap();
+            cfg.set_exit(8).unwrap();
+
+            cfg
+        };
+
+        assert_eq!(expected_cfg, simplified_cfg);
     }
 
     #[test]
