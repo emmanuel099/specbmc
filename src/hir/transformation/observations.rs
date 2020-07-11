@@ -1,7 +1,7 @@
 use crate::environment::Environment;
 use crate::error::Result;
 use crate::expr;
-use crate::hir::Program;
+use crate::hir::{ControlFlowGraph, Instruction, Program};
 use crate::ir::Transform;
 
 #[derive(Default, Builder, Debug)]
@@ -9,6 +9,8 @@ pub struct Observations {
     cache_available: bool,
     btb_available: bool,
     pht_available: bool,
+    obs_end_of_program: bool,
+    obs_each_effectful_instruction: bool,
 }
 
 impl Observations {
@@ -17,23 +19,65 @@ impl Observations {
             cache_available: env.architecture.cache,
             btb_available: env.architecture.branch_target_buffer,
             pht_available: env.architecture.pattern_history_table,
+            obs_end_of_program: env.analysis.observe.end_of_program,
+            obs_each_effectful_instruction: env.analysis.observe.each_effectful_instruction,
         }
     }
 
-    fn observable_variables(&self) -> Vec<expr::Variable> {
-        let mut variables = Vec::new();
+    fn observable_exprs(&self) -> Vec<expr::Expression> {
+        let mut exprs = Vec::new();
 
         if self.cache_available {
-            variables.push(expr::Cache::variable());
+            exprs.push(expr::Cache::variable().into());
         }
         if self.btb_available {
-            variables.push(expr::BranchTargetBuffer::variable());
+            exprs.push(expr::BranchTargetBuffer::variable().into());
         }
         if self.pht_available {
-            variables.push(expr::PatternHistoryTable::variable());
+            exprs.push(expr::PatternHistoryTable::variable().into());
         }
 
-        variables
+        exprs
+    }
+
+    fn place_observe_after_each_effectul_instruction(
+        &self,
+        cfg: &mut ControlFlowGraph,
+    ) -> Result<()> {
+        let obs_exprs = self.observable_exprs();
+
+        for block in cfg.blocks_mut() {
+            let effectful_inst_indices: Vec<usize> = block
+                .instructions()
+                .iter()
+                .enumerate()
+                .filter_map(|(index, inst)| {
+                    if inst.has_effects() {
+                        Some(index)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            for index in effectful_inst_indices.iter().rev() {
+                let mut obs = Instruction::observable(obs_exprs.clone());
+                obs.labels_mut().pseudo();
+                block.insert_instruction(index + 1, obs)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn place_observe_at_end_of_program(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+        let exit_block = cfg.exit_block_mut()?;
+        exit_block
+            .observable(self.observable_exprs())
+            .labels_mut()
+            .pseudo();
+
+        Ok(())
     }
 }
 
@@ -49,16 +93,13 @@ impl Transform<Program> for Observations {
     fn transform(&self, program: &mut Program) -> Result<()> {
         let cfg = program.control_flow_graph_mut();
 
-        // Place an observe at the end of the program
-        let exit_block = cfg.exit_block_mut()?;
-        let exprs: Vec<expr::Expression> = self
-            .observable_variables()
-            .iter()
-            .map(|var| var.clone().into())
-            .collect();
-        exit_block.observable(exprs).labels_mut().pseudo();
+        if self.obs_each_effectful_instruction {
+            self.place_observe_after_each_effectul_instruction(cfg)?;
+        }
 
-        // TODO add more obs if defined so
+        if self.obs_end_of_program {
+            self.place_observe_at_end_of_program(cfg)?;
+        }
 
         Ok(())
     }

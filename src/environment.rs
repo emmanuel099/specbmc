@@ -87,6 +87,23 @@ impl Default for UnwindingGuard {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Observe {
+    #[serde(default = "enabled")]
+    pub end_of_program: bool,
+    #[serde(default = "disabled")]
+    pub each_effectful_instruction: bool,
+}
+
+impl Default for Observe {
+    fn default() -> Self {
+        Self {
+            end_of_program: true,
+            each_effectful_instruction: false,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Analysis {
     #[serde(default = "enabled")]
     pub spectre_pht: bool,
@@ -102,6 +119,7 @@ pub struct Analysis {
     pub unwinding_guard: UnwindingGuard,
     #[serde(default = "disabled")]
     pub start_with_empty_cache: bool,
+    pub observe: Observe,
 }
 
 impl Default for Analysis {
@@ -114,6 +132,7 @@ impl Default for Analysis {
             unwind: 0,
             unwinding_guard: UnwindingGuard::default(),
             start_with_empty_cache: false,
+            observe: Observe::default(),
         }
     }
 }
