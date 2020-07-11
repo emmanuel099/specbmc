@@ -96,30 +96,22 @@ fn add_nonspec_operations(program: &mut Program) -> Result<()> {
     Ok(())
 }
 
-fn variable_requires_nonspec_equivalent(var: &Variable) -> bool {
-    match var.sort() {
-        Sort::Cache | Sort::BranchTargetBuffer | Sort::PatternHistoryTable => true,
-        _ => false,
-    }
-}
-
 fn operation_requires_nonspec_equivalent(operation: &Operation) -> bool {
+    let requires_nonspec_equivalent =
+        |var: &Variable| -> bool { var.sort().is_rollback_persistent() };
+
     match operation {
         Operation::Assert { .. }
         | Operation::Assume { .. }
         | Operation::Observable { .. }
-        | Operation::Indistinguishable { .. } => {
-            let variables_read = operation.variables_read();
-            variables_read
-                .into_iter()
-                .any(variable_requires_nonspec_equivalent)
-        }
-        _ => {
-            let variables_written = operation.variables_written();
-            variables_written
-                .into_iter()
-                .any(variable_requires_nonspec_equivalent)
-        }
+        | Operation::Indistinguishable { .. } => operation
+            .variables_read()
+            .into_iter()
+            .any(requires_nonspec_equivalent),
+        _ => operation
+            .variables_written()
+            .into_iter()
+            .any(requires_nonspec_equivalent),
     }
 }
 
@@ -128,7 +120,7 @@ fn replace_variable_with_nonspec_equivalent(var: &mut Variable) {
         Sort::Cache => *var = cache_nonspec(),
         Sort::BranchTargetBuffer => *var = btb_nonspec(),
         Sort::PatternHistoryTable => *var = pht_nonspec(),
-        _ => {}
+        _ => unimplemented!(),
     };
 }
 
