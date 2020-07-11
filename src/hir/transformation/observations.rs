@@ -12,6 +12,7 @@ pub struct Observations {
     obs_end_of_program: bool,
     obs_each_effectful_instruction: bool,
     obs_after_rollback: bool,
+    obs_locations: Vec<u64>,
 }
 
 impl Observations {
@@ -23,6 +24,7 @@ impl Observations {
             obs_end_of_program: env.analysis.observe.end_of_program,
             obs_each_effectful_instruction: env.analysis.observe.each_effectful_instruction,
             obs_after_rollback: env.analysis.observe.after_rollback,
+            obs_locations: env.analysis.observe.locations.to_owned(),
         }
     }
 
@@ -105,6 +107,41 @@ impl Observations {
         Ok(())
     }
 
+    fn place_observe_at_program_locations(
+        &self,
+        cfg: &mut ControlFlowGraph,
+        locations: &Vec<u64>,
+    ) -> Result<()> {
+        let obs_exprs = self.observable_exprs();
+
+        for block in cfg.blocks_mut() {
+            let effectful_inst_indices: Vec<usize> = block
+                .instructions()
+                .iter()
+                .enumerate()
+                .filter_map(|(index, inst)| {
+                    if let Some(address) = inst.address() {
+                        if locations.contains(&address) {
+                            Some(index)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            for index in effectful_inst_indices.iter().rev() {
+                let mut obs = Instruction::observable(obs_exprs.clone());
+                obs.labels_mut().pseudo();
+                block.insert_instruction(index + 1, obs)?;
+            }
+        }
+
+        Ok(())
+    }
+
     fn place_observe_at_end_of_program(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         let exit_block = cfg.exit_block_mut()?;
         exit_block
@@ -138,6 +175,10 @@ impl Transform<Program> for Observations {
 
         if self.obs_end_of_program {
             self.place_observe_at_end_of_program(cfg)?;
+        }
+
+        if !self.obs_locations.is_empty() {
+            self.place_observe_at_program_locations(cfg, &self.obs_locations)?;
         }
 
         Ok(())
