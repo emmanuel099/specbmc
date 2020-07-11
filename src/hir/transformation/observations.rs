@@ -11,6 +11,7 @@ pub struct Observations {
     pht_available: bool,
     obs_end_of_program: bool,
     obs_each_effectful_instruction: bool,
+    obs_after_rollback: bool,
 }
 
 impl Observations {
@@ -21,6 +22,7 @@ impl Observations {
             pht_available: env.architecture.pattern_history_table,
             obs_end_of_program: env.analysis.observe.end_of_program,
             obs_each_effectful_instruction: env.analysis.observe.each_effectful_instruction,
+            obs_after_rollback: env.analysis.observe.after_rollback,
         }
     }
 
@@ -70,6 +72,39 @@ impl Observations {
         Ok(())
     }
 
+    fn place_observe_after_rollback(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+        let rollback_block_indices: Vec<usize> = cfg
+            .blocks()
+            .iter()
+            .filter_map(|block| {
+                let has_incoming_rollback_edge: bool = cfg
+                    .edges_in(block.index())
+                    .unwrap()
+                    .iter()
+                    .any(|edge| edge.labels().is_rollback());
+
+                if has_incoming_rollback_edge {
+                    Some(block.index())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let obs_exprs = self.observable_exprs();
+
+        for block_index in rollback_block_indices {
+            let block = cfg.block_mut(block_index)?;
+
+            // Add the observe at the beginning of the block
+            let mut obs = Instruction::observable(obs_exprs.clone());
+            obs.labels_mut().pseudo();
+            block.insert_instruction(0, obs)?;
+        }
+
+        Ok(())
+    }
+
     fn place_observe_at_end_of_program(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         let exit_block = cfg.exit_block_mut()?;
         exit_block
@@ -95,6 +130,10 @@ impl Transform<Program> for Observations {
 
         if self.obs_each_effectful_instruction {
             self.place_observe_after_each_effectul_instruction(cfg)?;
+        }
+
+        if self.obs_after_rollback {
+            self.place_observe_after_rollback(cfg)?;
         }
 
         if self.obs_end_of_program {

@@ -92,6 +92,8 @@ pub struct Observe {
     pub end_of_program: bool,
     #[serde(default = "disabled")]
     pub each_effectful_instruction: bool,
+    #[serde(default = "disabled")]
+    pub after_rollback: bool,
 }
 
 impl Default for Observe {
@@ -99,6 +101,7 @@ impl Default for Observe {
         Self {
             end_of_program: true,
             each_effectful_instruction: false,
+            after_rollback: false,
         }
     }
 }
