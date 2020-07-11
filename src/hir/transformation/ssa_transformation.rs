@@ -113,6 +113,10 @@ fn insert_phi_nodes(program: &mut Program, form: SSAForm) -> Result<()> {
                     phi_node
                 };
 
+                if phi_node.incoming_variables().len() < 2 {
+                    continue;
+                }
+
                 let cfg = program.control_flow_graph_mut();
                 let df_block = cfg.block_mut(*df_index)?;
                 df_block.add_phi_node(phi_node);
