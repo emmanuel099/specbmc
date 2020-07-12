@@ -13,8 +13,8 @@ pub mod transformation;
 mod translation;
 
 pub use self::block::Block;
-pub use self::control_flow_graph::*;
-pub use self::edge::*;
+pub use self::control_flow_graph::{ControlFlowGraph, RemovedEdgeGuard};
+pub use self::edge::Edge;
 pub use self::effect::Effect;
 pub use self::instruction::Instruction;
 pub use self::operation::Operation;

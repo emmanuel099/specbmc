@@ -1,11 +1,11 @@
 //! Static Single Assignment (SSA) Transformation
 
-use crate::error::*;
-use crate::expr;
+use crate::error::Result;
+use crate::expr::{Expression, Variable};
 use crate::hir::analysis;
 use crate::hir::{Block, ControlFlowGraph, Instruction, PhiNode, Program};
 use crate::ir::Transform;
-use falcon::graph::*;
+use falcon::graph::{Graph, NullEdge, NullVertex, Vertex};
 use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Clone, Copy, Debug)]
@@ -134,7 +134,7 @@ fn insert_phi_nodes(program: &mut Program, form: SSAForm) -> Result<()> {
 }
 
 /// Get the set of variables which are mutated in the given block.
-fn variables_mutated_in_block(block: &Block) -> HashSet<&expr::Variable> {
+fn variables_mutated_in_block(block: &Block) -> HashSet<&Variable> {
     block
         .instructions()
         .iter()
@@ -143,7 +143,7 @@ fn variables_mutated_in_block(block: &Block) -> HashSet<&expr::Variable> {
 }
 
 /// Get a mapping from variables to a set of blocks (indices) in which they are mutated.
-fn variables_mutated_in_blocks(cfg: &ControlFlowGraph) -> HashMap<expr::Variable, HashSet<usize>> {
+fn variables_mutated_in_blocks(cfg: &ControlFlowGraph) -> HashMap<Variable, HashSet<usize>> {
     let mut mutated_in = HashMap::new();
 
     for block in cfg.blocks() {
@@ -188,14 +188,14 @@ impl VariableVersioning {
         self.scoped_versions.pop();
     }
 
-    fn get_version(&mut self, variable: &expr::Variable) -> Option<usize> {
+    fn get_version(&mut self, variable: &Variable) -> Option<usize> {
         self.scoped_versions
             .last()
             .and_then(|versions| versions.get(variable.name()))
             .copied()
     }
 
-    fn new_version(&mut self, variable: &expr::Variable) -> Option<usize> {
+    fn new_version(&mut self, variable: &Variable) -> Option<usize> {
         let count = self.counter.entry(variable.name().to_string()).or_insert(1);
         let version = *count;
         *count += 1;
@@ -211,7 +211,7 @@ trait SSARename {
     fn rename_variables(&mut self, versioning: &mut VariableVersioning) -> Result<()>;
 }
 
-impl SSARename for expr::Expression {
+impl SSARename for Expression {
     fn rename_variables(&mut self, versioning: &mut VariableVersioning) -> Result<()> {
         for variable in self.variables_mut() {
             variable.set_version(versioning.get_version(variable));
@@ -315,17 +315,18 @@ impl SSARename for Program {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::expr::BitVector;
     use crate::hir::Operation;
 
-    fn expr_const(value: u64) -> expr::Expression {
-        expr::BitVector::constant_u64(value, 64)
+    fn expr_const(value: u64) -> Expression {
+        BitVector::constant_u64(value, 64)
     }
 
-    fn variable(name: &str) -> expr::Variable {
-        expr::BitVector::variable(name, 64)
+    fn variable(name: &str) -> Variable {
+        BitVector::variable(name, 64)
     }
 
-    fn variable_ssa(name: &str, version: usize) -> expr::Variable {
+    fn variable_ssa(name: &str, version: usize) -> Variable {
         let mut variable = variable(name);
         variable.set_version(Some(version));
         variable
@@ -379,9 +380,9 @@ mod tests {
     #[test]
     fn test_renaming_of_expression() {
         // Given: x + y * x
-        let mut expression = expr::BitVector::add(
+        let mut expression = BitVector::add(
             variable("x").into(),
-            expr::BitVector::mul(variable("y").into(), variable("x").into()).unwrap(),
+            BitVector::mul(variable("y").into(), variable("x").into()).unwrap(),
         )
         .unwrap();
 
@@ -394,10 +395,9 @@ mod tests {
         // Expected: x_1 + y_1 * x_1
         assert_eq!(
             expression,
-            expr::BitVector::add(
+            BitVector::add(
                 variable_ssa("x", 1).into(),
-                expr::BitVector::mul(variable_ssa("y", 1).into(), variable_ssa("x", 1).into())
-                    .unwrap(),
+                BitVector::mul(variable_ssa("y", 1).into(), variable_ssa("x", 1).into()).unwrap(),
             )
             .unwrap()
         );
@@ -891,7 +891,7 @@ mod tests {
                 block
                     .assign(
                         variable("x"),
-                        expr::BitVector::add(variable("x").into(), variable("x").into()).unwrap(),
+                        BitVector::add(variable("x").into(), variable("x").into()).unwrap(),
                     )
                     .unwrap();
             }
@@ -982,11 +982,8 @@ mod tests {
                 block
                     .assign(
                         variable_ssa("x", 5),
-                        expr::BitVector::add(
-                            variable_ssa("x", 4).into(),
-                            variable_ssa("x", 4).into(),
-                        )
-                        .unwrap(),
+                        BitVector::add(variable_ssa("x", 4).into(), variable_ssa("x", 4).into())
+                            .unwrap(),
                     )
                     .unwrap();
                 block.add_phi_node({

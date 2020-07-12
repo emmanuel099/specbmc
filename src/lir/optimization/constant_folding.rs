@@ -6,9 +6,9 @@
 //! Please note that some operators aren't yet implemented.
 
 use crate::error::Result;
-use crate::expr::*;
-use crate::lir;
+use crate::expr::{BitVector, BitVectorValue, Boolean, Expression, Operator};
 use crate::lir::optimization::{Optimization, OptimizationResult};
+use crate::lir::{Node, Program};
 use std::convert::TryFrom;
 
 pub struct ConstantFolding {}
@@ -20,7 +20,7 @@ impl ConstantFolding {
 }
 
 impl Optimization for ConstantFolding {
-    fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
+    fn optimize(&self, program: &mut Program) -> Result<OptimizationResult> {
         if program.fold() {
             Ok(OptimizationResult::Changed)
         } else {
@@ -36,7 +36,7 @@ trait Fold {
     fn fold(&mut self) -> bool;
 }
 
-impl Fold for lir::Program {
+impl Fold for Program {
     fn fold(&mut self) -> bool {
         self.nodes_mut()
             .iter_mut()
@@ -44,7 +44,7 @@ impl Fold for lir::Program {
     }
 }
 
-impl Fold for lir::Node {
+impl Fold for Node {
     fn fold(&mut self) -> bool {
         match self {
             Self::Let { expr, .. } => expr.fold(),

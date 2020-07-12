@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr;
+use crate::expr::{Boolean, Expression};
 use crate::hir;
 use crate::ir::TryTranslateInto;
 use crate::mir;
@@ -82,10 +82,10 @@ fn translate_operation(operation: &hir::Operation) -> Result<Option<mir::Node>> 
 /// Gives the transition condition of edge (p, q) which is defined as:
 ///   - exec(p) /\ true if the edge is an unconditional edge
 ///   - exec(p) /\ c if the edge is a conditional edge with condition c
-fn transition_condition(edge: &hir::Edge) -> Result<expr::Expression> {
+fn transition_condition(edge: &hir::Edge) -> Result<Expression> {
     let pred_exec_cond = mir::Block::execution_condition_variable_for_index(edge.head());
     match edge.condition() {
-        Some(condition) => expr::Boolean::and(pred_exec_cond.into(), condition.clone()),
+        Some(condition) => Boolean::and(pred_exec_cond.into(), condition.clone()),
         None => Ok(pred_exec_cond.into()), // unconditional transition
     }
 }
@@ -104,12 +104,12 @@ fn transition_condition(edge: &hir::Edge) -> Result<expr::Expression> {
 fn compute_execution_condition(
     cfg: &hir::ControlFlowGraph,
     block_index: usize,
-) -> Result<expr::Expression> {
+) -> Result<Expression> {
     let mut transitions = vec![];
 
     let predecessors = cfg.predecessor_indices(block_index)?;
     if predecessors.is_empty() {
-        return Ok(expr::Boolean::constant(true));
+        return Ok(Boolean::constant(true));
     }
 
     for pred_index in predecessors {
@@ -117,7 +117,7 @@ fn compute_execution_condition(
         transitions.push(transition_condition(edge)?);
     }
 
-    expr::Boolean::disjunction(&transitions)
+    Boolean::disjunction(&transitions)
 }
 
 /// Transforms the phi node into a conditional expression s.t. it can be assigned to a variable.
@@ -128,8 +128,8 @@ fn compute_phi_expr(
     cfg: &hir::ControlFlowGraph,
     block_index: usize,
     phi_node: &hir::PhiNode,
-) -> Result<expr::Expression> {
-    let mut phi_expr: Option<expr::Expression> = None;
+) -> Result<Expression> {
+    let mut phi_expr: Option<Expression> = None;
 
     for pred_index in cfg.predecessor_indices(block_index)? {
         if !phi_node.has_incoming(pred_index) {
@@ -144,7 +144,7 @@ fn compute_phi_expr(
         let var = phi_node.incoming_variable(pred_index).unwrap().clone();
 
         if let Some(expr) = phi_expr {
-            phi_expr = Some(expr::Expression::ite(trans_cond, var.into(), expr)?);
+            phi_expr = Some(Expression::ite(trans_cond, var.into(), expr)?);
         } else {
             phi_expr = Some(var.into());
         }
@@ -155,12 +155,12 @@ fn compute_phi_expr(
 
 /// Create an expression to enforce equality of all given expression under 2-way self composition.
 /// For example, let `exprs` be `[x, y]` then this function will produce `x@0 == x@1 /\ y@0 == y@1`.
-fn equal_under_self_composition(exprs: &[expr::Expression]) -> expr::Expression {
-    expr::Boolean::conjunction(
+fn equal_under_self_composition(exprs: &[Expression]) -> Expression {
+    Boolean::conjunction(
         &exprs
             .iter()
-            .map(|e| expr::Expression::equal(e.self_compose(0), e.self_compose(1)).unwrap())
-            .collect::<Vec<expr::Expression>>(),
+            .map(|e| Expression::equal(e.self_compose(0), e.self_compose(1)).unwrap())
+            .collect::<Vec<Expression>>(),
     )
     .unwrap()
 }

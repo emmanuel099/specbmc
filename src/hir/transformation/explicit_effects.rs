@@ -1,4 +1,4 @@
-use crate::error::*;
+use crate::error::Result;
 use crate::expr::{BranchTargetBuffer, Cache, Expression, PatternHistoryTable};
 use crate::hir::{Effect, Instruction, Operation, Program};
 use crate::ir::Transform;

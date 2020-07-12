@@ -6,9 +6,9 @@
 //! This algorithm requires that the program is in SSA form.
 
 use crate::error::Result;
-use crate::expr;
-use crate::lir;
+use crate::expr::{Expression, Operator, Variable};
 use crate::lir::optimization::{Optimization, OptimizationResult};
+use crate::lir::{Node, Program};
 use std::collections::HashMap;
 
 pub struct ConstantPropagation {}
@@ -21,7 +21,7 @@ impl ConstantPropagation {
 
 impl Optimization for ConstantPropagation {
     /// Propagate all constants
-    fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
+    fn optimize(&self, program: &mut Program) -> Result<OptimizationResult> {
         let constants = program.determine_constants();
         if constants.is_empty() {
             return Ok(OptimizationResult::Unchanged);
@@ -33,18 +33,18 @@ impl Optimization for ConstantPropagation {
     }
 }
 
-type ConstantVariables = HashMap<expr::Variable, expr::Expression>;
+type ConstantVariables = HashMap<Variable, Expression>;
 
 trait DetermineConstants {
     fn determine_constants(&self) -> ConstantVariables;
 }
 
-impl DetermineConstants for lir::Program {
+impl DetermineConstants for Program {
     fn determine_constants(&self) -> ConstantVariables {
         let mut constants = HashMap::new();
 
         self.nodes().iter().for_each(|node| {
-            if let lir::Node::Let { var, expr } = node {
+            if let Node::Let { var, expr } = node {
                 if expr.is_constant() {
                     constants.insert(var.clone(), expr.clone());
                 }
@@ -59,7 +59,7 @@ trait PropagateConstants {
     fn propagate_constants(&mut self, constants: &ConstantVariables);
 }
 
-impl PropagateConstants for lir::Program {
+impl PropagateConstants for Program {
     fn propagate_constants(&mut self, constants: &ConstantVariables) {
         self.nodes_mut()
             .iter_mut()
@@ -67,7 +67,7 @@ impl PropagateConstants for lir::Program {
     }
 }
 
-impl PropagateConstants for lir::Node {
+impl PropagateConstants for Node {
     fn propagate_constants(&mut self, constants: &ConstantVariables) {
         match self {
             Self::Let { expr, .. } => expr.propagate_constants(constants),
@@ -79,10 +79,10 @@ impl PropagateConstants for lir::Node {
     }
 }
 
-impl PropagateConstants for expr::Expression {
+impl PropagateConstants for Expression {
     fn propagate_constants(&mut self, constants: &ConstantVariables) {
         match self.operator() {
-            expr::Operator::Variable(var) => {
+            Operator::Variable(var) => {
                 if let Some(constant) = constants.get(var) {
                     *self = constant.clone();
                 }
@@ -99,7 +99,7 @@ impl PropagateConstants for expr::Expression {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use expr::{Boolean, Sort, Variable};
+    use crate::expr::{Boolean, Sort, Variable};
 
     #[test]
     fn test_constant_propagation() {
@@ -109,7 +109,7 @@ mod tests {
         // y := x
         // assume(y /\ x)
 
-        let mut program = lir::Program::new();
+        let mut program = Program::new();
         program
             .assign(Variable::new("x", Sort::boolean()), Boolean::constant(true))
             .unwrap();
@@ -140,17 +140,15 @@ mod tests {
 
         assert_eq!(
             program.node(0).unwrap(),
-            &lir::Node::assign(Variable::new("x", Sort::boolean()), Boolean::constant(true),)
-                .unwrap()
+            &Node::assign(Variable::new("x", Sort::boolean()), Boolean::constant(true),).unwrap()
         );
         assert_eq!(
             program.node(1).unwrap(),
-            &lir::Node::assign(Variable::new("y", Sort::boolean()), Boolean::constant(true),)
-                .unwrap()
+            &Node::assign(Variable::new("y", Sort::boolean()), Boolean::constant(true),).unwrap()
         );
         assert_eq!(
             program.node(2).unwrap(),
-            &lir::Node::assume(
+            &Node::assume(
                 Boolean::and(
                     Variable::new("y", Sort::boolean()).into(),
                     Boolean::constant(true),

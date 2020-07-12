@@ -1,5 +1,5 @@
 use crate::environment::{Environment, WORD_SIZE};
-use crate::error::*;
+use crate::error::Result;
 use crate::expr::BitVector;
 use crate::hir::{Effect, Instruction, Operation, Program};
 use crate::ir::Transform;

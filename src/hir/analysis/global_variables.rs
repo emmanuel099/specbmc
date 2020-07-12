@@ -1,9 +1,9 @@
-use crate::expr;
-use crate::hir;
+use crate::expr::Variable;
+use crate::hir::Program;
 use std::collections::HashSet;
 
 /// Computes the set of variables that are live on entry of at least one block.
-pub fn global_variables(program: &hir::Program) -> HashSet<expr::Variable> {
+pub fn global_variables(program: &Program) -> HashSet<Variable> {
     let mut globals = HashSet::new();
 
     for block in program.control_flow_graph().blocks() {
@@ -29,19 +29,21 @@ pub fn global_variables(program: &hir::Program) -> HashSet<expr::Variable> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::expr::{BitVector, Expression};
+    use crate::hir::ControlFlowGraph;
 
-    fn expr_const(value: u64) -> expr::Expression {
-        expr::BitVector::constant_u64(value, 64)
+    fn expr_const(value: u64) -> Expression {
+        BitVector::constant_u64(value, 64)
     }
 
-    fn variable(name: &str) -> expr::Variable {
-        expr::BitVector::variable(name, 64)
+    fn variable(name: &str) -> Variable {
+        BitVector::variable(name, 64)
     }
 
     #[test]
     fn test_global_variables() {
         let program = {
-            let mut cfg = hir::ControlFlowGraph::new();
+            let mut cfg = ControlFlowGraph::new();
 
             let block0 = cfg.new_block();
             block0.assign(variable("x"), expr_const(1)).unwrap();
@@ -55,7 +57,7 @@ mod tests {
             let block2 = cfg.new_block();
             block2.load(variable("y"), variable("x").into()).unwrap();
 
-            hir::Program::new(cfg)
+            Program::new(cfg)
         };
 
         assert_eq!(

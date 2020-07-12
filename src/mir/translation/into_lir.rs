@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr;
+use crate::expr::{Boolean, Expression};
 use crate::ir::TryTranslateInto;
 use crate::lir;
 use crate::mir;
@@ -56,7 +56,7 @@ fn translate_block(
                 )?;
             }
             mir::Node::Assert { condition } => {
-                program.assert(expr::Boolean::imply(
+                program.assert(Boolean::imply(
                     block
                         .execution_condition_variable()
                         .self_compose(composition)
@@ -65,7 +65,7 @@ fn translate_block(
                 )?)?;
             }
             mir::Node::Assume { condition } => {
-                program.assume(expr::Boolean::imply(
+                program.assume(Boolean::imply(
                     block
                         .execution_condition_variable()
                         .self_compose(composition)
@@ -91,14 +91,14 @@ fn add_self_composition_constraints(
             match node {
                 mir::Node::HyperAssert { condition } => {
                     let compositions = involved_compositions(condition)?;
-                    lir_program.assert(expr::Boolean::imply(
+                    lir_program.assert(Boolean::imply(
                         hyper_execution_condition(&block, &compositions)?, // only if executed
                         condition.clone(),
                     )?)?;
                 }
                 mir::Node::HyperAssume { condition } => {
                     let compositions = involved_compositions(condition)?;
-                    lir_program.assume(expr::Boolean::imply(
+                    lir_program.assume(Boolean::imply(
                         hyper_execution_condition(&block, &compositions)?, // only if executed
                         condition.clone(),
                     )?)?;
@@ -113,23 +113,20 @@ fn add_self_composition_constraints(
 
 /// Lifts the execution condition of the block to multiple compositions.
 /// The resulting execution condition is true only if the block is executed in all compositions.
-fn hyper_execution_condition(
-    block: &mir::Block,
-    compositions: &[usize],
-) -> Result<expr::Expression> {
+fn hyper_execution_condition(block: &mir::Block, compositions: &[usize]) -> Result<Expression> {
     let exec_cond_var = block.execution_condition_variable();
 
-    expr::Boolean::conjunction(
+    Boolean::conjunction(
         &compositions
             .iter()
             .map(|i| exec_cond_var.self_compose(*i).into())
-            .collect::<Vec<expr::Expression>>(),
+            .collect::<Vec<Expression>>(),
     )
 }
 
 /// Determines the involved compositions for the given `Expression`.
 /// For example: An expression `(= x@1 x@2)` will give `[1, 2]`.
-fn involved_compositions(expr: &expr::Expression) -> Result<Vec<usize>> {
+fn involved_compositions(expr: &Expression) -> Result<Vec<usize>> {
     let mut compositions = Vec::new();
 
     for variable in expr.variables() {

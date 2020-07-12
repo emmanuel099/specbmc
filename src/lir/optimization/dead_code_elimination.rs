@@ -7,9 +7,9 @@
 //! This algorithm requires that the program is in SSA form.
 
 use crate::error::Result;
-use crate::expr;
-use crate::lir;
+use crate::expr::Variable;
 use crate::lir::optimization::{Optimization, OptimizationResult};
+use crate::lir::{Node, Program};
 use bit_vec::BitVec;
 use std::collections::HashMap;
 
@@ -26,7 +26,7 @@ impl Optimization for DeadCodeElimination {
     ///
     /// `Assert` and `Assume` nodes are considered as critical,
     /// meaning that they (including their dependencies) will remain.
-    fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
+    fn optimize(&self, program: &mut Program) -> Result<OptimizationResult> {
         let marks = mark(program.nodes());
         if marks.all() {
             // No dead nodes
@@ -44,18 +44,18 @@ trait DceCritical {
     fn is_critical(&self) -> bool;
 }
 
-impl DceCritical for lir::Node {
+impl DceCritical for Node {
     fn is_critical(&self) -> bool {
         !self.is_let()
     }
 }
 
 /// Get a map from variables to node indices where the variables are defined.
-fn variable_definitions(nodes: &[lir::Node]) -> HashMap<&expr::Variable, usize> {
+fn variable_definitions(nodes: &[Node]) -> HashMap<&Variable, usize> {
     let mut defs = HashMap::new();
 
     nodes.iter().enumerate().for_each(|(index, node)| {
-        if let lir::Node::Let { var, .. } = node {
+        if let Node::Let { var, .. } = node {
             defs.insert(var, index);
         }
     });
@@ -67,7 +67,7 @@ fn variable_definitions(nodes: &[lir::Node]) -> HashMap<&expr::Variable, usize> 
 ///
 /// The `BitVec` contains a single bit for each node.
 /// If the bit for a node is not set, the node can safely be removed.
-fn mark(nodes: &[lir::Node]) -> BitVec {
+fn mark(nodes: &[Node]) -> BitVec {
     let defs = variable_definitions(nodes);
 
     let mut marks = BitVec::from_elem(nodes.len(), false);
@@ -95,10 +95,10 @@ fn mark(nodes: &[lir::Node]) -> BitVec {
         };
 
         match &nodes[index] {
-            lir::Node::Let { expr, .. } => {
+            Node::Let { expr, .. } => {
                 expr.variables().iter().for_each(mark_def);
             }
-            lir::Node::Assert { condition } | lir::Node::Assume { condition } => {
+            Node::Assert { condition } | Node::Assume { condition } => {
                 condition.variables().iter().for_each(mark_def)
             }
             _ => (),
@@ -109,7 +109,7 @@ fn mark(nodes: &[lir::Node]) -> BitVec {
 }
 
 /// Remove all unmarked nodes.
-fn sweep(nodes: &mut Vec<lir::Node>, marks: &BitVec) {
+fn sweep(nodes: &mut Vec<Node>, marks: &BitVec) {
     marks
         .iter()
         .enumerate()

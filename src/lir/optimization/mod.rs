@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::lir;
+use crate::lir::Program;
 
 mod constant_folding;
 mod constant_propagation;
@@ -20,7 +20,7 @@ pub enum OptimizationResult {
 }
 
 pub trait Optimization {
-    fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult>;
+    fn optimize(&self, program: &mut Program) -> Result<OptimizationResult>;
 }
 
 pub struct Optimizer {
@@ -59,7 +59,7 @@ impl Optimizer {
         }
     }
 
-    pub fn optimize(&self, program: &mut lir::Program) -> Result<()> {
+    pub fn optimize(&self, program: &mut Program) -> Result<()> {
         for _ in 1..=self.repetitions {
             let mut unchanged = true;
 

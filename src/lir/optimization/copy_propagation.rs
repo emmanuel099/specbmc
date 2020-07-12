@@ -6,9 +6,9 @@
 //! This algorithm requires that the program is in SSA form.
 
 use crate::error::Result;
-use crate::expr;
-use crate::lir;
+use crate::expr::{Operator, Variable};
 use crate::lir::optimization::{Optimization, OptimizationResult};
+use crate::lir::{Node, Program};
 use std::collections::HashMap;
 
 pub struct CopyPropagation {}
@@ -21,7 +21,7 @@ impl CopyPropagation {
 
 impl Optimization for CopyPropagation {
     /// Propagate all simple assignments
-    fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
+    fn optimize(&self, program: &mut Program) -> Result<OptimizationResult> {
         let copies = program.determine_copies();
         if copies.is_empty() {
             return Ok(OptimizationResult::Unchanged);
@@ -33,19 +33,19 @@ impl Optimization for CopyPropagation {
     }
 }
 
-type CopiedVariables = HashMap<expr::Variable, expr::Variable>;
+type CopiedVariables = HashMap<Variable, Variable>;
 
 trait DetermineCopies {
     fn determine_copies(&self) -> CopiedVariables;
 }
 
-impl DetermineCopies for lir::Program {
+impl DetermineCopies for Program {
     fn determine_copies(&self) -> CopiedVariables {
         let mut copies = HashMap::new();
 
         self.nodes().iter().for_each(|node| {
-            if let lir::Node::Let { var, expr } = node {
-                if let expr::Operator::Variable(src_var) = expr.operator() {
+            if let Node::Let { var, expr } = node {
+                if let Operator::Variable(src_var) = expr.operator() {
                     copies.insert(var.clone(), src_var.clone());
                 }
             }
@@ -61,7 +61,7 @@ trait PropagateCopies {
     fn propagate_copies(&mut self, copies: &CopiedVariables);
 }
 
-impl PropagateCopies for lir::Program {
+impl PropagateCopies for Program {
     fn propagate_copies(&mut self, copies: &CopiedVariables) {
         self.nodes_mut()
             .iter_mut()
@@ -69,9 +69,9 @@ impl PropagateCopies for lir::Program {
     }
 }
 
-impl PropagateCopies for lir::Node {
+impl PropagateCopies for Node {
     fn propagate_copies(&mut self, copies: &CopiedVariables) {
-        let replace_if_copied = |var: &mut expr::Variable| {
+        let replace_if_copied = |var: &mut Variable| {
             if let Some(src_var) = copies.get(var) {
                 *var = src_var.clone();
             }
@@ -99,7 +99,7 @@ impl PropagateCopies for lir::Node {
 /// c = a
 fn resolve_copies_of_copies(copies: &mut CopiedVariables) {
     loop {
-        let mut prop: Option<(expr::Variable, expr::Variable)> = None;
+        let mut prop: Option<(Variable, Variable)> = None;
         for (copy, var) in copies.iter() {
             if let Some(src_var) = copies.get(var) {
                 prop = Some((copy.clone(), src_var.clone()));
@@ -120,7 +120,7 @@ fn resolve_copies_of_copies(copies: &mut CopiedVariables) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use expr::{Sort, Variable};
+    use crate::expr::{Sort, Variable};
 
     #[test]
     fn test_resolve_copies_of_copies() {
@@ -156,7 +156,7 @@ mod tests {
         // y := x
         // z := y
 
-        let mut program = lir::Program::new();
+        let mut program = Program::new();
         program
             .assign(
                 Variable::new("v", Sort::boolean()),
@@ -187,7 +187,7 @@ mod tests {
 
         assert_eq!(
             program.node(0).unwrap(),
-            &lir::Node::assign(
+            &Node::assign(
                 Variable::new("v", Sort::boolean()),
                 Variable::new("u", Sort::boolean()).into(),
             )
@@ -195,7 +195,7 @@ mod tests {
         );
         assert_eq!(
             program.node(1).unwrap(),
-            &lir::Node::assign(
+            &Node::assign(
                 Variable::new("y", Sort::boolean()),
                 Variable::new("x", Sort::boolean()).into(),
             )
@@ -203,7 +203,7 @@ mod tests {
         );
         assert_eq!(
             program.node(2).unwrap(),
-            &lir::Node::assign(
+            &Node::assign(
                 Variable::new("z", Sort::boolean()),
                 Variable::new("x", Sort::boolean()).into(),
             )

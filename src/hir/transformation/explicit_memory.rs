@@ -1,4 +1,4 @@
-use crate::error::*;
+use crate::error::Result;
 use crate::expr::Memory;
 use crate::hir::{Operation, Program};
 use crate::ir::Transform;

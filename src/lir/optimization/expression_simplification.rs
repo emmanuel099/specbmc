@@ -5,9 +5,9 @@
 //! Please note that some operators aren't yet implemented.
 
 use crate::error::Result;
-use crate::expr::*;
-use crate::lir;
+use crate::expr::{BitVector, Boolean, Constant, Expression, Integer, Operator};
 use crate::lir::optimization::{Optimization, OptimizationResult};
+use crate::lir::{Node, Program};
 use std::convert::TryFrom;
 
 pub struct ExpressionSimplification {}
@@ -19,7 +19,7 @@ impl ExpressionSimplification {
 }
 
 impl Optimization for ExpressionSimplification {
-    fn optimize(&self, program: &mut lir::Program) -> Result<OptimizationResult> {
+    fn optimize(&self, program: &mut Program) -> Result<OptimizationResult> {
         if program.simplify() {
             Ok(OptimizationResult::Changed)
         } else {
@@ -35,7 +35,7 @@ trait Simplify {
     fn simplify(&mut self) -> bool;
 }
 
-impl Simplify for lir::Program {
+impl Simplify for Program {
     fn simplify(&mut self) -> bool {
         self.nodes_mut()
             .iter_mut()
@@ -43,7 +43,7 @@ impl Simplify for lir::Program {
     }
 }
 
-impl Simplify for lir::Node {
+impl Simplify for Node {
     fn simplify(&mut self) -> bool {
         match self {
             Self::Let { expr, .. } => expr.simplify(),

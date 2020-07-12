@@ -1,5 +1,5 @@
 use crate::environment::{Environment, UnwindingGuard};
-use crate::error::*;
+use crate::error::Result;
 use crate::hir::{ControlFlowGraph, Program, RemovedEdgeGuard};
 use crate::ir::Transform;
 use std::collections::{BTreeMap, BTreeSet};
