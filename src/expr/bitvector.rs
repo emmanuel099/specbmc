@@ -29,6 +29,8 @@ pub enum BitVector {
     Xnor,
     Comp,
     Sub,
+    /// Subtraction which yields zero on underflow.
+    SaturatingSub,
     SDiv,
     SRem,
     SMod,
@@ -73,6 +75,7 @@ impl fmt::Display for BitVector {
             Self::Xnor => "bvxnor".to_owned(),
             Self::Comp => "bvcomp".to_owned(),
             Self::Sub => "bvsub".to_owned(),
+            Self::SaturatingSub => "bvsatsub".to_owned(),
             Self::SDiv => "bvsdiv".to_owned(),
             Self::SRem => "bvsrem".to_owned(),
             Self::SMod => "bvsmod".to_owned(),
@@ -185,6 +188,7 @@ impl BitVector {
     bv_arith!(xor, Self::Xor);
     bv_arith!(xnor, Self::Xnor);
     bv_arith!(sub, Self::Sub);
+    bv_arith!(saturating_sub, Self::SaturatingSub);
     bv_arith!(sdiv, Self::SDiv);
     bv_arith!(srem, Self::SRem);
     bv_arith!(smod, Self::SMod);

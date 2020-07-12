@@ -175,6 +175,13 @@ fn lower_to_smt_bitvec(
             let one = expr::BitVector::constant_u64(1, *bits);
             expr::Expression::ite(expr.clone(), one, zero).ok()
         }
+        (expr::BitVector::SaturatingSub, [lhs, rhs]) => {
+            let width = lhs.sort().unwrap_bit_vector();
+            let result = expr::BitVector::sub(lhs.to_owned(), rhs.to_owned()).unwrap();
+            let zero = expr::BitVector::constant_u64(0, width);
+            let underflow = expr::BitVector::ugt(result.clone(), lhs.to_owned()).unwrap();
+            expr::Expression::ite(underflow, zero, result).ok()
+        }
         _ => None,
     }
 }
@@ -373,7 +380,7 @@ impl Expr2Smt<()> for expr::BitVector {
             Self::SLe => write!(w, "bvsle")?,
             Self::SGt => write!(w, "bvsgt")?,
             Self::SGe => write!(w, "bvsge")?,
-            Self::ToBoolean | Self::FromBoolean(_) => {
+            Self::ToBoolean | Self::FromBoolean(_) | Self::SaturatingSub => {
                 panic!("ToBoolean/FromBoolean should have been lowered")
             }
         };
