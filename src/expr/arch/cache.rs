@@ -98,8 +98,7 @@ impl CacheValue {
             let evicted = self.addresses.contains(&addr);
             !evicted
         } else {
-            let fetched = self.addresses.contains(&addr);
-            fetched
+            self.addresses.contains(&addr)
         }
     }
 

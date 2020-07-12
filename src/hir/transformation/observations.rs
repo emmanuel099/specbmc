@@ -110,7 +110,7 @@ impl Observations {
     fn place_observe_at_program_locations(
         &self,
         cfg: &mut ControlFlowGraph,
-        locations: &Vec<u64>,
+        locations: &[u64],
     ) -> Result<()> {
         let obs_exprs = self.observable_exprs();
 
