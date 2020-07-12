@@ -74,6 +74,7 @@ impl TransientExecution {
                                     &mut default_cfg,
                                     &mut transient_start_rollback_points,
                                     &inst_ref,
+                                    self.speculation_window,
                                 )?;
                             }
                         }
@@ -84,6 +85,7 @@ impl TransientExecution {
                                     &mut default_cfg,
                                     &mut transient_start_rollback_points,
                                     &inst_ref,
+                                    self.speculation_window,
                                 )?;
                             }
                         }
@@ -243,6 +245,7 @@ fn add_transient_execution_start(
     cfg: &mut ControlFlowGraph,
     transient_start_rollback_points: &mut BTreeMap<InstructionRef, (usize, usize)>,
     inst_ref: &InstructionRef,
+    max_spec_window: usize,
 ) -> Result<()> {
     let head_index = inst_ref.block();
     let tail_index = cfg.split_block_at(head_index, inst_ref.index())?;
@@ -264,6 +267,17 @@ fn add_transient_execution_start(
         let zero = BitVector::constant_u64(0, SPECULATION_WINDOW_SIZE);
         transient_start
             .assume(BitVector::sgt(spec_win().into(), zero)?)?
+            .labels_mut()
+            .pseudo();
+
+        transient_start
+            .assume(BitVector::sle(
+                spec_win().into(),
+                BitVector::constant_u64(
+                    max_spec_window.try_into().unwrap(),
+                    SPECULATION_WINDOW_SIZE,
+                ),
+            )?)?
             .labels_mut()
             .pseudo();
 
