@@ -3,6 +3,7 @@ use crate::error::Result;
 use crate::expr;
 use crate::hir::{ControlFlowGraph, Instruction, Program};
 use crate::ir::Transform;
+use std::collections::HashSet;
 
 #[derive(Default, Builder, Debug)]
 pub struct Observations {
@@ -75,18 +76,12 @@ impl Observations {
     }
 
     fn place_observe_after_rollback(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
-        let rollback_block_indices: Vec<usize> = cfg
-            .blocks()
+        let rollback_block_indices: HashSet<usize> = cfg
+            .edges()
             .iter()
-            .filter_map(|block| {
-                let has_incoming_rollback_edge: bool = cfg
-                    .edges_in(block.index())
-                    .unwrap()
-                    .iter()
-                    .any(|edge| edge.labels().is_rollback());
-
-                if has_incoming_rollback_edge {
-                    Some(block.index())
+            .filter_map(|edge| {
+                if edge.labels().is_rollback() {
+                    Some(edge.tail())
                 } else {
                     None
                 }
