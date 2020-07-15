@@ -24,7 +24,7 @@ bit-vec = "0.6.1"
 serde = { version = "1.0.104", features = ["derive"] }
 serde_yaml = "0.8.11"
 console = "0.11.1"
-colored = "1.9.3"
+colored = "2.0.0"
 indicatif = "0.15.0"
 nom = "5.1.0"
 derivative = "2.1.1"
