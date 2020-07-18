@@ -125,6 +125,7 @@ pub struct Analysis {
     pub unwinding_guard: UnwindingGuard,
     #[serde(default = "disabled")]
     pub start_with_empty_cache: bool,
+    #[serde(default)]
     pub observe: Observe,
 }
 
