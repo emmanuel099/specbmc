@@ -262,12 +262,15 @@ fn build_environment(arguments: &Arguments) -> Result<environment::Environment> 
         match Environment::from_file(&env_file) {
             Ok(env) => {
                 println!(
-                    "Using environment defined in '{}'",
+                    "Using environment defined in '{}'.",
                     style(&env_file.to_str().unwrap()).yellow()
                 );
                 env
             }
-            Err(_) => Environment::default(),
+            Err(_) => {
+                println!("Using default environment.");
+                Environment::default()
+            }
         }
     };
 
