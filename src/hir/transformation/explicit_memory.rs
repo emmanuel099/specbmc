@@ -11,8 +11,8 @@ impl Transform<Program> for ExplicitMemory {
         "ExplicitMemory"
     }
 
-    fn description(&self) -> &'static str {
-        "Make memory accesses explicit"
+    fn description(&self) -> String {
+        "Make memory accesses explicit".to_string()
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {

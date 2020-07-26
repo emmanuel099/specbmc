@@ -153,8 +153,8 @@ impl Transform<Program> for Observations {
         "Observations"
     }
 
-    fn description(&self) -> &'static str {
-        "Add observations"
+    fn description(&self) -> String {
+        "Add observations".to_string()
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {

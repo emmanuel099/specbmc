@@ -81,8 +81,8 @@ impl Transform<Program> for InstructionEffects {
         "InstructionEffects"
     }
 
-    fn description(&self) -> &'static str {
-        "Add instruction effects"
+    fn description(&self) -> String {
+        "Add instruction effects".to_string()
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {

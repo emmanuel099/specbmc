@@ -5,7 +5,7 @@ pub trait Transform<T> {
     fn name(&self) -> &'static str;
 
     /// Concise description of the transformation.
-    fn description(&self) -> &'static str;
+    fn description(&self) -> String;
 
     /// Applies the transformation to `program`.
     fn transform(&self, program: &mut T) -> Result<()>;

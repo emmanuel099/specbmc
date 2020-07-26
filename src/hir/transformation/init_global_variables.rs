@@ -205,8 +205,8 @@ impl Transform<Program> for InitGlobalVariables {
         "InitGlobalVariables"
     }
 
-    fn description(&self) -> &'static str {
-        "Set up initial state"
+    fn description(&self) -> String {
+        "Set up initial state".to_string()
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {

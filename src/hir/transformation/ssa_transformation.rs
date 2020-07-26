@@ -37,8 +37,8 @@ impl Transform<Program> for SSATransformation {
         "SSATransformation"
     }
 
-    fn description(&self) -> &'static str {
-        "Transform into static single assignment form"
+    fn description(&self) -> String {
+        "Transform into static single assignment form".to_string()
     }
 
     /// Transform the HIR program into SSA form.

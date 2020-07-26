@@ -58,8 +58,8 @@ impl Transform<Program> for NonSpecObsEquivalence {
         "NonSpecObsEquivalence"
     }
 
-    fn description(&self) -> &'static str {
-        "Add non-speculative observational equivalence constraints"
+    fn description(&self) -> String {
+        "Add non-speculative observational equivalence constraints".to_string()
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {

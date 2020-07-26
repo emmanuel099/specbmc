@@ -183,8 +183,8 @@ impl Transform<Program> for TransientExecution {
         "TransientExecution"
     }
 
-    fn description(&self) -> &'static str {
-        "Add transient execution behavior"
+    fn description(&self) -> String {
+        "Add transient execution behavior".to_string()
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {

@@ -11,8 +11,8 @@ impl Transform<Program> for ExplicitEffects {
         "ExplicitEffects"
     }
 
-    fn description(&self) -> &'static str {
-        "Make instruction effects explicit"
+    fn description(&self) -> String {
+        "Make instruction effects explicit".to_string()
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {

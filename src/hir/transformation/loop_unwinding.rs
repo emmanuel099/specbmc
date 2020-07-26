@@ -149,8 +149,8 @@ impl Transform<Program> for LoopUnwinding {
         "LoopUnwinding"
     }
 
-    fn description(&self) -> &'static str {
-        "Unwind loops"
+    fn description(&self) -> String {
+        "Unwind loops".to_string()
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {
