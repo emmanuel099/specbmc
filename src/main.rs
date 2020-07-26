@@ -34,6 +34,7 @@ struct Arguments {
     speculation_window: Option<usize>,
     debug: bool,
     skip_solving: bool,
+    skip_cex: bool,
     cfg_file: Option<String>,
     transient_cfg_file: Option<String>,
     mir_file: Option<String>,
@@ -142,6 +143,11 @@ fn parse_arguments() -> Arguments {
                 .help("Skips solving the SMT formula"),
         )
         .arg(
+            Arg::with_name("skip_cex")
+                .long("skip-cex")
+                .help("Skips generating of counterexample"),
+        )
+        .arg(
             Arg::with_name("cfg_file")
                 .long("cfg")
                 .value_name("FILE")
@@ -240,6 +246,7 @@ fn parse_arguments() -> Arguments {
             .map(|v| v.parse::<usize>().unwrap()),
         debug: matches.is_present("debug"),
         skip_solving: matches.is_present("skip_solving"),
+        skip_cex: matches.is_present("skip_cex"),
         cfg_file: matches.value_of("cfg_file").map(String::from),
         transient_cfg_file: matches.value_of("transient_cfg_file").map(String::from),
         mir_file: matches.value_of("mir_file").map(String::from),
@@ -435,10 +442,12 @@ fn spec_bmc(arguments: &Arguments) -> Result<()> {
         CheckResult::AssertionViolated { model } => {
             println!("{}", "Leak detected!".bold().red());
 
-            let counter_example = cex::build_counter_example(&hir_program, model.as_ref())?;
-            counter_example
-                .control_flow_graph()
-                .render_to_file(Path::new("cex.dot"))?;
+            if !arguments.skip_cex {
+                let counter_example = cex::build_counter_example(&hir_program, model.as_ref())?;
+                counter_example
+                    .control_flow_graph()
+                    .render_to_file(Path::new("cex.dot"))?;
+            }
 
             process::exit(1);
         }
