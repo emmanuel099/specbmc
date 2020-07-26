@@ -383,7 +383,7 @@ fn spec_bmc(arguments: &Arguments) -> Result<()> {
 
     println!(
         "{} Loading program '{}'",
-        style("[1/9]").bold().dim(),
+        style("[1/7]").bold().dim(),
         input_file.yellow()
     );
     let mut hir_program =
@@ -395,7 +395,7 @@ fn spec_bmc(arguments: &Arguments) -> Result<()> {
             .render_to_file(Path::new(path))?;
     }
 
-    println!("{} Transforming HIR ...", style("[4/9]").bold().dim());
+    println!("{} Transforming HIR ...", style("[2/7]").bold().dim());
     hir_transformations(&env, &mut hir_program)?;
 
     if let Some(path) = &arguments.transient_cfg_file {
@@ -404,18 +404,18 @@ fn spec_bmc(arguments: &Arguments) -> Result<()> {
             .render_to_file(Path::new(path))?;
     }
 
-    println!("{} Translating into MIR", style("[5/9]").bold().dim());
+    println!("{} Translating into MIR", style("[3/7]").bold().dim());
     let mir_program = mir::Program::try_translate_from(&hir_program)?;
 
     if let Some(path) = &arguments.mir_file {
         mir_program.block_graph().render_to_file(Path::new(path))?;
     }
 
-    println!("{} Translating into LIR", style("[6/9]").bold().dim());
+    println!("{} Translating into LIR", style("[4/7]").bold().dim());
     let mut lir_program = lir::Program::try_translate_from(&mir_program)?;
     lir_program.validate()?;
 
-    println!("{} Optimizing LIR", style("[7/9]").bold().dim());
+    println!("{} Optimizing LIR", style("[5/7]").bold().dim());
     lir_optimize(&env, &mut lir_program)?;
 
     if let Some(path) = &arguments.lir_file {
@@ -427,14 +427,14 @@ fn spec_bmc(arguments: &Arguments) -> Result<()> {
         solver.dump_formula_to_file(Path::new(path))?
     }
 
-    println!("{} Encoding LIR", style("[8/9]").bold().dim());
+    println!("{} Encoding LIR", style("[6/7]").bold().dim());
     solver.encode_program(&lir_program)?;
 
     if arguments.skip_solving {
         return Ok(());
     }
 
-    println!("{} Searching for leaks ...", style("[9/9]").bold().dim());
+    println!("{} Searching for leaks ...", style("[7/7]").bold().dim());
     match solver.check_assertions()? {
         CheckResult::AssertionsHold => {
             println!("{}", "Program is safe.".bold().green());
