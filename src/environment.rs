@@ -42,6 +42,16 @@ impl Default for Solver {
     }
 }
 
+impl fmt::Display for Solver {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Z3 => write!(f, "Z3"),
+            Self::CVC4 => write!(f, "CVC4"),
+            Self::Yices2 => write!(f, "Yices2"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Check {
     #[serde(rename = "only_transient_leaks")]

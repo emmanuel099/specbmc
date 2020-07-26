@@ -427,7 +427,11 @@ fn spec_bmc(arguments: &Arguments) -> Result<()> {
         solver.dump_formula_to_file(Path::new(path))?
     }
 
-    println!("{} Encoding LIR", style("[6/7]").bold().dim());
+    println!(
+        "{} Encoding LIR as SMT formula (solver: {})",
+        style("[6/7]").bold().dim(),
+        env.solver
+    );
     solver.encode_program(&lir_program)?;
 
     if arguments.skip_solving {
