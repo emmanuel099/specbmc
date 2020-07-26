@@ -150,7 +150,7 @@ impl Transform<Program> for LoopUnwinding {
     }
 
     fn description(&self) -> String {
-        "Unwind loops".to_string()
+        format!("Unwind loops (k={})", self.unwinding_bound)
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {

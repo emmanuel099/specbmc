@@ -184,7 +184,10 @@ impl Transform<Program> for TransientExecution {
     }
 
     fn description(&self) -> String {
-        "Add transient execution behavior".to_string()
+        format!(
+            "Add transient execution behavior (max. speculation window={})",
+            self.speculation_window
+        )
     }
 
     fn transform(&self, program: &mut Program) -> Result<()> {

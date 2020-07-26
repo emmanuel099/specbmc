@@ -428,7 +428,7 @@ fn spec_bmc(arguments: &Arguments) -> Result<()> {
     }
 
     println!(
-        "{} Encoding LIR as SMT formula (solver: {})",
+        "{} Encoding LIR as SMT formula (solver={})",
         style("[6/7]").bold().dim(),
         env.solver
     );
