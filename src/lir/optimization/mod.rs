@@ -10,7 +10,6 @@ mod expression_simplification;
 use constant_folding::ConstantFolding;
 use constant_propagation::ConstantPropagation;
 use copy_propagation::CopyPropagation;
-use dead_code_elimination::DeadCodeElimination;
 use expression_simplification::ExpressionSimplification;
 
 #[derive(Eq, PartialEq)]
@@ -38,10 +37,7 @@ impl Optimizer {
 
     pub fn basic() -> Self {
         Self {
-            optimizations: vec![
-                Box::new(CopyPropagation::new()),
-                Box::new(DeadCodeElimination::new()),
-            ],
+            optimizations: vec![Box::new(CopyPropagation::new())],
             repetitions: 1,
         }
     }
@@ -53,7 +49,6 @@ impl Optimizer {
                 Box::new(ConstantPropagation::new()),
                 Box::new(ExpressionSimplification::new()),
                 Box::new(CopyPropagation::new()),
-                Box::new(DeadCodeElimination::new()),
             ],
             repetitions: 5,
         }
