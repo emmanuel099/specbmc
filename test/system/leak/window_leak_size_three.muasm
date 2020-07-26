@@ -1,0 +1,10 @@
+    c <- 0
+    beqz c, EndIf
+Then:
+    load x, 42
+    x <- x /\ 1
+    load tmp, x % stop here
+    load tmp, 0
+    load tmp, 1
+EndIf:
+    skip

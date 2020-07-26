@@ -1,0 +1,12 @@
+analysis:
+    spectre_pht: false
+    spectre_stl: true
+architecture:
+    cache: true
+    btb: false
+    pht: false
+policy:
+    registers:
+        default: low
+    memory:
+        default: high

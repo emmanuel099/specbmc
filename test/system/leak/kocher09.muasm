@@ -1,0 +1,7 @@
+    load c, x_is_safe
+    beqz cond, EndIf
+Then:
+    load v, array1 + x
+    load tmp, array2 + v << 8
+EndIf:
+    skip

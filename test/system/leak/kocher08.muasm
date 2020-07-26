@@ -1,0 +1,8 @@
+    idx <- 0
+    cond <- x < array1_size
+    beqz cond, EndConditionalExpr
+Then:
+    idx <- x + 1
+EndConditionalExpr:
+    load v, array1 + idx
+    load tmp, array2 + v << 8

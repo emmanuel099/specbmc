@@ -1,0 +1,7 @@
+    % wipe secret
+    zero <- 0
+    store zero, secret_ptr
+
+    % encode
+    load secret, secret_ptr
+    load tmp, array1 + secret

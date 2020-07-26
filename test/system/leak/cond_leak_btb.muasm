@@ -1,0 +1,13 @@
+    c1 <- 0
+    beqz c1, End
+Then1:
+    load v, 21
+    load c2, v=0
+    beqz c2, Else2
+Then2:
+    skip
+    jmp End
+Else2:
+    skip
+End:
+    skip

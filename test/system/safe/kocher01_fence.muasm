@@ -1,0 +1,8 @@
+    cond <- x < array1_size
+    beqz cond, EndIf
+Then:
+    load v, array1 + x
+    spbarr
+    load tmp, array2 + v << 8
+EndIf:
+    skip

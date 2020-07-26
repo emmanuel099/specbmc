@@ -1,0 +1,12 @@
+    u <- 0
+    cond1 <- i < len
+    beqz cond1, EndIf
+Then:
+    load tmp, a + i
+    cond2 <- i >= len
+    beqz cond2, UnmaskedLoad
+    u <- -1
+UnmaskedLoad:
+    load v, (tmp \/ u)
+EndIf:
+    skip

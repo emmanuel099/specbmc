@@ -1,0 +1,24 @@
+    load x, 5 % make x high
+    load y, 6 % make y high
+
+    c1 <- x = 1
+    beqz c1, Else1
+Then1:
+    c2 <- y = 1
+    beqz c2, Else2
+Then2:
+    load tmp, 1
+    jmp End
+Else2:
+    load tmp, 2
+    jmp End
+Else1:
+    c3 <- y = 1
+    beqz c3, Else3
+Then3:
+    load tmp, 3
+    jmp End
+Else3:
+    load tmp, 4
+End:
+    skip

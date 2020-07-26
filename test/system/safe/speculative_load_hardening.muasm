@@ -1,0 +1,9 @@
+    u <- -1
+    cond <- i < len
+    beqz cond, EndIf
+Then:
+    cmov i < len, u <- 0
+    load tmp, a + i
+    load v, (tmp \/ u)
+EndIf:
+    skip

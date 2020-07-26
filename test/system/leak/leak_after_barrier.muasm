@@ -1,0 +1,17 @@
+    array_length <- 10
+    % secret-dependent control flow -> x depends on secret=0
+    c1 <- secret = 0
+    beqz c1, L1
+    x <- 42
+    jmp L2
+L1:
+    x <- 21
+L2:
+    spbarr
+    c2 <- x < array_length
+    beqz c2, L3
+    % unreachable without speculation -> x is either 21 or 42 and therefore c2 is always false
+    % encode x during transient execution
+    load tmp, array + x << 8
+L3:
+    skip

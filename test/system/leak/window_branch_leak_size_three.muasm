@@ -1,0 +1,14 @@
+    c <- 0
+    beqz c, End
+Then:
+    load x, 0
+    beqz x, NestedElse
+NestedThen:
+    load tmp, 21
+    load tmp, 42
+    jmp End
+NestedElse:
+    load tmp, 42
+    load tmp, 21
+End:
+    skip

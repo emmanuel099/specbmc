@@ -1,0 +1,4 @@
+    idx <- 0
+    cmov x < array1_size, idx <- x + 1
+    load v, array1 + idx
+    load tmp, array2 + v << 8
