@@ -23,7 +23,7 @@ jobs:
         run: cargo test --verbose
     #- name: Run clippy
     #  run: cargo clippy --all-targets -- -D warnings -W clippy::pedantic
-      - name: Add Yices 2 repository
-        run: sudo add-apt-repository ppa:sri-csl/formal-methods
-      - name: Install Yices 2
-        run: sudo apt update; sudo apt install -t devel -y yices2
+      - name: Install Yices
+        run: curl -L -o yices ${{ secrets.YICES2_ARTIFACT_URL }}; sudo mv yices /usr/bin/
+      - name: Run system tests
+        run: python3 test/test.py
