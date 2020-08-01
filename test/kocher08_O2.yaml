@@ -10,3 +10,5 @@ policy:
         default: low
     memory:
         default: high
+test:
+    expect: safe

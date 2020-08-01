@@ -1,6 +1,6 @@
 analysis:
-    spectre_pht: false
-    spectre_stl: true
+    spectre_pht: true
+    spectre_stl: false
 architecture:
     cache: true
     btb: false
@@ -10,3 +10,5 @@ policy:
         default: low
     memory:
         default: high
+test:
+    expect: unsafe
