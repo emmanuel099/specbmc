@@ -11,8 +11,10 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v1
+      - name: Add experimental
+        run: echo 'deb http://ftp.de.debian.org/debian experimental main' | sudo tee -a /etc/apt/sources.list
       - name: Install capstone
-        run: sudo apt update; sudo apt install -y libcapstone-dev
+        run: sudo apt update; sudo apt install -t experimental -y libcapstone-dev
       - name: Build
         run: cargo build --verbose
       - name: Run tests
