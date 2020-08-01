@@ -26,4 +26,4 @@ jobs:
       - name: Install Yices
         run: curl -L -o yices ${{ secrets.YICES2_ARTIFACT_URL }}; sudo mv yices /usr/bin/
       - name: Run system tests
-        run: python3 test/test.py
+        run: python3 test.py

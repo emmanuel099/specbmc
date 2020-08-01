@@ -2,24 +2,19 @@
 
 from subprocess import Popen, PIPE, TimeoutExpired
 import shlex
-import glob
 import yaml
 import time
+import os
+from pathlib import Path
 
-SOLVER = 'yices2'
-DEFAULT_ARGS = '--skip-cex'
-TIMEOUT = 60  # seconds
+SOLVER = os.getenv('SOLVER', 'yices2')
+DEFAULT_ARGS = os.getenv('DEFAULT_ARGS', '--skip-cex')
+SPECBMC_BIN = os.getenv('SPECBMC_BIN', 'target/debug/specbmc')
+TIMEOUT = os.getenv('TIMEOUT', 60)  # seconds
 
 # specbmc exit codes
 EXIT_CODE_SAFE = 0
 EXIT_CODE_UNSAFE = 2
-
-
-def str_without_suffix(s: str, suffix: str) -> str:
-    if suffix and s.endswith(suffix):
-        return s[:-len(suffix)]
-    else:
-        return s
 
 
 def get_expected_value_from_environment(env_file: str):
@@ -31,7 +26,7 @@ def get_expected_value_from_environment(env_file: str):
         return expected
 
 
-def run_test(test_file: str, env_file: str):
+def run_test(test_file, env_file):
     print(f'test {test_file} with environment {env_file} ... ',
           end='', flush=True)
 
@@ -42,7 +37,7 @@ def run_test(test_file: str, env_file: str):
         return False
 
     try:
-        args = ['specbmc', test, '--env', env, '--solver', SOLVER]
+        args = [SPECBMC_BIN, test_file, '--env', env_file, '--solver', SOLVER]
         args += shlex.split(DEFAULT_ARGS)
         start_time = time.time()
         proc = Popen(args, stdout=PIPE, stderr=PIPE)
@@ -72,27 +67,26 @@ def run_test(test_file: str, env_file: str):
 
 
 def find_tests():
-    return glob.glob('*.muasm', recursive=False)
+    return Path('test').rglob('*.muasm')
 
 
-def find_environments_for_test(test: str):
-    env_prefix = str_without_suffix(test, '.muasm')
-    return glob.glob(f'{env_prefix}.*yaml', recursive=False)
+def find_environments_for_test(test_file):
+    env_prefix = test_file.stem
+    return test_file.parent.glob(f'{env_prefix}.*yaml')
 
 
 print(f'SOLVER={SOLVER}')
 print(f'DEFAULT_ARGS={DEFAULT_ARGS}')
+print(f'SPECBMC_BIN={SPECBMC_BIN}')
 print(f'TIMEOUT={TIMEOUT}s')
+
+print()
 
 some_test_failed = False
 
-tests = find_tests()
-print(f'found {len(tests)} tests')
-print()
-
-for test in tests:
-    for env in find_environments_for_test(test):
-        if not run_test(test, env):
+for test_file in find_tests():
+    for env_file in find_environments_for_test(test_file):
+        if not run_test(test_file, env_file):
             some_test_failed = True
 
 print()
