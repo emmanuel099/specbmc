@@ -23,9 +23,16 @@ jobs:
         run: cargo test --verbose
       #- name: Run clippy
       #  run: cargo clippy --all-targets -- -D warnings -W clippy::pedantic
-      - name: Install Z3
-        run: sudo apt update; sudo apt install -y z3
+
+      - name: Install Yices
+        env:
+          YICES2_ARTIFACT_URL: ${{ secrets.YICES2_ARTIFACT_URL }}
+        run: |
+          curl -L -o yices "$YICES2_ARTIFACT_URL" &&
+          chmod +x yices &&
+          sudo mv yices /usr/bin/
+
       - name: Run system tests
         env:
-          SOLVER: z3
+          SOLVER: yices2
         run: python3 test.py
