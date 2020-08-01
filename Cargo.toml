@@ -8,10 +8,6 @@ edition = "2018"
 repository = "https://github.com/emmanuel099/specbmc"
 readme = "README.md"
 
-[features]
-# Build Falcon with capstone 4 support
-capstone4 = ["falcon/capstone4"]
-
 [dependencies]
 clap = "2.33.0"
 error-chain = "0.12"
