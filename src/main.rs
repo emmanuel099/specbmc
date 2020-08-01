@@ -18,7 +18,7 @@ fn main() {
     let arguments = parse_arguments();
     if let Err(e) = spec_bmc(&arguments) {
         println!("{}", style(e).bold().red());
-        process::exit(-1);
+        process::exit(1);
     }
 }
 
@@ -453,7 +453,7 @@ fn spec_bmc(arguments: &Arguments) -> Result<()> {
                     .render_to_file(Path::new("cex.dot"))?;
             }
 
-            process::exit(1);
+            process::exit(2);
         }
     }
 
