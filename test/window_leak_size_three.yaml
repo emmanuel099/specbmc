@@ -2,11 +2,13 @@ analysis:
     spectre_pht: true
     spectre_stl: false
 architecture:
-    cache: false
-    btb: true
-    pht: true
+    cache: true
+    btb: false
+    pht: false
 policy:
     registers:
         default: low
     memory:
         default: high
+test:
+    expect: unsafe

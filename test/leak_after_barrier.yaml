@@ -8,5 +8,9 @@ architecture:
 policy:
     registers:
         default: low
+        high:
+            - secret
     memory:
         default: high
+test:
+    expect: unsafe
