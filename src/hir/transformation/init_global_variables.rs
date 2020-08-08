@@ -2,9 +2,9 @@ use crate::environment::{Environment, SecurityLevel, WORD_SIZE};
 use crate::error::Result;
 use crate::expr::{
     BitVector, BranchTargetBuffer, Cache, CacheValue, Expression, Memory, PatternHistoryTable,
-    Predictor, Sort,
+    Predictor, Sort, Variable,
 };
-use crate::hir::{analysis, Program};
+use crate::hir::{analysis, Block, Program};
 use crate::ir::Transform;
 use std::collections::HashSet;
 
@@ -52,18 +52,12 @@ impl InitGlobalVariables {
         let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
 
         for reg in uninitialized_regs {
-            entry_block
-                .assign(reg.clone(), Expression::nondet(reg.sort().clone()))?
-                .labels_mut()
-                .pseudo();
+            havoc_variable(entry_block, reg.clone())?;
 
             if self.low_registers.contains(reg.name())
                 || (self.registers_default_low && !self.high_registers.contains(reg.name()))
             {
-                entry_block
-                    .indistinguishable(vec![reg.clone().into()])
-                    .labels_mut()
-                    .pseudo();
+                low_equivalent(entry_block, reg.clone().into());
             }
         }
 
@@ -74,24 +68,19 @@ impl InitGlobalVariables {
     fn init_memory(&self, program: &mut Program) -> Result<()> {
         let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
 
-        entry_block
-            .assign(Memory::variable(), Expression::nondet(Sort::memory()))?
-            .labels_mut()
-            .pseudo();
+        havoc_variable(entry_block, Memory::variable())?;
 
         if self.memory_default_low {
             println!("low addresses {:?}", self.high_memory_addresses); // TODO
             unimplemented!();
         } else {
             for address in &self.low_memory_addresses {
-                entry_block
-                    .indistinguishable(vec![Memory::load(
-                        8,
-                        Memory::variable().into(),
-                        BitVector::constant_u64(*address, WORD_SIZE),
-                    )?])
-                    .labels_mut()
-                    .pseudo();
+                let memory_content_at_address = Memory::load(
+                    8,
+                    Memory::variable().into(),
+                    BitVector::constant_u64(*address, WORD_SIZE),
+                )?;
+                low_equivalent(entry_block, memory_content_at_address);
             }
         }
 
@@ -101,14 +90,8 @@ impl InitGlobalVariables {
     fn init_predictor(&self, program: &mut Program) -> Result<()> {
         let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
 
-        entry_block
-            .assign(Predictor::variable(), Expression::nondet(Sort::predictor()))?
-            .labels_mut()
-            .pseudo();
-        entry_block
-            .indistinguishable(vec![Predictor::variable().into()])
-            .labels_mut()
-            .pseudo();
+        havoc_variable(entry_block, Predictor::variable())?;
+        low_equivalent(entry_block, Predictor::variable().into());
 
         Ok(())
     }
@@ -120,20 +103,17 @@ impl InitGlobalVariables {
 
         let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
 
-        let initial_content = if self.start_with_empty_cache {
-            Expression::constant(CacheValue::empty().into(), Sort::cache())
+        if self.start_with_empty_cache {
+            let empty_cache = Expression::constant(CacheValue::empty().into(), Sort::cache());
+            entry_block
+                .assign(Cache::variable(), empty_cache)?
+                .labels_mut()
+                .pseudo();
         } else {
-            Expression::nondet(Sort::cache())
-        };
+            havoc_variable(entry_block, Cache::variable())?;
+        }
 
-        entry_block
-            .assign(Cache::variable(), initial_content)?
-            .labels_mut()
-            .pseudo();
-        entry_block
-            .indistinguishable(vec![Cache::variable().into()])
-            .labels_mut()
-            .pseudo();
+        low_equivalent(entry_block, Cache::variable().into());
 
         Ok(())
     }
@@ -145,17 +125,8 @@ impl InitGlobalVariables {
 
         let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
 
-        entry_block
-            .assign(
-                BranchTargetBuffer::variable(),
-                Expression::nondet(Sort::branch_target_buffer()),
-            )?
-            .labels_mut()
-            .pseudo();
-        entry_block
-            .indistinguishable(vec![BranchTargetBuffer::variable().into()])
-            .labels_mut()
-            .pseudo();
+        havoc_variable(entry_block, BranchTargetBuffer::variable())?;
+        low_equivalent(entry_block, BranchTargetBuffer::variable().into());
 
         Ok(())
     }
@@ -167,17 +138,8 @@ impl InitGlobalVariables {
 
         let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
 
-        entry_block
-            .assign(
-                PatternHistoryTable::variable(),
-                Expression::nondet(Sort::pattern_history_table()),
-            )?
-            .labels_mut()
-            .pseudo();
-        entry_block
-            .indistinguishable(vec![PatternHistoryTable::variable().into()])
-            .labels_mut()
-            .pseudo();
+        havoc_variable(entry_block, PatternHistoryTable::variable())?;
+        low_equivalent(entry_block, PatternHistoryTable::variable().into());
 
         Ok(())
     }
@@ -219,4 +181,17 @@ impl Transform<Program> for InitGlobalVariables {
 
         Ok(())
     }
+}
+
+fn havoc_variable(block: &mut Block, var: Variable) -> Result<()> {
+    block
+        .assign(var.clone(), Expression::nondet(var.sort().to_owned()))?
+        .labels_mut()
+        .pseudo();
+
+    Ok(())
+}
+
+fn low_equivalent(block: &mut Block, expr: Expression) {
+    block.indistinguishable(vec![expr]).labels_mut().pseudo();
 }
