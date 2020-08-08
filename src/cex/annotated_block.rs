@@ -108,21 +108,31 @@ impl From<&hir::Block> for Block {
 pub type AnnotatedBlock = AnnotatedElement<Block, Annotation>;
 
 impl AnnotatedBlock {
-    /// Returns the actual `Block`.
+    /// Returns the index of this `AnnotatedBlock`
+    pub fn index(&self) -> usize {
+        self.element.index()
+    }
+
+    /// Returns the actual `AnnotatedBlock`.
     pub fn block(&self) -> &Block {
         &self.element
     }
 
-    /// Returns a mutable reference to the actual `Block`.
+    /// Returns a mutable reference to the actual `AnnotatedBlock`.
     pub fn block_mut(&mut self) -> &mut Block {
         &mut self.element
     }
 
-    /// Returns whether this `Block` is executed in any composition.
+    /// Returns whether this `AnnotatedBlock` is executed in any composition.
     pub fn executed(&self) -> bool {
         self.annotations
             .iter()
             .any(|(_, annotation)| annotation.executed())
+    }
+
+    /// Returns whether this `AnnotatedBlock` is transient.
+    pub fn is_transient(&self) -> bool {
+        self.element.is_transient()
     }
 }
 

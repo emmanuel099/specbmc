@@ -16,6 +16,8 @@ pub fn build_counter_example(program: &hir::Program, model: &dyn Model) -> Resul
         add_trace_info(&mut cex, model, &trace, composition)?;
     }
 
+    cex.control_flow_graph_mut().simplify();
+
     Ok(cex)
 }
 

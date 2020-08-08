@@ -67,9 +67,33 @@ impl ControlFlowGraph {
         Ok(self.graph.insert_vertex(block)?)
     }
 
+    /// Adds the basic block to the graph
+    pub fn remove_block(&mut self, index: usize) -> Result<()> {
+        Ok(self.graph.remove_vertex(index)?)
+    }
+
     /// Adds the edge to the graph
     pub fn add_edge(&mut self, edge: AnnotatedEdge) -> Result<()> {
         Ok(self.graph.insert_edge(edge)?)
+    }
+
+    /// Simplifies the control flow graph by removing non-executed transient blocks.
+    pub fn simplify(&mut self) {
+        let non_executed_transient_block_indices: Vec<usize> = self
+            .blocks()
+            .into_iter()
+            .filter_map(|block| {
+                if block.is_transient() && !block.executed() {
+                    Some(block.index())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        for block_index in non_executed_transient_block_indices {
+            self.remove_block(block_index).unwrap()
+        }
     }
 }
 
