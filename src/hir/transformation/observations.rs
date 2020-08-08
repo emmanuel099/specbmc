@@ -146,20 +146,8 @@ impl Observations {
 
         Ok(())
     }
-}
 
-impl Transform<Program> for Observations {
-    fn name(&self) -> &'static str {
-        "Observations"
-    }
-
-    fn description(&self) -> String {
-        "Add observations".to_string()
-    }
-
-    fn transform(&self, program: &mut Program) -> Result<()> {
-        let cfg = program.control_flow_graph_mut();
-
+    fn place_observations(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         if self.obs_each_effectful_instruction {
             self.place_observe_after_each_effectul_instruction(cfg)?;
         }
@@ -175,6 +163,24 @@ impl Transform<Program> for Observations {
         if !self.obs_locations.is_empty() {
             self.place_observe_at_program_locations(cfg, &self.obs_locations)?;
         }
+
+        Ok(())
+    }
+}
+
+impl Transform<Program> for Observations {
+    fn name(&self) -> &'static str {
+        "Observations"
+    }
+
+    fn description(&self) -> String {
+        "Add observations".to_string()
+    }
+
+    fn transform(&self, program: &mut Program) -> Result<()> {
+        let cfg = program.control_flow_graph_mut();
+
+        self.place_observations(cfg)?;
 
         Ok(())
     }
