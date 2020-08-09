@@ -1,6 +1,7 @@
 use crate::cex::{AnnotatedElement, Effect};
-use crate::expr::{Constant, Expression};
+use crate::expr::{Constant, Expression, Variable};
 use crate::hir::Instruction;
+use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Clone, Debug)]
@@ -10,6 +11,8 @@ pub struct Annotation {
     assignments: Vec<(Expression, Constant)>,
     /// Effects produced by the underlying instruction.
     effects: Vec<Effect>,
+    /// Configuration
+    configuration: HashMap<Variable, Constant>,
 }
 
 impl Annotation {
@@ -21,12 +24,20 @@ impl Annotation {
         self.effects.push(effect);
     }
 
+    pub fn add_variable_configuration(&mut self, var: Variable, value: Constant) {
+        self.configuration.insert(var, value);
+    }
+
     pub fn assignments(&self) -> &Vec<(Expression, Constant)> {
         &self.assignments
     }
 
     pub fn effects(&self) -> &Vec<Effect> {
         &self.effects
+    }
+
+    pub fn configuration(&self) -> &HashMap<Variable, Constant> {
+        &self.configuration
     }
 }
 
@@ -35,6 +46,7 @@ impl Default for Annotation {
         Self {
             assignments: Vec::new(),
             effects: Vec::new(),
+            configuration: HashMap::new(),
         }
     }
 }

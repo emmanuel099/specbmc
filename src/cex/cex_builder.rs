@@ -97,6 +97,14 @@ fn add_trace_info(
                         .add_effect(effect);
                 });
 
+            for var in inst.variables_read() {
+                if let Some(value) = var.evaluate(model, composition) {
+                    annotated_inst
+                        .annotation_mut(composition)
+                        .add_variable_configuration(var.clone(), value);
+                }
+            }
+
             for var in inst.variables_written() {
                 if let Some(value) = var.evaluate(model, composition) {
                     annotated_inst
