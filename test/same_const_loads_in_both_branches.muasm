@@ -1,0 +1,11 @@
+    c <- i < len
+    beqz c, Else
+Then:
+    load x, 1
+    load y, 2
+    jmp EndIf
+Else:
+    load y, 2
+    load x, 1
+EndIf:
+    skip

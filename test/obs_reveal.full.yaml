@@ -1,0 +1,19 @@
+analysis:
+    spectre_pht: true
+    spectre_stl: false
+    observe:
+        end_of_program: true
+        each_effectful_instruction: true
+        after_rollback: true
+architecture:
+    cache: true
+    btb: false
+    pht: false
+policy:
+    registers:
+        default: low
+        high: ["secret"]
+    memory:
+        default: high
+test:
+    expect: safe

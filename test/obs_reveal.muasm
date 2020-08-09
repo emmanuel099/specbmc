@@ -1,0 +1,6 @@
+    beqz secret_is_ptr, EndIf
+Then:
+    load tmp, secret
+EndIf:
+    skip
+    load public, secret % reveal secret
