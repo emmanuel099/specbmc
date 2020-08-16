@@ -1,7 +1,7 @@
 use crate::environment::Environment;
 use crate::error::Result;
 use crate::expr;
-use crate::hir::{ControlFlowGraph, Instruction, Program};
+use crate::hir::{ControlFlowGraph, Instruction};
 use crate::ir::Transform;
 use std::collections::HashSet;
 
@@ -146,8 +146,18 @@ impl Observations {
 
         Ok(())
     }
+}
 
-    fn place_observations(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+impl Transform<ControlFlowGraph> for Observations {
+    fn name(&self) -> &'static str {
+        "Observations"
+    }
+
+    fn description(&self) -> String {
+        "Add observations".to_string()
+    }
+
+    fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         if self.obs_each_effectful_instruction {
             self.place_observe_after_each_effectul_instruction(cfg)?;
         }
@@ -163,24 +173,6 @@ impl Observations {
         if !self.obs_locations.is_empty() {
             self.place_observe_at_program_locations(cfg, &self.obs_locations)?;
         }
-
-        Ok(())
-    }
-}
-
-impl Transform<Program> for Observations {
-    fn name(&self) -> &'static str {
-        "Observations"
-    }
-
-    fn description(&self) -> String {
-        "Add observations".to_string()
-    }
-
-    fn transform(&self, program: &mut Program) -> Result<()> {
-        let cfg = program.control_flow_graph_mut();
-
-        self.place_observations(cfg)?;
 
         Ok(())
     }

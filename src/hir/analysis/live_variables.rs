@@ -1,6 +1,6 @@
 use crate::error::Result;
 use crate::expr::Variable;
-use crate::hir::{Block, Program};
+use crate::hir::{Block, ControlFlowGraph};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Debug)]
@@ -28,9 +28,7 @@ impl LiveVariables {
 /// Computes the set of live variables for each basic block.
 ///
 /// This analysis is limited to DAGs only.
-pub fn live_variables(program: &Program) -> Result<LiveVariables> {
-    let cfg = program.control_flow_graph();
-
+pub fn live_variables(cfg: &ControlFlowGraph) -> Result<LiveVariables> {
     // Tracks the live variables for each block.
     let mut live_in: HashMap<usize, HashSet<Variable>> = HashMap::new();
     let mut live_out: HashMap<usize, HashSet<Variable>> = HashMap::new();
@@ -196,10 +194,8 @@ mod tests {
         cfg.unconditional_edge(1, 3).unwrap();
         cfg.unconditional_edge(2, 3).unwrap();
 
-        let program = Program::new(cfg);
-
         // WHEN
-        let live_vars = live_variables(&program).unwrap();
+        let live_vars = live_variables(&cfg).unwrap();
 
         // WHEN
         assert_eq!(

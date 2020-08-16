@@ -1,12 +1,12 @@
 use crate::error::Result;
 use crate::expr::{BranchTargetBuffer, Cache, Expression, PatternHistoryTable};
-use crate::hir::{Effect, Instruction, Operation, Program};
+use crate::hir::{Effect, Instruction, Operation};
 use crate::ir::Transform;
 
 #[derive(Default, Builder, Debug)]
 pub struct ExplicitEffects {}
 
-impl Transform<Program> for ExplicitEffects {
+impl Transform<Instruction> for ExplicitEffects {
     fn name(&self) -> &'static str {
         "ExplicitEffects"
     }
@@ -15,31 +15,21 @@ impl Transform<Program> for ExplicitEffects {
         "Make instruction effects explicit".to_string()
     }
 
-    fn transform(&self, program: &mut Program) -> Result<()> {
-        for block in program.control_flow_graph_mut().blocks_mut() {
-            for instruction in block.instructions_mut() {
-                encode_effects(instruction)?;
-            }
+    fn transform(&self, instruction: &mut Instruction) -> Result<()> {
+        if !instruction.has_effects() {
+            return Ok(());
         }
+
+        let effect_operations = instruction
+            .effects()
+            .iter()
+            .map(encode_effect)
+            .collect::<Result<Vec<Operation>>>()?;
+
+        instruction.add_operations(&effect_operations);
 
         Ok(())
     }
-}
-
-fn encode_effects(instruction: &mut Instruction) -> Result<()> {
-    if !instruction.has_effects() {
-        return Ok(());
-    }
-
-    let effect_operations = instruction
-        .effects()
-        .iter()
-        .map(encode_effect)
-        .collect::<Result<Vec<Operation>>>()?;
-
-    instruction.add_operations(&effect_operations);
-
-    Ok(())
 }
 
 fn encode_effect(effect: &Effect) -> Result<Operation> {

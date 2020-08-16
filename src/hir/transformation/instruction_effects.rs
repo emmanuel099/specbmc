@@ -1,7 +1,7 @@
 use crate::environment::{Environment, WORD_SIZE};
 use crate::error::Result;
 use crate::expr::BitVector;
-use crate::hir::{Effect, Instruction, Operation, Program};
+use crate::hir::{Effect, Instruction, Operation};
 use crate::ir::Transform;
 
 #[derive(Default, Builder, Debug)]
@@ -76,7 +76,7 @@ impl InstructionEffects {
     }
 }
 
-impl Transform<Program> for InstructionEffects {
+impl Transform<Instruction> for InstructionEffects {
     fn name(&self) -> &'static str {
         "InstructionEffects"
     }
@@ -85,17 +85,9 @@ impl Transform<Program> for InstructionEffects {
         "Add instruction effects".to_string()
     }
 
-    fn transform(&self, program: &mut Program) -> Result<()> {
-        program
-            .control_flow_graph_mut()
-            .blocks_mut()
-            .iter_mut()
-            .for_each(|block| {
-                block.instructions_mut().iter_mut().for_each(|instruction| {
-                    let effects = self.instruction_effects(instruction);
-                    instruction.add_effects(&effects);
-                });
-            });
+    fn transform(&self, instruction: &mut Instruction) -> Result<()> {
+        let effects = self.instruction_effects(instruction);
+        instruction.add_effects(&effects);
 
         Ok(())
     }

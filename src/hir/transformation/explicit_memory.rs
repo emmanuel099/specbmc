@@ -1,12 +1,12 @@
 use crate::error::Result;
 use crate::expr::Memory;
-use crate::hir::{Operation, Program};
+use crate::hir::{Instruction, Operation};
 use crate::ir::Transform;
 
 #[derive(Default, Builder, Debug)]
 pub struct ExplicitMemory {}
 
-impl Transform<Program> for ExplicitMemory {
+impl Transform<Instruction> for ExplicitMemory {
     fn name(&self) -> &'static str {
         "ExplicitMemory"
     }
@@ -15,13 +15,9 @@ impl Transform<Program> for ExplicitMemory {
         "Make memory accesses explicit".to_string()
     }
 
-    fn transform(&self, program: &mut Program) -> Result<()> {
-        for block in program.control_flow_graph_mut().blocks_mut() {
-            for instruction in block.instructions_mut() {
-                for operation in instruction.operations_mut() {
-                    replace_store_load_with_assign(operation)?;
-                }
-            }
+    fn transform(&self, instruction: &mut Instruction) -> Result<()> {
+        for operation in instruction.operations_mut() {
+            replace_store_load_with_assign(operation)?;
         }
 
         Ok(())

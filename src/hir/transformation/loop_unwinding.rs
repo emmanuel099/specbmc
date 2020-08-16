@@ -1,6 +1,6 @@
 use crate::environment::{Environment, UnwindingGuard};
 use crate::error::Result;
-use crate::hir::{ControlFlowGraph, Program, RemovedEdgeGuard};
+use crate::hir::{ControlFlowGraph, RemovedEdgeGuard};
 use crate::ir::Transform;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -144,7 +144,7 @@ impl LoopUnwinding {
     }
 }
 
-impl Transform<Program> for LoopUnwinding {
+impl Transform<ControlFlowGraph> for LoopUnwinding {
     fn name(&self) -> &'static str {
         "LoopUnwinding"
     }
@@ -153,8 +153,7 @@ impl Transform<Program> for LoopUnwinding {
         format!("Unwind loops (k={})", self.unwinding_bound)
     }
 
-    fn transform(&self, program: &mut Program) -> Result<()> {
-        let cfg = program.control_flow_graph_mut();
+    fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         self.unwind_cfg(cfg)?;
         cfg.simplify()
     }

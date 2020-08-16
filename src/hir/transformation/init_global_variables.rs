@@ -4,7 +4,7 @@ use crate::expr::{
     BitVector, BranchTargetBuffer, Cache, CacheValue, Expression, Memory, PatternHistoryTable,
     Predictor, Sort, Variable,
 };
-use crate::hir::{analysis, Block, Program};
+use crate::hir::{analysis, Block, ControlFlowGraph};
 use crate::ir::Transform;
 use std::collections::HashSet;
 
@@ -42,14 +42,14 @@ impl InitGlobalVariables {
     }
 
     /// Havoc registers and make low-registers indistinguishable
-    fn init_registers(&self, program: &mut Program) -> Result<()> {
+    fn init_registers(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         // All variables which are live at the entry block are considered uninitialized and
         // will therefore be havoced.
-        let live_variables = analysis::live_variables(&program)?;
-        let entry_block_index = program.control_flow_graph().entry()?;
+        let live_variables = analysis::live_variables(&cfg)?;
+        let entry_block_index = cfg.entry()?;
         let uninitialized_regs = live_variables.live_at_entry(entry_block_index)?;
 
-        let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
+        let entry_block = cfg.entry_block_mut()?;
 
         for reg in uninitialized_regs {
             havoc_variable(entry_block, reg.clone())?;
@@ -65,8 +65,8 @@ impl InitGlobalVariables {
     }
 
     /// Havoc memory and make low-addresses indistinguishable
-    fn init_memory(&self, program: &mut Program) -> Result<()> {
-        let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
+    fn init_memory(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+        let entry_block = cfg.entry_block_mut()?;
 
         havoc_variable(entry_block, Memory::variable())?;
 
@@ -87,8 +87,8 @@ impl InitGlobalVariables {
         Ok(())
     }
 
-    fn init_predictor(&self, program: &mut Program) -> Result<()> {
-        let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
+    fn init_predictor(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+        let entry_block = cfg.entry_block_mut()?;
 
         havoc_variable(entry_block, Predictor::variable())?;
         low_equivalent(entry_block, Predictor::variable().into());
@@ -96,12 +96,12 @@ impl InitGlobalVariables {
         Ok(())
     }
 
-    fn init_cache(&self, program: &mut Program) -> Result<()> {
+    fn init_cache(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         if !self.cache_available {
             return Ok(());
         }
 
-        let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
+        let entry_block = cfg.entry_block_mut()?;
 
         if self.start_with_empty_cache {
             let empty_cache = Expression::constant(CacheValue::empty().into(), Sort::cache());
@@ -118,12 +118,12 @@ impl InitGlobalVariables {
         Ok(())
     }
 
-    fn init_btb(&self, program: &mut Program) -> Result<()> {
+    fn init_btb(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         if !self.btb_available {
             return Ok(());
         }
 
-        let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
+        let entry_block = cfg.entry_block_mut()?;
 
         havoc_variable(entry_block, BranchTargetBuffer::variable())?;
         low_equivalent(entry_block, BranchTargetBuffer::variable().into());
@@ -131,12 +131,12 @@ impl InitGlobalVariables {
         Ok(())
     }
 
-    fn init_pht(&self, program: &mut Program) -> Result<()> {
+    fn init_pht(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         if !self.pht_available {
             return Ok(());
         }
 
-        let entry_block = program.control_flow_graph_mut().entry_block_mut()?;
+        let entry_block = cfg.entry_block_mut()?;
 
         havoc_variable(entry_block, PatternHistoryTable::variable())?;
         low_equivalent(entry_block, PatternHistoryTable::variable().into());
@@ -162,7 +162,7 @@ impl Default for InitGlobalVariables {
     }
 }
 
-impl Transform<Program> for InitGlobalVariables {
+impl Transform<ControlFlowGraph> for InitGlobalVariables {
     fn name(&self) -> &'static str {
         "InitGlobalVariables"
     }
@@ -171,13 +171,13 @@ impl Transform<Program> for InitGlobalVariables {
         "Set up initial state".to_string()
     }
 
-    fn transform(&self, program: &mut Program) -> Result<()> {
-        self.init_memory(program)?;
-        self.init_predictor(program)?;
-        self.init_cache(program)?;
-        self.init_btb(program)?;
-        self.init_pht(program)?;
-        self.init_registers(program)?;
+    fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+        self.init_memory(cfg)?;
+        self.init_predictor(cfg)?;
+        self.init_cache(cfg)?;
+        self.init_btb(cfg)?;
+        self.init_pht(cfg)?;
+        self.init_registers(cfg)?;
 
         Ok(())
     }

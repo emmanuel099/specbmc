@@ -3,7 +3,7 @@
 use crate::error::Result;
 use crate::expr::{Expression, Variable};
 use crate::hir::analysis;
-use crate::hir::{Block, ControlFlowGraph, Instruction, PhiNode, Program};
+use crate::hir::{Block, ControlFlowGraph, Instruction, PhiNode};
 use crate::ir::Transform;
 use falcon::graph::{Graph, NullEdge, NullVertex, Vertex};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -32,7 +32,7 @@ impl Default for SSATransformation {
     }
 }
 
-impl Transform<Program> for SSATransformation {
+impl Transform<ControlFlowGraph> for SSATransformation {
     fn name(&self) -> &'static str {
         "SSATransformation"
     }
@@ -42,9 +42,9 @@ impl Transform<Program> for SSATransformation {
     }
 
     /// Transform the HIR program into SSA form.
-    fn transform(&self, program: &mut Program) -> Result<()> {
-        insert_phi_nodes(program, self.form)?;
-        rename_variables(program)?;
+    fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+        insert_phi_nodes(cfg, self.form)?;
+        rename_variables(cfg)?;
 
         Ok(())
     }
@@ -54,8 +54,7 @@ impl Transform<Program> for SSATransformation {
 ///
 /// Implements the algorithm for constructing Standard, Semi-Pruned or Pruned SSA form,
 /// see Algorithm 3.1 in "SSA-based Compiler Design" book for more details.
-fn insert_phi_nodes(program: &mut Program, form: SSAForm) -> Result<()> {
-    let cfg = program.control_flow_graph();
+fn insert_phi_nodes(cfg: &mut ControlFlowGraph, form: SSAForm) -> Result<()> {
     let entry = cfg.entry()?;
 
     if !cfg.predecessor_indices(entry)?.is_empty() {
@@ -66,8 +65,8 @@ fn insert_phi_nodes(program: &mut Program, form: SSAForm) -> Result<()> {
 
     let (global_variables, live_variables) = match form {
         SSAForm::Minimal => (None, None),
-        SSAForm::SemiPruned => (Some(analysis::global_variables(&program)), None),
-        SSAForm::Pruned => (None, Some(analysis::live_variables(&program)?)),
+        SSAForm::SemiPruned => (Some(analysis::global_variables(cfg)), None),
+        SSAForm::Pruned => (None, Some(analysis::live_variables(cfg)?)),
     };
 
     for (variable, defs) in variables_mutated_in_blocks(cfg) {
@@ -94,7 +93,6 @@ fn insert_phi_nodes(program: &mut Program, form: SSAForm) -> Result<()> {
                 let phi_node = {
                     let mut phi_node = PhiNode::new(variable.clone());
 
-                    let cfg = program.control_flow_graph();
                     let df_block = cfg.block(*df_index).unwrap();
 
                     for predecessor in cfg.predecessor_indices(*df_index)? {
@@ -117,7 +115,6 @@ fn insert_phi_nodes(program: &mut Program, form: SSAForm) -> Result<()> {
                     continue;
                 }
 
-                let cfg = program.control_flow_graph_mut();
                 let df_block = cfg.block_mut(*df_index)?;
                 df_block.add_phi_node(phi_node);
 
@@ -158,9 +155,9 @@ fn variables_mutated_in_blocks(cfg: &ControlFlowGraph) -> HashMap<Variable, Hash
     mutated_in
 }
 
-fn rename_variables(program: &mut Program) -> Result<()> {
+fn rename_variables(cfg: &mut ControlFlowGraph) -> Result<()> {
     let mut versioning = VariableVersioning::new();
-    program.rename_variables(&mut versioning)
+    cfg.rename_variables(&mut versioning)
 }
 
 struct VariableVersioning {
@@ -303,12 +300,6 @@ impl SSARename for ControlFlowGraph {
         }
 
         dominator_tree_dfs_pre_order_traverse(self, &dominator_tree, entry, versioning)
-    }
-}
-
-impl SSARename for Program {
-    fn rename_variables(&mut self, versioning: &mut VariableVersioning) -> Result<()> {
-        self.control_flow_graph_mut().rename_variables(versioning)
     }
 }
 
@@ -727,7 +718,7 @@ mod tests {
         //             v            |
         //          block 5 <-------+
         //           y = x
-        let mut program = {
+        let mut cfg = {
             let mut cfg = ControlFlowGraph::new();
 
             // block0
@@ -768,10 +759,10 @@ mod tests {
 
             cfg.set_entry(0).unwrap();
 
-            Program::new(cfg)
+            cfg
         };
 
-        insert_phi_nodes(&mut program, SSAForm::SemiPruned).unwrap();
+        insert_phi_nodes(&mut cfg, SSAForm::SemiPruned).unwrap();
 
         // Expected:
         //           block 0
@@ -794,7 +785,6 @@ mod tests {
         //             v            |
         //          block 5 <-------+
         //  x = phi [x, 4] [x, 3]
-        let cfg = program.control_flow_graph();
         let block0 = cfg.block(0).unwrap();
         let block1 = cfg.block(1).unwrap();
         let block2 = cfg.block(2).unwrap();
@@ -867,7 +857,7 @@ mod tests {
         //             v            |
         //          block 4 <-------+
         //           res = x
-        let mut program = {
+        let mut cfg = {
             let mut cfg = ControlFlowGraph::new();
 
             // block0
@@ -916,12 +906,10 @@ mod tests {
 
             cfg.set_entry(5).unwrap();
 
-            Program::new(cfg)
+            cfg
         };
 
-        SSATransformation::default()
-            .transform(&mut program)
-            .unwrap();
+        SSATransformation::default().transform(&mut cfg).unwrap();
 
         // Expected:
         //           block 5
@@ -948,7 +936,7 @@ mod tests {
         //          block 4 <-------+
         //  x6 = phi [x5, 3] [x3, 2]
         //         res1 = x6
-        let expected_program = {
+        let expected_cfg = {
             let mut cfg = ControlFlowGraph::new();
 
             // block0
@@ -1022,9 +1010,9 @@ mod tests {
 
             cfg.set_entry(5).unwrap();
 
-            Program::new(cfg)
+            cfg
         };
 
-        assert_eq!(program, expected_program);
+        assert_eq!(cfg, expected_cfg);
     }
 }

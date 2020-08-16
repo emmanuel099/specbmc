@@ -1,7 +1,7 @@
 use crate::environment::{Environment, PredictorStrategy, SPECULATION_WINDOW_SIZE, WORD_SIZE};
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Predictor, Sort, Variable};
-use crate::hir::{ControlFlowGraph, Edge, Operation, Program, RemovedEdgeGuard};
+use crate::hir::{ControlFlowGraph, Edge, Operation, RemovedEdgeGuard};
 use crate::ir::Transform;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
@@ -178,7 +178,7 @@ impl Default for TransientExecution {
     }
 }
 
-impl Transform<Program> for TransientExecution {
+impl Transform<ControlFlowGraph> for TransientExecution {
     fn name(&self) -> &'static str {
         "TransientExecution"
     }
@@ -190,12 +190,10 @@ impl Transform<Program> for TransientExecution {
         )
     }
 
-    fn transform(&self, program: &mut Program) -> Result<()> {
-        let (mut default_cfg, transient_start_rollback_points) =
-            self.build_default_cfg(program.control_flow_graph())?;
+    fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+        let (mut default_cfg, transient_start_rollback_points) = self.build_default_cfg(cfg)?;
 
-        let (transient_cfg, transient_entry_points) =
-            self.build_transient_cfg(program.control_flow_graph())?;
+        let (transient_cfg, transient_entry_points) = self.build_transient_cfg(cfg)?;
 
         // Add copy of the transient graph for each speculating instruction into the default graph.
         // The transient graph is embedded into the default graph by adding transient start and
@@ -227,8 +225,7 @@ impl Transform<Program> for TransientExecution {
         }
 
         default_cfg.simplify()?;
-
-        program.set_control_flow_graph(default_cfg);
+        *cfg = default_cfg;
 
         Ok(())
     }

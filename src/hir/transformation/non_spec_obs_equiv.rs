@@ -1,7 +1,7 @@
 use crate::environment::Environment;
 use crate::error::Result;
 use crate::expr::{BranchTargetBuffer, Cache, Expression, PatternHistoryTable, Sort, Variable};
-use crate::hir::{Instruction, Operation, Program};
+use crate::hir::{ControlFlowGraph, Instruction, Operation};
 use crate::ir::Transform;
 
 #[derive(Default, Builder, Debug)]
@@ -23,7 +23,7 @@ impl NonSpecObsEquivalence {
     /// Initially each microarchitectual component has the same state as their non-speculative counterpart.
     fn add_initial_spec_nonspec_equivalence_constraints(
         &self,
-        program: &mut Program,
+        cfg: &mut ControlFlowGraph,
     ) -> Result<()> {
         let mut eq_vars: Vec<(Variable, Variable)> = Vec::new();
         if self.cache_available {
@@ -39,9 +39,7 @@ impl NonSpecObsEquivalence {
             eq_vars.push((pht_nonspec(), pht_spec));
         }
 
-        let cfg = program.control_flow_graph_mut();
         let entry_block = cfg.entry_block_mut()?;
-
         for (lhs, rhs) in eq_vars {
             entry_block
                 .assume(Expression::equal(lhs.into(), rhs.into())?)?
@@ -53,7 +51,7 @@ impl NonSpecObsEquivalence {
     }
 }
 
-impl Transform<Program> for NonSpecObsEquivalence {
+impl Transform<ControlFlowGraph> for NonSpecObsEquivalence {
     fn name(&self) -> &'static str {
         "NonSpecObsEquivalence"
     }
@@ -62,23 +60,19 @@ impl Transform<Program> for NonSpecObsEquivalence {
         "Add non-speculative observational equivalence constraints".to_string()
     }
 
-    fn transform(&self, program: &mut Program) -> Result<()> {
-        program
-            .control_flow_graph_mut()
-            .blocks_mut()
-            .iter_mut()
-            .for_each(|block| {
-                let is_transient = block.is_transient();
-                block.instructions_mut().iter_mut().for_each(|inst| {
-                    if !is_transient {
-                        // Non-speculative counterparts are only affected during non-transient execution.
-                        add_nonspec_equivalents_for_all_operations(inst);
-                    }
-                    make_observations_nonspec_indistinguishable(inst);
-                })
-            });
+    fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+        cfg.blocks_mut().iter_mut().for_each(|block| {
+            let is_transient = block.is_transient();
+            block.instructions_mut().iter_mut().for_each(|inst| {
+                if !is_transient {
+                    // Non-speculative counterparts are only affected during non-transient execution.
+                    add_nonspec_equivalents_for_all_operations(inst);
+                }
+                make_observations_nonspec_indistinguishable(inst);
+            })
+        });
 
-        self.add_initial_spec_nonspec_equivalence_constraints(program)?;
+        self.add_initial_spec_nonspec_equivalence_constraints(cfg)?;
 
         Ok(())
     }
