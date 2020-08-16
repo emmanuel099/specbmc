@@ -41,6 +41,7 @@ struct Arguments {
     lir_file: Option<String>,
     smt_file: Option<String>,
     input_file: String,
+    print_assembly_info: bool,
 }
 
 fn parse_arguments() -> Arguments {
@@ -189,6 +190,12 @@ fn parse_arguments() -> Arguments {
                 .required(true)
                 .index(1),
         )
+        .arg(
+            Arg::with_name("print_assembly_info")
+                .short("a")
+                .long("assembly-info")
+                .help("Prints assembly info and exits"),
+        )
         .get_matches();
 
     let parse_optimization_level = |level: &str| match level {
@@ -253,6 +260,7 @@ fn parse_arguments() -> Arguments {
         lir_file: matches.value_of("lir_file").map(String::from),
         smt_file: matches.value_of("smt_file").map(String::from),
         input_file: matches.value_of("input_file").map(String::from).unwrap(),
+        print_assembly_info: matches.is_present("print_assembly_info"),
     }
 }
 
@@ -373,6 +381,27 @@ fn lir_optimize(env: &environment::Environment, program: &mut lir::Program) -> R
 }
 
 fn spec_bmc(arguments: &Arguments) -> Result<()> {
+    if arguments.print_assembly_info {
+        print_assembly_info(arguments)?;
+        return Ok(());
+    }
+
+    check_program(arguments)
+}
+
+fn print_assembly_info(arguments: &Arguments) -> Result<()> {
+    let input_file = Path::new(&arguments.input_file);
+
+    let input_file_path = Path::new(input_file);
+    let loader = loader::loader_for_file(input_file_path).ok_or("No compatible loader found")?;
+
+    let info = loader.assembly_info()?;
+    println!("{}", info);
+
+    Ok(())
+}
+
+fn check_program(arguments: &Arguments) -> Result<()> {
     let input_file = &arguments.input_file;
 
     let env = build_environment(arguments)?;
@@ -386,8 +415,9 @@ fn spec_bmc(arguments: &Arguments) -> Result<()> {
         style("[1/7]").bold().dim(),
         input_file.yellow()
     );
-    let mut hir_program =
-        loader::load_program(Path::new(input_file), arguments.function.as_deref())?;
+    let input_file_path = Path::new(input_file);
+    let loader = loader::loader_for_file(input_file_path).ok_or("No compatible loader found")?;
+    let mut hir_program = loader.load_program()?;
 
     if let Some(path) = &arguments.cfg_file {
         hir_program

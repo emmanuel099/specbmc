@@ -2,15 +2,42 @@ use crate::environment::WORD_SIZE;
 use crate::error::Result;
 use crate::expr;
 use crate::hir;
+use crate::loader::{AssemblyInfo, FunctionInfo, Loader};
 use muasm_parser::{ir, parser};
 use std::collections::{BTreeMap, HashMap};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-pub fn load_program(file_path: &Path) -> Result<hir::Program> {
-    let source = fs::read_to_string(file_path)?;
-    let ir = parser::parse_program(&source)?;
-    translate_ir_to_hir(&ir)
+pub struct MuasmLoader {
+    file_path: PathBuf,
+}
+
+impl MuasmLoader {
+    pub fn new(file_path: &Path) -> Self {
+        Self {
+            file_path: file_path.to_owned(),
+        }
+    }
+}
+
+impl Loader for MuasmLoader {
+    fn assembly_info(&self) -> Result<AssemblyInfo> {
+        let main = FunctionInfo {
+            address: 0,
+            name: Some("main".to_owned()),
+        };
+
+        Ok(AssemblyInfo {
+            entry: 0,
+            functions: vec![main],
+        })
+    }
+
+    fn load_program(&self) -> Result<hir::Program> {
+        let source = fs::read_to_string(&self.file_path)?;
+        let ir = parser::parse_program(&source)?;
+        translate_ir_to_hir(&ir)
+    }
 }
 
 fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::Program> {

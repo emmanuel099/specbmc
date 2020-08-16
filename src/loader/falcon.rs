@@ -1,10 +1,11 @@
 use crate::error::Result;
 use crate::expr;
 use crate::hir;
+use crate::loader;
 use crate::util::AbsoluteDifference;
 use falcon::il;
 use falcon::loader::{Elf, Loader};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[rustfmt::skip]
 const SPECULATION_BARRIERS: &[&str] = &[
@@ -12,20 +13,56 @@ const SPECULATION_BARRIERS: &[&str] = &[
     "mfence", "lfence", "cpuid",
 ];
 
-pub fn load_program(file_path: &Path, function_name_or_id: Option<&str>) -> Result<hir::Program> {
-    let program = load_elf(file_path)?;
+pub struct FalconLoader {
+    file_path: PathBuf,
+}
 
-    if let Some(name_or_id) = function_name_or_id {
-        let function = match name_or_id.trim().parse::<usize>() {
-            Ok(id) => program.function(id),
-            Err(_) => program.function_by_name(name_or_id),
-        };
+impl FalconLoader {
+    pub fn new(file_path: &Path) -> Self {
+        Self {
+            file_path: file_path.to_owned(),
+        }
+    }
+}
 
-        let function =
-            function.ok_or_else(|| format!("Function '{}' could not be found", name_or_id))?;
+impl loader::Loader for FalconLoader {
+    fn assembly_info(&self) -> Result<loader::AssemblyInfo> {
+        let elf = Elf::from_file(&self.file_path)?;
+
+        let mut functions = Vec::new();
+        for f in elf.function_entries()? {
+            functions.push(loader::FunctionInfo {
+                address: f.address(),
+                name: f.name().map(String::from),
+            });
+        }
+
+        Ok(loader::AssemblyInfo {
+            entry: elf.program_entry(),
+            functions,
+        })
+    }
+
+    fn load_program(&self) -> Result<hir::Program> {
+        let program = load_elf(&self.file_path)?;
+
+        let function = program.function_by_name("main");
+        let function = function.ok_or("Function 'main' could not be found")?;
         translate_function(function)
-    } else {
-        Err("Falcon loader is currently limited to a single function".into())
+
+        // TODO
+        /*if let Some(name_or_id) = function_name_or_id {
+            let function = match name_or_id.trim().parse::<usize>() {
+                Ok(id) => program.function(id),
+                Err(_) => program.function_by_name(name_or_id),
+            };
+
+            let function =
+                function.ok_or_else(|| format!("Function '{}' could not be found", name_or_id))?;
+            translate_function(function)
+        } else {
+            Err("Falcon loader is currently limited to a single function".into())
+        }*/
     }
 }
 
