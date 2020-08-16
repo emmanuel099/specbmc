@@ -1,7 +1,7 @@
 mod explicit_effects;
 mod explicit_memory;
+mod function_inlining;
 mod init_global_variables;
-mod inlining;
 mod instruction_effects;
 mod loop_unwinding;
 mod non_spec_obs_equiv;
@@ -11,8 +11,8 @@ mod transient_execution;
 
 pub use self::explicit_effects::ExplicitEffects;
 pub use self::explicit_memory::ExplicitMemory;
+pub use self::function_inlining::FunctionInlining;
 pub use self::init_global_variables::InitGlobalVariables;
-pub use self::inlining::Inlining;
 pub use self::instruction_effects::InstructionEffects;
 pub use self::loop_unwinding::LoopUnwinding;
 pub use self::non_spec_obs_equiv::NonSpecObsEquivalence;

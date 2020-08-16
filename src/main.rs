@@ -423,8 +423,8 @@ fn check_program(arguments: &Arguments) -> Result<()> {
     let program = loader.load_program()?;
 
     println!("{} Inline functions", style("[2/8]").bold().dim());
-    let inlining = hir::transformation::Inlining::new();
-    let mut hir_program = inlining.inline(&program)?;
+    let function_inlining = hir::transformation::FunctionInlining::new();
+    let mut hir_program = function_inlining.inline(&program)?;
 
     if let Some(path) = &arguments.cfg_file {
         hir_program

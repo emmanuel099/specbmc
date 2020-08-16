@@ -1,9 +1,9 @@
 use crate::error::Result;
 use crate::hir::{InlinedProgram, Program};
 
-pub struct Inlining {}
+pub struct FunctionInlining {}
 
-impl Inlining {
+impl FunctionInlining {
     pub fn new() -> Self {
         Self {}
     }
