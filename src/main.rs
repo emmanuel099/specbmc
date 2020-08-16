@@ -414,7 +414,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
     }
 
     println!(
-        "{} Loading program '{}'",
+        "{} Load program '{}'",
         style("[1/8]").bold().dim(),
         input_file.yellow()
     );
@@ -432,7 +432,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
             .render_to_file(Path::new(path))?;
     }
 
-    println!("{} Transforming HIR ...", style("[3/8]").bold().dim());
+    println!("{} Transform HIR ...", style("[3/8]").bold().dim());
     hir_transformations(&env, &mut hir_program)?;
 
     if let Some(path) = &arguments.transient_cfg_file {
@@ -441,18 +441,18 @@ fn check_program(arguments: &Arguments) -> Result<()> {
             .render_to_file(Path::new(path))?;
     }
 
-    println!("{} Translating into MIR", style("[4/8]").bold().dim());
+    println!("{} Translate into MIR", style("[4/8]").bold().dim());
     let mir_program = mir::Program::try_translate_from(&hir_program)?;
 
     if let Some(path) = &arguments.mir_file {
         mir_program.block_graph().render_to_file(Path::new(path))?;
     }
 
-    println!("{} Translating into LIR", style("[5/8]").bold().dim());
+    println!("{} Translate into LIR", style("[5/8]").bold().dim());
     let mut lir_program = lir::Program::try_translate_from(&mir_program)?;
     lir_program.validate()?;
 
-    println!("{} Optimizing LIR", style("[6/8]").bold().dim());
+    println!("{} Optimize LIR", style("[6/8]").bold().dim());
     lir_optimize(&env, &mut lir_program)?;
 
     if let Some(path) = &arguments.lir_file {
@@ -465,7 +465,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
     }
 
     println!(
-        "{} Encoding LIR as SMT formula (solver={})",
+        "{} Encode LIR as SMT formula (solver={})",
         style("[7/8]").bold().dim(),
         env.solver
     );
@@ -475,7 +475,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
         return Ok(());
     }
 
-    println!("{} Searching for leaks ...", style("[8/8]").bold().dim());
+    println!("{} Search for leaks ...", style("[8/8]").bold().dim());
     match solver.check_assertions()? {
         CheckResult::AssertionsHold => {
             println!("{}", "Program is safe.".bold().green());
