@@ -324,11 +324,14 @@ fn build_environment(arguments: &Arguments) -> Result<environment::Environment> 
     Ok(env)
 }
 
-fn hir_transformations(env: &environment::Environment, program: &mut hir::Program) -> Result<()> {
+fn hir_transformations(
+    env: &environment::Environment,
+    program: &mut hir::InlinedProgram,
+) -> Result<()> {
     use hir::transformation::*;
 
     let transformations = {
-        let mut steps: Vec<Box<dyn Transform<hir::Program>>> = Vec::new();
+        let mut steps: Vec<Box<dyn Transform<hir::InlinedProgram>>> = Vec::new();
         steps.push(Box::new(LoopUnwinding::new_from_env(env)));
         steps.push(Box::new(InstructionEffects::new_from_env(env)));
         if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
@@ -412,12 +415,16 @@ fn check_program(arguments: &Arguments) -> Result<()> {
 
     println!(
         "{} Loading program '{}'",
-        style("[1/7]").bold().dim(),
+        style("[1/8]").bold().dim(),
         input_file.yellow()
     );
     let input_file_path = Path::new(input_file);
     let loader = loader::loader_for_file(input_file_path).ok_or("No compatible loader found")?;
-    let mut hir_program = loader.load_program()?;
+    let program = loader.load_program()?;
+
+    println!("{} Inline functions", style("[2/8]").bold().dim());
+    let inlining = hir::transformation::Inlining::new();
+    let mut hir_program = inlining.inline(&program)?;
 
     if let Some(path) = &arguments.cfg_file {
         hir_program
@@ -425,7 +432,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
             .render_to_file(Path::new(path))?;
     }
 
-    println!("{} Transforming HIR ...", style("[2/7]").bold().dim());
+    println!("{} Transforming HIR ...", style("[3/8]").bold().dim());
     hir_transformations(&env, &mut hir_program)?;
 
     if let Some(path) = &arguments.transient_cfg_file {
@@ -434,18 +441,18 @@ fn check_program(arguments: &Arguments) -> Result<()> {
             .render_to_file(Path::new(path))?;
     }
 
-    println!("{} Translating into MIR", style("[3/7]").bold().dim());
+    println!("{} Translating into MIR", style("[4/8]").bold().dim());
     let mir_program = mir::Program::try_translate_from(&hir_program)?;
 
     if let Some(path) = &arguments.mir_file {
         mir_program.block_graph().render_to_file(Path::new(path))?;
     }
 
-    println!("{} Translating into LIR", style("[4/7]").bold().dim());
+    println!("{} Translating into LIR", style("[5/8]").bold().dim());
     let mut lir_program = lir::Program::try_translate_from(&mir_program)?;
     lir_program.validate()?;
 
-    println!("{} Optimizing LIR", style("[5/7]").bold().dim());
+    println!("{} Optimizing LIR", style("[6/8]").bold().dim());
     lir_optimize(&env, &mut lir_program)?;
 
     if let Some(path) = &arguments.lir_file {
@@ -459,7 +466,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
 
     println!(
         "{} Encoding LIR as SMT formula (solver={})",
-        style("[6/7]").bold().dim(),
+        style("[7/8]").bold().dim(),
         env.solver
     );
     solver.encode_program(&lir_program)?;
@@ -468,7 +475,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
         return Ok(());
     }
 
-    println!("{} Searching for leaks ...", style("[7/7]").bold().dim());
+    println!("{} Searching for leaks ...", style("[8/8]").bold().dim());
     match solver.check_assertions()? {
         CheckResult::AssertionsHold => {
             println!("{}", "Program is safe.".bold().green());

@@ -8,6 +8,9 @@ use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+const MAIN_ADDRESS: u64 = 0;
+const MAIN_NAME: &str = "main";
+
 pub struct MuasmLoader {
     file_path: PathBuf,
 }
@@ -23,12 +26,12 @@ impl MuasmLoader {
 impl Loader for MuasmLoader {
     fn assembly_info(&self) -> Result<AssemblyInfo> {
         let main = FunctionInfo {
-            address: 0,
-            name: Some("main".to_owned()),
+            address: MAIN_ADDRESS,
+            name: Some(MAIN_NAME.to_owned()),
         };
 
         Ok(AssemblyInfo {
-            entry: 0,
+            entry: MAIN_ADDRESS,
             functions: vec![main],
         })
     }
@@ -36,11 +39,17 @@ impl Loader for MuasmLoader {
     fn load_program(&self) -> Result<hir::Program> {
         let source = fs::read_to_string(&self.file_path)?;
         let ir = parser::parse_program(&source)?;
-        translate_ir_to_hir(&ir)
+
+        let cfg = translate_ir_to_hir(&ir)?;
+        let function = hir::Function::new(MAIN_ADDRESS, Some(MAIN_NAME.to_owned()), cfg);
+
+        let mut program = hir::Program::new();
+        program.insert_function(function)?;
+        Ok(program)
     }
 }
 
-fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::Program> {
+fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::ControlFlowGraph> {
     let mut cfg = hir::ControlFlowGraph::new();
 
     // Mapping from instruction address to instruction graph entry/exit
@@ -171,7 +180,7 @@ fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::Program> {
 
     cfg.simplify()?;
 
-    Ok(hir::Program::new(cfg))
+    Ok(cfg)
 }
 
 trait VariableBuilder {

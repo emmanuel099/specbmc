@@ -7,7 +7,7 @@ use crate::mir;
 /// We have a 2-safety hyperproperty
 const NUMBER_OF_SELF_COMPOSITIONS: usize = 2;
 
-impl TryTranslateInto<mir::Program> for hir::Program {
+impl TryTranslateInto<mir::Program> for hir::InlinedProgram {
     fn try_translate_into(&self) -> Result<mir::Program> {
         let block_graph = translate_control_flow_graph(self.control_flow_graph())?;
         Ok(mir::Program::new(block_graph, NUMBER_OF_SELF_COMPOSITIONS))

@@ -6,7 +6,10 @@ use crate::expr::{Constant, Expression, Variable};
 use crate::hir;
 use crate::solver::Model;
 
-pub fn build_counter_example(program: &hir::Program, model: &dyn Model) -> Result<CounterExample> {
+pub fn build_counter_example(
+    program: &hir::InlinedProgram,
+    model: &dyn Model,
+) -> Result<CounterExample> {
     let mut cex = create_cex_from(program)?;
 
     let cfg = program.control_flow_graph();
@@ -53,7 +56,7 @@ fn extract_trace(
     }
 }
 
-fn create_cex_from(program: &hir::Program) -> Result<CounterExample> {
+fn create_cex_from(program: &hir::InlinedProgram) -> Result<CounterExample> {
     let mut cex_cfg = ControlFlowGraph::new();
 
     let cfg = program.control_flow_graph();

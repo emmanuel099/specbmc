@@ -46,23 +46,12 @@ impl loader::Loader for FalconLoader {
     fn load_program(&self) -> Result<hir::Program> {
         let program = load_elf(&self.file_path)?;
 
-        let function = program.function_by_name("main");
-        let function = function.ok_or("Function 'main' could not be found")?;
-        translate_function(function)
-
-        // TODO
-        /*if let Some(name_or_id) = function_name_or_id {
-            let function = match name_or_id.trim().parse::<usize>() {
-                Ok(id) => program.function(id),
-                Err(_) => program.function_by_name(name_or_id),
-            };
-
-            let function =
-                function.ok_or_else(|| format!("Function '{}' could not be found", name_or_id))?;
-            translate_function(function)
-        } else {
-            Err("Falcon loader is currently limited to a single function".into())
-        }*/
+        let mut hir_prog = hir::Program::new();
+        for function in program.functions() {
+            let hir_func = translate_function(function)?;
+            hir_prog.insert_function(hir_func)?;
+        }
+        Ok(hir_prog)
     }
 }
 
@@ -84,10 +73,13 @@ fn load_elf(file_path: &Path) -> Result<il::Program> {
     }
 }
 
-fn translate_function(function: &il::Function) -> Result<hir::Program> {
+fn translate_function(function: &il::Function) -> Result<hir::Function> {
     let cfg = translate_control_flow_graph(function.control_flow_graph())?;
-
-    Ok(hir::Program::new(cfg))
+    Ok(hir::Function::new(
+        function.address(),
+        Some(function.name()),
+        cfg,
+    ))
 }
 
 fn translate_control_flow_graph(src_cfg: &il::ControlFlowGraph) -> Result<hir::ControlFlowGraph> {
