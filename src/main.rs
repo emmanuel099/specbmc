@@ -40,6 +40,7 @@ struct Arguments {
     skip_cex: bool,
     cfg_file: Option<String>,
     transient_cfg_file: Option<String>,
+    call_graph_file: Option<String>,
     mir_file: Option<String>,
     lir_file: Option<String>,
     smt_file: Option<String>,
@@ -166,6 +167,13 @@ fn parse_arguments() -> Arguments {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("call_graph_file")
+                .long("call-graph")
+                .value_name("FILE")
+                .help("Prints call graph into the file (DOT)")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("mir_file")
                 .long("mir")
                 .value_name("FILE")
@@ -259,6 +267,7 @@ fn parse_arguments() -> Arguments {
         skip_cex: matches.is_present("skip_cex"),
         cfg_file: matches.value_of("cfg_file").map(String::from),
         transient_cfg_file: matches.value_of("transient_cfg_file").map(String::from),
+        call_graph_file: matches.value_of("call_graph_file").map(String::from),
         mir_file: matches.value_of("mir_file").map(String::from),
         lir_file: matches.value_of("lir_file").map(String::from),
         smt_file: matches.value_of("smt_file").map(String::from),
@@ -426,6 +435,10 @@ fn check_program(arguments: &Arguments) -> Result<()> {
     let program = loader.load_program()?;
 
     println!("{} Inline functions", style("[2/8]").bold().dim());
+    if let Some(path) = &arguments.call_graph_file {
+        let call_graph = hir::analysis::call_graph(&program);
+        call_graph.render_to_file(Path::new(path))?;
+    }
     let function_inlining = hir::transformation::FunctionInlining::new();
     let mut hir_program = function_inlining.inline(&program)?;
 
