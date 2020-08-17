@@ -141,53 +141,60 @@ fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
     let mut block = hir::Block::new(src_block.index());
 
     for instruction in src_block.instructions() {
-        match instruction.operation() {
-            il::Operation::Assign { dst, src } => {
-                let variable = translate_scalar(dst)?;
-                let expr = translate_expr(src)?;
-                let expr = maybe_cast(expr, variable.sort())?;
-                let inst = block.assign(variable, expr)?;
-                inst.set_address(instruction.address());
-            }
-            il::Operation::Store { index, src } => {
-                let address = translate_expr(index)?;
-                let expr = translate_expr(src)?;
-                let inst = block.store(address, expr)?;
-                inst.set_address(instruction.address());
-            }
-            il::Operation::Load { dst, index } => {
-                let variable = translate_scalar(dst)?;
-                let address = translate_expr(index)?;
-                let inst = block.load(variable, address)?;
-                inst.set_address(instruction.address());
-            }
-            il::Operation::Branch { target } => {
-                let target = translate_expr(target)?;
-                let inst = block.branch(target)?;
-                inst.set_address(instruction.address());
-            }
-            il::Operation::ConditionalBranch { condition, target } => {
-                let condition = translate_expr(condition)?;
-                let target = translate_expr(target)?;
-                let inst = block.conditional_branch(condition, target)?;
-                inst.set_address(instruction.address());
-            }
-            il::Operation::Intrinsic { intrinsic } => {
-                if SPECULATION_BARRIERS.contains(&intrinsic.mnemonic()) {
-                    let inst = block.barrier();
-                    inst.set_address(instruction.address());
-                }
-            }
-            il::Operation::Nop { .. } => {
-                let inst = block.skip();
-                inst.set_address(instruction.address());
-            }
-        }
+        let inst = translate_operation(&mut block, instruction.operation())?;
+        inst.set_address(instruction.address());
     }
 
     label_pseudo_instructions(&mut block);
 
     Ok(block)
+}
+
+fn translate_operation<'a>(
+    block: &'a mut hir::Block,
+    operation: &il::Operation,
+) -> Result<&'a mut hir::Instruction> {
+    match operation {
+        il::Operation::Assign { dst, src } => {
+            let variable = translate_scalar(dst)?;
+            let expr = translate_expr(src)?;
+            let expr = maybe_cast(expr, variable.sort())?;
+            block.assign(variable, expr)
+        }
+        il::Operation::Store { index, src } => {
+            let address = translate_expr(index)?;
+            let expr = translate_expr(src)?;
+            block.store(address, expr)
+        }
+        il::Operation::Load { dst, index } => {
+            let variable = translate_scalar(dst)?;
+            let address = translate_expr(index)?;
+            block.load(variable, address)
+        }
+        il::Operation::Branch { target } => {
+            let target = translate_expr(target)?;
+            block.branch(target)
+        }
+        il::Operation::ConditionalBranch { condition, target } => {
+            let condition = translate_expr(condition)?;
+            let target = translate_expr(target)?;
+            block.conditional_branch(condition, target)
+        }
+        il::Operation::Intrinsic { intrinsic } => {
+            if SPECULATION_BARRIERS.contains(&intrinsic.mnemonic()) {
+                Ok(block.barrier())
+            } else {
+                Ok(block.skip())
+            }
+        }
+        il::Operation::Nop { placeholder } => {
+            if let Some(operation) = placeholder {
+                translate_operation(block, operation)
+            } else {
+                Ok(block.skip())
+            }
+        }
+    }
 }
 
 /// If multiple consecutive instructions have the same address, then all but the first
