@@ -6,6 +6,7 @@ use crate::util::AbsoluteDifference;
 use falcon::il;
 use falcon::loader::{Elf, Loader};
 use std::collections::HashSet;
+use std::convert::TryInto;
 use std::path::{Path, PathBuf};
 
 #[rustfmt::skip]
@@ -191,6 +192,11 @@ impl FalconTranslator {
             }
             il::Operation::Branch { target } => {
                 let target = translate_expr(target)?;
+                if let Ok(address) = (&target).try_into() {
+                    if self.function_addresses.contains(&address) {
+                        return block.call(target);
+                    }
+                }
                 block.branch(target)
             }
             il::Operation::ConditionalBranch { condition, target } => {
