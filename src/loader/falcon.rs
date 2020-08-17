@@ -5,6 +5,7 @@ use crate::loader;
 use crate::util::AbsoluteDifference;
 use falcon::il;
 use falcon::loader::{Elf, Loader};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 #[rustfmt::skip]
@@ -46,9 +47,17 @@ impl loader::Loader for FalconLoader {
     fn load_program(&self) -> Result<hir::Program> {
         let program = load_elf(&self.file_path)?;
 
+        let translator = FalconTranslator {
+            function_addresses: program
+                .functions()
+                .into_iter()
+                .map(il::Function::address)
+                .collect(),
+        };
+
         let mut hir_prog = hir::Program::new();
         for function in program.functions() {
-            let hir_func = translate_function(function)?;
+            let hir_func = translator.translate_function(function)?;
             hir_prog.insert_function(hir_func)?;
         }
         Ok(hir_prog)
@@ -73,125 +82,135 @@ fn load_elf(file_path: &Path) -> Result<il::Program> {
     }
 }
 
-fn translate_function(function: &il::Function) -> Result<hir::Function> {
-    let cfg = translate_control_flow_graph(function.control_flow_graph())?;
-    Ok(hir::Function::new(
-        function.address(),
-        Some(function.name()),
-        cfg,
-    ))
+struct FalconTranslator {
+    function_addresses: HashSet<u64>,
 }
 
-fn translate_control_flow_graph(src_cfg: &il::ControlFlowGraph) -> Result<hir::ControlFlowGraph> {
-    let mut cfg = hir::ControlFlowGraph::new();
-
-    for block in src_cfg.blocks() {
-        cfg.add_block(translate_block(block)?)?;
+impl FalconTranslator {
+    pub fn translate_function(&self, function: &il::Function) -> Result<hir::Function> {
+        let cfg = self.translate_control_flow_graph(function.control_flow_graph())?;
+        Ok(hir::Function::new(
+            function.address(),
+            Some(function.name()),
+            cfg,
+        ))
     }
 
-    for src_edge in src_cfg.edges() {
-        match src_edge.condition() {
-            Some(condition) => {
-                let condition = translate_expr(condition)?;
-                let edge = cfg.conditional_edge(src_edge.head(), src_edge.tail(), condition)?;
-                if is_taken_edge(src_cfg, src_edge)? {
-                    edge.labels_mut().taken();
+    fn translate_control_flow_graph(
+        &self,
+        src_cfg: &il::ControlFlowGraph,
+    ) -> Result<hir::ControlFlowGraph> {
+        let mut cfg = hir::ControlFlowGraph::new();
+
+        for block in src_cfg.blocks() {
+            cfg.add_block(self.translate_block(block)?)?;
+        }
+
+        for src_edge in src_cfg.edges() {
+            match src_edge.condition() {
+                Some(condition) => {
+                    let condition = translate_expr(condition)?;
+                    let edge = cfg.conditional_edge(src_edge.head(), src_edge.tail(), condition)?;
+                    if is_taken_edge(src_cfg, src_edge)? {
+                        edge.labels_mut().taken();
+                    }
+                }
+                None => {
+                    cfg.unconditional_edge(src_edge.head(), src_edge.tail())?;
                 }
             }
-            None => {
-                cfg.unconditional_edge(src_edge.head(), src_edge.tail())?;
+        }
+
+        // Add a dedicated entry block.
+        // This makes sure that the entry block has no predecessors.
+        let start_blocks: Vec<usize> = cfg
+            .graph()
+            .vertices_without_predecessors()
+            .iter()
+            .map(|block| block.index())
+            .collect();
+        let entry = cfg.new_block().index();
+        for start_block in start_blocks {
+            cfg.unconditional_edge(entry, start_block)?;
+        }
+        cfg.set_entry(entry)?;
+
+        // Add a dedicated exit block and connect all end blocks (= blocks without successor) to it.
+        // This makes sure that there is only a single end block.
+        let end_blocks: Vec<usize> = cfg
+            .graph()
+            .vertices_without_successors()
+            .iter()
+            .map(|block| block.index())
+            .collect();
+        let exit = cfg.new_block().index();
+        for end_block in end_blocks {
+            cfg.unconditional_edge(end_block, exit)?;
+        }
+        cfg.set_exit(exit)?;
+
+        cfg.simplify()?;
+
+        Ok(cfg)
+    }
+
+    fn translate_block(&self, src_block: &il::Block) -> Result<hir::Block> {
+        let mut block = hir::Block::new(src_block.index());
+
+        for instruction in src_block.instructions() {
+            let inst = self.translate_operation(&mut block, instruction.operation())?;
+            inst.set_address(instruction.address());
+        }
+
+        label_pseudo_instructions(&mut block);
+
+        Ok(block)
+    }
+
+    fn translate_operation<'a>(
+        &self,
+        block: &'a mut hir::Block,
+        operation: &il::Operation,
+    ) -> Result<&'a mut hir::Instruction> {
+        match operation {
+            il::Operation::Assign { dst, src } => {
+                let variable = translate_scalar(dst)?;
+                let expr = translate_expr(src)?;
+                let expr = maybe_cast(expr, variable.sort())?;
+                block.assign(variable, expr)
             }
-        }
-    }
-
-    // Add a dedicated entry block.
-    // This makes sure that the entry block has no predecessors.
-    let start_blocks: Vec<usize> = cfg
-        .graph()
-        .vertices_without_predecessors()
-        .iter()
-        .map(|block| block.index())
-        .collect();
-    let entry = cfg.new_block().index();
-    for start_block in start_blocks {
-        cfg.unconditional_edge(entry, start_block)?;
-    }
-    cfg.set_entry(entry)?;
-
-    // Add a dedicated exit block and connect all end blocks (= blocks without successor) to it.
-    // This makes sure that there is only a single end block.
-    let end_blocks: Vec<usize> = cfg
-        .graph()
-        .vertices_without_successors()
-        .iter()
-        .map(|block| block.index())
-        .collect();
-    let exit = cfg.new_block().index();
-    for end_block in end_blocks {
-        cfg.unconditional_edge(end_block, exit)?;
-    }
-    cfg.set_exit(exit)?;
-
-    cfg.simplify()?;
-
-    Ok(cfg)
-}
-
-fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
-    let mut block = hir::Block::new(src_block.index());
-
-    for instruction in src_block.instructions() {
-        let inst = translate_operation(&mut block, instruction.operation())?;
-        inst.set_address(instruction.address());
-    }
-
-    label_pseudo_instructions(&mut block);
-
-    Ok(block)
-}
-
-fn translate_operation<'a>(
-    block: &'a mut hir::Block,
-    operation: &il::Operation,
-) -> Result<&'a mut hir::Instruction> {
-    match operation {
-        il::Operation::Assign { dst, src } => {
-            let variable = translate_scalar(dst)?;
-            let expr = translate_expr(src)?;
-            let expr = maybe_cast(expr, variable.sort())?;
-            block.assign(variable, expr)
-        }
-        il::Operation::Store { index, src } => {
-            let address = translate_expr(index)?;
-            let expr = translate_expr(src)?;
-            block.store(address, expr)
-        }
-        il::Operation::Load { dst, index } => {
-            let variable = translate_scalar(dst)?;
-            let address = translate_expr(index)?;
-            block.load(variable, address)
-        }
-        il::Operation::Branch { target } => {
-            let target = translate_expr(target)?;
-            block.branch(target)
-        }
-        il::Operation::ConditionalBranch { condition, target } => {
-            let condition = translate_expr(condition)?;
-            let target = translate_expr(target)?;
-            block.conditional_branch(condition, target)
-        }
-        il::Operation::Intrinsic { intrinsic } => {
-            if SPECULATION_BARRIERS.contains(&intrinsic.mnemonic()) {
-                Ok(block.barrier())
-            } else {
-                Ok(block.skip())
+            il::Operation::Store { index, src } => {
+                let address = translate_expr(index)?;
+                let expr = translate_expr(src)?;
+                block.store(address, expr)
             }
-        }
-        il::Operation::Nop { placeholder } => {
-            if let Some(operation) = placeholder {
-                translate_operation(block, operation)
-            } else {
-                Ok(block.skip())
+            il::Operation::Load { dst, index } => {
+                let variable = translate_scalar(dst)?;
+                let address = translate_expr(index)?;
+                block.load(variable, address)
+            }
+            il::Operation::Branch { target } => {
+                let target = translate_expr(target)?;
+                block.branch(target)
+            }
+            il::Operation::ConditionalBranch { condition, target } => {
+                let condition = translate_expr(condition)?;
+                let target = translate_expr(target)?;
+                block.conditional_branch(condition, target)
+            }
+            il::Operation::Intrinsic { intrinsic } => {
+                if SPECULATION_BARRIERS.contains(&intrinsic.mnemonic()) {
+                    Ok(block.barrier())
+                } else {
+                    Ok(block.skip())
+                }
+            }
+            il::Operation::Nop { placeholder } => {
+                if let Some(operation) = placeholder {
+                    self.translate_operation(block, operation)
+                } else {
+                    Ok(block.skip())
+                }
             }
         }
     }
