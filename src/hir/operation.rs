@@ -19,6 +19,8 @@ pub enum Operation {
         variable: Variable,
         address: Expression,
     },
+    /// Call the function given by target.
+    Call { target: Expression },
     /// Branch to the value given by target.
     Branch { target: Expression },
     /// Branch to the value given by target if the condition holds.
@@ -59,6 +61,12 @@ impl Operation {
         address.sort().expect_word()?;
         variable.sort().expect_bit_vector()?;
         Ok(Self::Load { variable, address })
+    }
+
+    /// Create a new `Operation::Call`.
+    pub fn call(target: Expression) -> Result<Self> {
+        target.sort().expect_word()?;
+        Ok(Self::Call { target })
     }
 
     /// Create a new `Operation::Branch`.
@@ -123,6 +131,13 @@ impl Operation {
     pub fn is_load(&self) -> bool {
         match self {
             Self::Load { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_call(&self) -> bool {
+        match self {
+            Self::Call { .. } => true,
             _ => false,
         }
     }
@@ -193,7 +208,7 @@ impl Operation {
                 .chain(expr.variables().into_iter())
                 .collect(),
             Self::Load { address, .. } => address.variables(),
-            Self::Branch { target } => target.variables(),
+            Self::Call { target } | Self::Branch { target } => target.variables(),
             Self::ConditionalBranch { condition, target } => condition
                 .variables()
                 .into_iter()
@@ -217,7 +232,7 @@ impl Operation {
                 .chain(expr.variables_mut().into_iter())
                 .collect(),
             Self::Load { address, .. } => address.variables_mut(),
-            Self::Branch { target } => target.variables_mut(),
+            Self::Call { target } | Self::Branch { target } => target.variables_mut(),
             Self::ConditionalBranch { condition, target } => condition
                 .variables_mut()
                 .into_iter()
@@ -237,6 +252,7 @@ impl Operation {
         match self {
             Self::Assign { variable, .. } | Self::Load { variable, .. } => vec![variable],
             Self::Store { .. }
+            | Self::Call { .. }
             | Self::Branch { .. }
             | Self::ConditionalBranch { .. }
             | Self::Skip
@@ -253,6 +269,7 @@ impl Operation {
         match self {
             Self::Assign { variable, .. } | Self::Load { variable, .. } => vec![variable],
             Self::Store { .. }
+            | Self::Call { .. }
             | Self::Branch { .. }
             | Self::ConditionalBranch { .. }
             | Self::Skip
@@ -279,6 +296,7 @@ impl fmt::Display for Operation {
             Self::Assign { variable, expr } => write!(f, "{} = {}", variable, expr),
             Self::Store { address, expr } => write!(f, "store({}, {})", address, expr),
             Self::Load { variable, address } => write!(f, "{} = load({})", variable, address),
+            Self::Call { target } => write!(f, "call {}", target),
             Self::Branch { target } => write!(f, "branch {}", target),
             Self::ConditionalBranch { condition, target } => {
                 write!(f, "branch {} if {}", target, condition)

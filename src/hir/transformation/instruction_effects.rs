@@ -41,7 +41,7 @@ impl InstructionEffects {
                         effects.push(Effect::cache_fetch(address.clone(), bit_width));
                     }
                 }
-                Operation::Branch { target } => {
+                Operation::Call { target } | Operation::Branch { target } => {
                     if self.btb_available {
                         let location = BitVector::constant_u64(
                             instruction.address().unwrap_or_default(),

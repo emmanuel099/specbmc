@@ -178,6 +178,12 @@ impl Block {
         Ok(self.instructions.last_mut().unwrap())
     }
 
+    /// Adds a call operation to the end of this block.
+    pub fn call(&mut self, target: Expression) -> Result<&mut Instruction> {
+        self.instructions.push(Instruction::call(target)?);
+        Ok(self.instructions.last_mut().unwrap())
+    }
+
     /// Adds a unconditional branch operation to the end of this block.
     pub fn branch(&mut self, target: Expression) -> Result<&mut Instruction> {
         self.instructions.push(Instruction::branch(target)?);

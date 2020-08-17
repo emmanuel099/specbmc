@@ -94,6 +94,11 @@ impl Instruction {
         Ok(Self::new(Operation::load(variable, address)?))
     }
 
+    /// Create a new `Call` instruction.
+    pub fn call(target: Expression) -> Result<Self> {
+        Ok(Self::new(Operation::call(target)?))
+    }
+
     /// Create a new `Branch` instruction.
     pub fn branch(target: Expression) -> Result<Self> {
         Ok(Self::new(Operation::branch(target)?))
