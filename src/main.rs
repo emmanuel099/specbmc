@@ -17,7 +17,10 @@ use std::process;
 fn main() {
     let arguments = parse_arguments();
     if let Err(e) = spec_bmc(&arguments) {
-        println!("{}", style(e).bold().red());
+        println!("{}", style(&e).bold().red());
+        if let Some(backtrace) = e.backtrace() {
+            println!("{:?}", backtrace);
+        }
         process::exit(1);
     }
 }
