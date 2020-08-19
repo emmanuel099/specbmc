@@ -211,11 +211,26 @@ impl FalconTranslator {
             } => {
                 let condition = translate_expr(condition)?;
                 match operation.deref() {
+                    il::Operation::Assign { dst, src } => {
+                        let variable = translate_scalar(dst)?;
+                        let expr = translate_expr(src)?;
+                        let expr = maybe_cast(expr, variable.sort())?;
+                        // Only assign new value if condition holds, otherwise assign identity
+                        let expr = expr::Expression::ite(
+                            condition.clone(),
+                            expr.clone(),
+                            variable.clone().into(),
+                        )?;
+                        block.assign(variable, expr)
+                    }
                     il::Operation::Branch { target } => {
                         let target = translate_expr(&target)?;
                         block.conditional_branch(condition, target)
                     }
-                    _ => unimplemented!(),
+                    _ => unimplemented!(
+                        "Translation for conditional {:#?} is not implemented",
+                        operation
+                    ),
                 }
             }
             il::Operation::Intrinsic { intrinsic } => {
