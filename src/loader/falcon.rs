@@ -5,8 +5,10 @@ use crate::loader;
 use crate::util::AbsoluteDifference;
 use falcon::il;
 use falcon::loader::{Elf, Loader};
+use falcon::translator;
 use std::collections::HashSet;
 use std::convert::TryInto;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
 #[rustfmt::skip]
@@ -66,8 +68,12 @@ impl loader::Loader for FalconLoader {
 }
 
 fn load_elf(file_path: &Path) -> Result<il::Program> {
+    let options = translator::OptionsBuilder::default()
+        .unsupported_are_intrinsics(true)
+        .build();
+
     let elf = Elf::from_file(file_path)?;
-    let result = elf.program_recursive_verbose();
+    let result = elf.program_recursive_verbose(&options);
     match result {
         Ok((program, lifting_errors)) => {
             lifting_errors.iter().for_each(|(func, err)| {
@@ -199,10 +205,18 @@ impl FalconTranslator {
                 }
                 block.branch(target)
             }
-            il::Operation::ConditionalBranch { condition, target } => {
+            il::Operation::Conditional {
+                condition,
+                operation,
+            } => {
                 let condition = translate_expr(condition)?;
-                let target = translate_expr(target)?;
-                block.conditional_branch(condition, target)
+                match operation.deref() {
+                    il::Operation::Branch { target } => {
+                        let target = translate_expr(&target)?;
+                        block.conditional_branch(condition, target)
+                    }
+                    _ => unimplemented!(),
+                }
             }
             il::Operation::Intrinsic { intrinsic } => {
                 if SPECULATION_BARRIERS.contains(&intrinsic.mnemonic()) {
