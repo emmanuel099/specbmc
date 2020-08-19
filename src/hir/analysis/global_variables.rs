@@ -9,6 +9,17 @@ pub fn global_variables(cfg: &ControlFlowGraph) -> HashSet<Variable> {
     for block in cfg.blocks() {
         let mut killed = HashSet::new();
 
+        block.phi_nodes().iter().for_each(|phi_node| {
+            phi_node
+                .incoming_variables()
+                .into_iter()
+                .for_each(|variable| {
+                    globals.insert(variable.clone());
+                });
+
+            killed.insert(phi_node.out());
+        });
+
         block.instructions().iter().for_each(|inst| {
             inst.variables_read()
                 .into_iter()
