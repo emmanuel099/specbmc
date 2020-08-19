@@ -1,4 +1,4 @@
-use crate::expr::Expression;
+use crate::expr::{Expression, Variable};
 use falcon::graph;
 use std::collections::BTreeSet;
 use std::fmt;
@@ -142,6 +142,24 @@ impl Edge {
     /// Returns whether this `Edge` is conditional or not.
     pub fn is_conditional(&self) -> bool {
         self.condition.is_some()
+    }
+
+    /// Get the variables read by this `Edge`.
+    pub fn variables_read(&self) -> Vec<&Variable> {
+        if let Some(condition) = &self.condition {
+            condition.variables()
+        } else {
+            Vec::default()
+        }
+    }
+
+    /// Get a mutable reference to the variables read by this `Edge`.
+    pub fn variables_read_mut(&mut self) -> Vec<&mut Variable> {
+        if let Some(condition) = &mut self.condition {
+            condition.variables_mut()
+        } else {
+            Vec::default()
+        }
     }
 }
 

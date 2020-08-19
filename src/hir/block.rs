@@ -237,6 +237,54 @@ impl Block {
             .push(Instruction::indistinguishable(exprs));
         self.instructions.last_mut().unwrap()
     }
+
+    /// Get the variables written by this `Block`.
+    pub fn variables_written(&self) -> Vec<&Variable> {
+        self.instructions
+            .iter()
+            .flat_map(Instruction::variables_written)
+            .chain(self.phi_nodes.iter().map(PhiNode::out))
+            .collect()
+    }
+
+    /// Get a mutable reference to the variables written by this `Block`.
+    pub fn variables_written_mut(&mut self) -> Vec<&mut Variable> {
+        self.instructions
+            .iter_mut()
+            .flat_map(Instruction::variables_written_mut)
+            .chain(self.phi_nodes.iter_mut().map(PhiNode::out_mut))
+            .collect()
+    }
+
+    /// Get the variables read by this `Block`.
+    pub fn variables_read(&self) -> Vec<&Variable> {
+        self.instructions
+            .iter()
+            .flat_map(Instruction::variables_read)
+            .chain(self.phi_nodes.iter().flat_map(PhiNode::incoming_variables))
+            .collect()
+    }
+
+    /// Get a mutable reference to the variables read by this `Block`.
+    pub fn variables_read_mut(&mut self) -> Vec<&mut Variable> {
+        self.instructions
+            .iter_mut()
+            .flat_map(Instruction::variables_read_mut)
+            .chain(
+                self.phi_nodes
+                    .iter_mut()
+                    .flat_map(PhiNode::incoming_variables_mut),
+            )
+            .collect()
+    }
+
+    /// Get each `Variable` used by this `Block`.
+    pub fn variables(&self) -> Vec<&Variable> {
+        self.variables_read()
+            .into_iter()
+            .chain(self.variables_written().into_iter())
+            .collect()
+    }
 }
 
 impl graph::Vertex for Block {

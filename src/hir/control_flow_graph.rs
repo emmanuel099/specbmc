@@ -1,7 +1,7 @@
 //! A `ControlFlowGraph` is a directed `Graph` of `Block` and `Edge`.
 
 use crate::error::Result;
-use crate::expr::{Boolean, Expression};
+use crate::expr::{Boolean, Expression, Variable};
 use crate::hir::{Block, Edge};
 use crate::util::RenderGraph;
 use falcon::graph;
@@ -636,6 +636,31 @@ impl ControlFlowGraph {
         }
 
         Ok(())
+    }
+
+    /// Get the variables written by this `ControlFlowGraph`.
+    pub fn variables_written(&self) -> Vec<&Variable> {
+        self.blocks()
+            .into_iter()
+            .flat_map(Block::variables_written)
+            .collect()
+    }
+
+    /// Get the variables read by this `ControlFlowGraph`.
+    pub fn variables_read(&self) -> Vec<&Variable> {
+        self.blocks()
+            .into_iter()
+            .flat_map(Block::variables_read)
+            .chain(self.edges().into_iter().flat_map(Edge::variables_read))
+            .collect()
+    }
+
+    /// Get each `Variable` used by this `ControlFlowGraph`.
+    pub fn variables(&self) -> Vec<&Variable> {
+        self.variables_read()
+            .into_iter()
+            .chain(self.variables_written().into_iter())
+            .collect()
     }
 }
 

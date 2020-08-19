@@ -38,6 +38,10 @@ impl PhiNode {
         self.incoming.values().collect()
     }
 
+    pub fn incoming_variables_mut(&mut self) -> Vec<&mut Variable> {
+        self.incoming.values_mut().collect()
+    }
+
     pub fn out(&self) -> &Variable {
         &self.out
     }
