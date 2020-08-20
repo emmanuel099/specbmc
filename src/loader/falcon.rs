@@ -31,7 +31,7 @@ impl FalconLoader {
 
 impl loader::Loader for FalconLoader {
     fn assembly_info(&self) -> Result<loader::AssemblyInfo> {
-        let elf = Elf::from_file(&self.file_path)?;
+        let elf = load_elf(&self.file_path)?;
 
         let mut functions = Vec::new();
         for f in elf.function_entries()? {
@@ -48,7 +48,8 @@ impl loader::Loader for FalconLoader {
     }
 
     fn load_program(&self) -> Result<hir::Program> {
-        let program = load_elf(&self.file_path)?;
+        let elf = load_elf(&self.file_path)?;
+        let program = lift_elf(&elf)?;
 
         let translator = FalconTranslator {
             function_addresses: program
@@ -63,16 +64,21 @@ impl loader::Loader for FalconLoader {
             let hir_func = translator.translate_function(function)?;
             hir_prog.insert_function(hir_func)?;
         }
+        hir_prog.set_entry(hir::ProgramEntry::Address(elf.program_entry()))?;
+
         Ok(hir_prog)
     }
 }
 
-fn load_elf(file_path: &Path) -> Result<il::Program> {
+fn load_elf(file_path: &Path) -> Result<Elf> {
+    Ok(Elf::from_file(file_path)?)
+}
+
+fn lift_elf(elf: &Elf) -> Result<il::Program> {
     let options = translator::OptionsBuilder::default()
         .unsupported_are_intrinsics(true)
         .build();
 
-    let elf = Elf::from_file(file_path)?;
     let result = elf.program_recursive_verbose(&options);
     match result {
         Ok((program, lifting_errors)) => {
