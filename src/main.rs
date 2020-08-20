@@ -460,7 +460,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
         let call_graph = hir::analysis::call_graph(&program);
         call_graph.render_to_file(Path::new(path))?;
     }
-    let function_inlining = hir::transformation::FunctionInlining::new();
+    let function_inlining = hir::transformation::FunctionInlining::new_from_env(&env);
     let mut hir_program = function_inlining.inline(&program)?;
 
     if let Some(path) = &arguments.cfg_file {
