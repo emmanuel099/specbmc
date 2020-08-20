@@ -10,7 +10,7 @@ impl FunctionInlining {
 
     pub fn inline(&self, program: &Program) -> Result<InlinedProgram> {
         // TODO
-        let main = program.function_by_name("main").ok_or("no main function")?;
+        let main = program.entry_function().ok_or("no entry function")?;
         Ok(InlinedProgram::new(main.control_flow_graph().clone()))
     }
 }
