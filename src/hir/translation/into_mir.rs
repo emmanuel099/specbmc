@@ -133,13 +133,6 @@ fn compute_phi_expr(
     let mut phi_expr: Option<Expression> = None;
 
     for pred_index in cfg.predecessor_indices(block_index)? {
-        if !phi_node.has_incoming(pred_index) {
-            // The SSA transformation doesn't add phi inputs for variables which
-            // don't survive the rollback (e.g. memory). Therefore, it's possible
-            // that an incoming edge has no corresponding phi-node input.
-            continue;
-        }
-
         let edge = cfg.edge(pred_index, block_index)?;
         let trans_cond = transition_condition(edge)?;
         let var = phi_node.incoming_variable(pred_index).unwrap().clone();

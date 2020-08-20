@@ -92,28 +92,11 @@ fn insert_phi_nodes(cfg: &mut ControlFlowGraph, form: SSAForm) -> Result<()> {
 
                 let phi_node = {
                     let mut phi_node = PhiNode::new(variable.clone());
-
-                    let df_block = cfg.block(*df_index).unwrap();
-
                     for predecessor in cfg.predecessor_indices(*df_index)? {
-                        let pred_block = cfg.block(predecessor).unwrap();
-
-                        // Skip rollback phi inputs (edges from transient- to default-execution) for
-                        // variables which don't survive the rollback, such as memory or registers.
-                        let is_rollback = pred_block.is_transient() && !df_block.is_transient();
-                        if is_rollback && !variable.sort().is_rollback_persistent() {
-                            continue;
-                        }
-
                         phi_node.add_incoming(variable.clone(), predecessor);
                     }
-
                     phi_node
                 };
-
-                if phi_node.incoming_variables().len() < 2 {
-                    continue;
-                }
 
                 let df_block = cfg.block_mut(*df_index)?;
                 df_block.add_phi_node(phi_node);

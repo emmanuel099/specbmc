@@ -1,9 +1,9 @@
 use crate::environment::{Environment, PredictorStrategy, SPECULATION_WINDOW_SIZE, WORD_SIZE};
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Predictor, Sort, Variable};
-use crate::hir::{ControlFlowGraph, Edge, Operation, RemovedEdgeGuard};
+use crate::hir::{Block, ControlFlowGraph, Edge, Operation, RemovedEdgeGuard};
 use crate::ir::Transform;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::convert::TryInto;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Builder)]
@@ -209,10 +209,19 @@ impl Transform<ControlFlowGraph> for TransientExecution {
                 self.speculation_window,
             )?;
 
-            let block_map = default_cfg.insert(&reduced_transient_cfg)?;
+            let saved_vars = reorder_buffer_vars(&reduced_transient_cfg);
 
+            let block_map = default_cfg.insert(&reduced_transient_cfg)?;
             let transient_entry = block_map[&transient_entry_point];
             let transient_resolve = block_map[&reduced_transient_cfg.exit().unwrap()];
+
+            // Save modified variables (registers + memory) for restore on rollback
+            let transient_entry_block = default_cfg.block_mut(transient_entry)?;
+            save_variables(transient_entry_block, &saved_vars)?;
+
+            // "Discard mis-predicted reorder buffer entries" by restoring the saved variables
+            let transient_resolve_block = default_cfg.block_mut(transient_resolve)?;
+            restore_variables(transient_resolve_block, &saved_vars)?;
 
             default_cfg
                 .unconditional_edge(start, transient_entry)
@@ -229,6 +238,34 @@ impl Transform<ControlFlowGraph> for TransientExecution {
 
         Ok(())
     }
+}
+
+/// The set of variables (registers & memory) which would usually end up in the reorder buffer.
+fn reorder_buffer_vars(cfg: &ControlFlowGraph) -> HashSet<&Variable> {
+    cfg.variables_written()
+        .into_iter()
+        .filter(|var| !var.sort().is_rollback_persistent())
+        .collect()
+}
+
+fn saved_variable_for(var: &Variable) -> Variable {
+    Variable::new(format!("_RB_{}", var.name()), var.sort().clone())
+}
+
+fn save_variables(block: &mut Block, variables: &HashSet<&Variable>) -> Result<()> {
+    for &var in variables.iter() {
+        let saved_var = saved_variable_for(var);
+        block.assign(saved_var, var.clone().into())?;
+    }
+    Ok(())
+}
+
+fn restore_variables(block: &mut Block, variables: &HashSet<&Variable>) -> Result<()> {
+    for &var in variables.iter() {
+        let saved_var = saved_variable_for(var);
+        block.assign(var.clone(), saved_var.into())?;
+    }
+    Ok(())
 }
 
 /// Speculation-Window Variable
