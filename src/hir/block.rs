@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::expr::{Expression, Variable};
 use crate::hir::{Instruction, PhiNode};
 use falcon::graph;
+use std::cmp;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -107,6 +108,19 @@ impl Block {
             return Err(format!("Index {} is invalid", index).into());
         }
         self.instructions.insert(index, instruction);
+        Ok(())
+    }
+
+    /// Inserts multiple instructions at the given indices.
+    pub fn insert_instructions(
+        &mut self,
+        indexed_instructions: Vec<(usize, Instruction)>,
+    ) -> Result<()> {
+        let mut sorted_instructions = indexed_instructions;
+        sorted_instructions.sort_by_key(|&(index, _)| cmp::Reverse(index));
+        for (index, inst) in sorted_instructions.into_iter() {
+            self.insert_instruction(index, inst)?;
+        }
         Ok(())
     }
 

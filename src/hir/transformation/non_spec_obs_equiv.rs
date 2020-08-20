@@ -61,16 +61,25 @@ impl Transform<ControlFlowGraph> for NonSpecObsEquivalence {
     }
 
     fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
-        cfg.blocks_mut().iter_mut().for_each(|block| {
+        for block in cfg.blocks_mut() {
+            let mut instructions_to_insert = Vec::new();
+
             let is_transient = block.is_transient();
-            block.instructions_mut().iter_mut().for_each(|inst| {
-                if !is_transient {
+            for (index, inst) in block.instructions().iter().enumerate() {
+                if inst.is_observable() {
+                    let mut nonspec_inst = create_nonspec_indistinguishable_equivalent(inst);
+                    nonspec_inst.labels_mut().pseudo();
+                    instructions_to_insert.push((index, nonspec_inst));
+                } else if !is_transient && instruction_requires_nonspec_equivalent(inst) {
                     // Non-speculative counterparts are only affected during non-transient execution.
-                    add_nonspec_equivalents_for_all_operations(inst);
+                    let mut nonspec_inst = create_nonspec_instruction_equivalent(inst);
+                    nonspec_inst.labels_mut().pseudo();
+                    instructions_to_insert.push((index, nonspec_inst));
                 }
-                make_observations_nonspec_indistinguishable(inst);
-            })
-        });
+            }
+
+            block.insert_instructions(instructions_to_insert)?;
+        }
 
         self.add_initial_spec_nonspec_equivalence_constraints(cfg)?;
 
@@ -79,84 +88,50 @@ impl Transform<ControlFlowGraph> for NonSpecObsEquivalence {
 }
 
 /// Observable is a special case as we want observable microarchitectual components to be
-/// indistinguishable without speculation. Therefore, we add an indistinguishable operation for
-/// each observable operation, requiring that the non-speculative counterparts of all observable
+/// indistinguishable without speculation. Therefore, we add an indistinguishable instruction for
+/// each observable instruction, requiring that the non-speculative counterparts of all observable
 /// microarchitectual components are indistinguishable.
-fn make_observations_nonspec_indistinguishable(inst: &mut Instruction) {
-    let create_nonspec_indistinguishable_for_observable = |op: &Operation| -> Option<Operation> {
-        if let Operation::Observable { exprs } = op {
-            let mut nonspec_exprs = exprs.to_owned();
-            nonspec_exprs.iter_mut().for_each(|expr| {
-                expr.variables_mut()
-                    .into_iter()
-                    .for_each(replace_variable_with_nonspec_equivalent);
-            });
-            Some(Operation::indistinguishable(nonspec_exprs))
-        } else {
-            None
-        }
-    };
+fn create_nonspec_indistinguishable_equivalent(inst: &Instruction) -> Instruction {
+    assert!(inst.is_observable());
 
-    let operations = inst
-        .operations()
-        .iter()
-        .filter_map(create_nonspec_indistinguishable_for_observable)
-        .collect::<Vec<Operation>>();
-
-    inst.add_operations(&operations);
+    if let Operation::Observable { exprs } = inst.operation() {
+        let mut nonspec_exprs = exprs.to_owned();
+        nonspec_exprs.iter_mut().for_each(|expr| {
+            expr.variables_mut()
+                .into_iter()
+                .for_each(replace_variable_with_nonspec_equivalent);
+        });
+        Instruction::indistinguishable(nonspec_exprs)
+    } else {
+        unreachable!()
+    }
 }
 
 /// For each operation which affects microarchitectual components an equivalent operation
 /// affecting their non-speculative counterparts will be added.
-fn add_nonspec_equivalents_for_all_operations(inst: &mut Instruction) {
-    let operations = inst
-        .operations()
-        .iter()
-        .filter_map(|op| {
-            if operation_requires_nonspec_equivalent(op) {
-                Some(create_nonspec_operation_equivalent(op))
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<Operation>>();
-
-    inst.add_operations(&operations);
-}
-
-fn operation_requires_nonspec_equivalent(operation: &Operation) -> bool {
+fn instruction_requires_nonspec_equivalent(inst: &Instruction) -> bool {
     let requires_nonspec_equivalent =
         |var: &Variable| -> bool { var.sort().is_rollback_persistent() };
 
-    match operation {
-        Operation::Observable { .. } => false,
-        Operation::Assert { .. }
-        | Operation::Assume { .. }
-        | Operation::Indistinguishable { .. } => operation
-            .variables_read()
-            .into_iter()
-            .any(requires_nonspec_equivalent),
-        _ => operation
-            .variables_written()
-            .into_iter()
-            .any(requires_nonspec_equivalent),
-    }
+    inst.variables()
+        .into_iter()
+        .any(requires_nonspec_equivalent)
 }
 
-/// Simply clone the operation and replace e.g. cache variables with their non-speculative counterparts.
-fn create_nonspec_operation_equivalent(op: &Operation) -> Operation {
-    assert!(!op.is_observable());
+/// Simply clone the instruction and replace e.g. cache variables with their non-speculative counterparts.
+fn create_nonspec_instruction_equivalent(inst: &Instruction) -> Instruction {
+    assert!(!inst.is_observable());
 
-    let mut nonspec_op = op.to_owned();
-    nonspec_op
+    let mut nonspec_inst = inst.clone();
+    nonspec_inst
         .variables_read_mut()
         .into_iter()
         .for_each(replace_variable_with_nonspec_equivalent);
-    nonspec_op
+    nonspec_inst
         .variables_written_mut()
         .into_iter()
         .for_each(replace_variable_with_nonspec_equivalent);
-    nonspec_op
+    nonspec_inst
 }
 
 fn replace_variable_with_nonspec_equivalent(var: &mut Variable) {

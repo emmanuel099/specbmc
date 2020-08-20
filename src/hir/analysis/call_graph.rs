@@ -113,17 +113,13 @@ fn block_direct_call_targets(block: &Block) -> Vec<u64> {
     block
         .instructions()
         .iter()
-        .map(instruction_direct_call_targets)
-        .flatten()
+        .filter_map(instruction_direct_call_targets)
         .collect()
 }
 
-fn instruction_direct_call_targets(inst: &Instruction) -> Vec<u64> {
-    inst.operations()
-        .iter()
-        .filter_map(|op| match op {
-            Operation::Call { target } => target.try_into().ok(),
-            _ => None,
-        })
-        .collect()
+fn instruction_direct_call_targets(inst: &Instruction) -> Option<u64> {
+    match inst.operation() {
+        Operation::Call { target } => target.try_into().ok(),
+        _ => None,
+    }
 }

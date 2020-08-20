@@ -65,32 +65,30 @@ impl TransientExecution {
                     .build()
                     .unwrap();
 
-                for operation in inst.operations() {
-                    match operation {
-                        Operation::Store { .. } => {
-                            if self.spectre_stl {
-                                // The `Store` instruction can speculatively be by-passed.
-                                add_transient_execution_start(
-                                    &mut default_cfg,
-                                    &mut transient_start_rollback_points,
-                                    &inst_ref,
-                                    self.speculation_window,
-                                )?;
-                            }
+                match inst.operation() {
+                    Operation::Store { .. } => {
+                        if self.spectre_stl {
+                            // The `Store` instruction can speculatively be by-passed.
+                            add_transient_execution_start(
+                                &mut default_cfg,
+                                &mut transient_start_rollback_points,
+                                &inst_ref,
+                                self.speculation_window,
+                            )?;
                         }
-                        Operation::ConditionalBranch { .. } => {
-                            if self.spectre_pht {
-                                // The `ConditionalBranch` instruction can be mis-predicted.
-                                add_transient_execution_start(
-                                    &mut default_cfg,
-                                    &mut transient_start_rollback_points,
-                                    &inst_ref,
-                                    self.speculation_window,
-                                )?;
-                            }
-                        }
-                        _ => (),
                     }
+                    Operation::ConditionalBranch { .. } => {
+                        if self.spectre_pht {
+                            // The `ConditionalBranch` instruction can be mis-predicted.
+                            add_transient_execution_start(
+                                &mut default_cfg,
+                                &mut transient_start_rollback_points,
+                                &inst_ref,
+                                self.speculation_window,
+                            )?;
+                        }
+                    }
+                    _ => (),
                 }
             }
         }
@@ -125,32 +123,30 @@ impl TransientExecution {
                     .build()
                     .unwrap();
 
-                for operation in inst.operations() {
-                    match operation {
-                        Operation::Store { .. } => {
-                            if self.spectre_stl {
-                                transient_store(
-                                    &mut transient_cfg,
-                                    &mut transient_entry_points,
-                                    &inst_ref,
-                                )?;
-                            }
+                match inst.operation() {
+                    Operation::Store { .. } => {
+                        if self.spectre_stl {
+                            transient_store(
+                                &mut transient_cfg,
+                                &mut transient_entry_points,
+                                &inst_ref,
+                            )?;
                         }
-                        Operation::ConditionalBranch { .. } => {
-                            if self.spectre_pht {
-                                transient_conditional_branch(
-                                    &mut transient_cfg,
-                                    &mut transient_entry_points,
-                                    &inst_ref,
-                                    self.predictor_strategy,
-                                )?;
-                            }
-                        }
-                        Operation::Barrier => {
-                            transient_barrier(&mut transient_cfg, &inst_ref)?;
-                        }
-                        _ => (),
                     }
+                    Operation::ConditionalBranch { .. } => {
+                        if self.spectre_pht {
+                            transient_conditional_branch(
+                                &mut transient_cfg,
+                                &mut transient_entry_points,
+                                &inst_ref,
+                                self.predictor_strategy,
+                            )?;
+                        }
+                    }
+                    Operation::Barrier => {
+                        transient_barrier(&mut transient_cfg, &inst_ref)?;
+                    }
+                    _ => (),
                 }
             }
         }

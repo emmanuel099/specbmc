@@ -16,9 +16,7 @@ impl Transform<Instruction> for ExplicitMemory {
     }
 
     fn transform(&self, instruction: &mut Instruction) -> Result<()> {
-        for operation in instruction.operations_mut() {
-            replace_store_load_with_assign(operation)?;
-        }
+        replace_store_load_with_assign(instruction.operation_mut())?;
 
         Ok(())
     }

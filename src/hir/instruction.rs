@@ -61,8 +61,7 @@ impl fmt::Display for Labels {
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Instruction {
-    /// Operations happen in parallel.
-    operations: Vec<Operation>,
+    operation: Operation,
     effects: Vec<Effect>,
     address: Option<u64>,
     labels: Labels,
@@ -72,7 +71,7 @@ impl Instruction {
     /// Create a new instruction with the given index and operation.
     pub fn new(operation: Operation) -> Self {
         Self {
-            operations: vec![operation],
+            operation,
             effects: vec![],
             address: None,
             labels: Labels::default(),
@@ -139,24 +138,14 @@ impl Instruction {
         Self::new(Operation::indistinguishable(exprs))
     }
 
-    /// Get the operations of this `Instruction`
-    pub fn operations(&self) -> &[Operation] {
-        &self.operations
+    /// Get the operation of this `Instruction`
+    pub fn operation(&self) -> &Operation {
+        &self.operation
     }
 
-    /// Get a mutable reference to the operations of this `Instruction`
-    pub fn operations_mut(&mut self) -> &mut Vec<Operation> {
-        &mut self.operations
-    }
-
-    /// Add an `Operation` to this `Instruction`
-    pub fn add_operation(&mut self, operation: Operation) {
-        self.operations.push(operation);
-    }
-
-    /// Add multiple operations to this `Instruction`
-    pub fn add_operations(&mut self, operations: &[Operation]) {
-        self.operations.extend_from_slice(operations);
+    /// Get a mutable reference to the operation of this `Instruction`
+    pub fn operation_mut(&mut self) -> &mut Operation {
+        &mut self.operation
     }
 
     /// Add an `Effect` to this `Instruction`
@@ -204,37 +193,79 @@ impl Instruction {
         self.address = address;
     }
 
+    pub fn is_assign(&self) -> bool {
+        self.operation.is_assign()
+    }
+
+    pub fn is_store(&self) -> bool {
+        self.operation.is_store()
+    }
+
+    pub fn is_load(&self) -> bool {
+        self.operation.is_load()
+    }
+
+    pub fn is_call(&self) -> bool {
+        self.operation.is_call()
+    }
+
+    pub fn is_branch(&self) -> bool {
+        self.operation.is_branch()
+    }
+
+    pub fn is_conditional_branch(&self) -> bool {
+        self.operation.is_conditional_branch()
+    }
+
+    pub fn is_skip(&self) -> bool {
+        self.operation.is_skip()
+    }
+
+    pub fn is_barrier(&self) -> bool {
+        self.operation.is_barrier()
+    }
+
+    pub fn is_assert(&self) -> bool {
+        self.operation.is_assert()
+    }
+
+    pub fn is_assume(&self) -> bool {
+        self.operation.is_assume()
+    }
+
+    pub fn is_observable(&self) -> bool {
+        self.operation.is_observable()
+    }
+
+    pub fn is_indistinguishable(&self) -> bool {
+        self.operation.is_indistinguishable()
+    }
+
     /// Get the variables written by this `Instruction`.
     pub fn variables_written(&self) -> Vec<&Variable> {
-        self.operations
-            .iter()
-            .flat_map(Operation::variables_written)
-            .collect()
+        self.operation.variables_written()
     }
 
     /// Get a mutable reference to the variables written by this `Instruction`.
     pub fn variables_written_mut(&mut self) -> Vec<&mut Variable> {
-        self.operations
-            .iter_mut()
-            .flat_map(Operation::variables_written_mut)
-            .collect()
+        self.operation.variables_written_mut()
     }
 
     /// Get the variables read by this `Instruction`.
     pub fn variables_read(&self) -> Vec<&Variable> {
-        self.operations
+        self.effects
             .iter()
-            .flat_map(Operation::variables_read)
-            .chain(self.effects.iter().flat_map(Effect::variables))
+            .flat_map(Effect::variables)
+            .chain(self.operation.variables_read())
             .collect()
     }
 
     /// Get a mutable reference to the variables read by this `Instruction`.
     pub fn variables_read_mut(&mut self) -> Vec<&mut Variable> {
-        self.operations
+        self.effects
             .iter_mut()
-            .flat_map(Operation::variables_read_mut)
-            .chain(self.effects.iter_mut().flat_map(Effect::variables_mut))
+            .flat_map(Effect::variables_mut)
+            .chain(self.operation.variables_read_mut())
             .collect()
     }
 
@@ -252,12 +283,7 @@ impl fmt::Display for Instruction {
         if let Some(address) = self.address {
             write!(f, "{:X} ", address)?;
         }
-        if !self.operations.is_empty() {
-            write!(f, "{}", self.operations.first().unwrap())?;
-            for operation in self.operations.iter().skip(1) {
-                write!(f, "\n\t|| {}", operation)?;
-            }
-        }
+        write!(f, "{}", self.operation)?;
         for effect in &self.effects {
             write!(f, "\n\t# {}", effect)?;
         }

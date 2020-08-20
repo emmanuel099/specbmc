@@ -46,10 +46,8 @@ fn translate_block(cfg: &hir::ControlFlowGraph, src_block: &hir::Block) -> Resul
     }
 
     for instruction in src_block.instructions() {
-        for operation in instruction.operations() {
-            if let Some(node) = translate_operation(operation)? {
-                block.add_node(node);
-            }
+        if let Some(node) = translate_operation(instruction.operation())? {
+            block.add_node(node);
         }
     }
 

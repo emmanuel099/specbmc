@@ -419,8 +419,8 @@ mod tests {
 
         // Expected: x_2 := load(x_1)
         assert_eq!(
-            instruction.operations()[0],
-            Operation::Load {
+            instruction.operation(),
+            &Operation::Load {
                 variable: variable_ssa("x", 2),
                 address: variable_ssa("x", 1).into(),
             }
@@ -441,8 +441,8 @@ mod tests {
 
         // Expected: store(x_1, y_1)
         assert_eq!(
-            instruction.operations()[0],
-            Operation::Store {
+            instruction.operation(),
+            &Operation::Store {
                 address: variable_ssa("x", 1).into(),
                 expr: variable_ssa("y", 1).into(),
             }
@@ -496,23 +496,23 @@ mod tests {
             &PhiNode::new(variable_ssa("y", 1))
         );
         assert_eq!(
-            block.instruction(0).unwrap().operations()[0],
-            Operation::assign(variable_ssa("x", 1), variable_ssa("y", 1).into()).unwrap()
+            block.instruction(0).unwrap().operation(),
+            &Operation::assign(variable_ssa("x", 1), variable_ssa("y", 1).into()).unwrap()
         );
         assert_eq!(
-            block.instruction(1).unwrap().operations()[0],
-            Operation::Load {
+            block.instruction(1).unwrap().operation(),
+            &Operation::Load {
                 variable: variable_ssa("y", 2),
                 address: variable_ssa("x", 1).into(),
             }
         );
         assert_eq!(
-            block.instruction(2).unwrap().operations()[0],
-            Operation::assign(variable_ssa("x", 2), variable_ssa("y", 2).into()).unwrap()
+            block.instruction(2).unwrap().operation(),
+            &Operation::assign(variable_ssa("x", 2), variable_ssa("y", 2).into()).unwrap()
         );
         assert_eq!(
-            block.instruction(3).unwrap().operations()[0],
-            Operation::assign(variable_ssa("z", 1), variable_ssa("x", 2).into()).unwrap()
+            block.instruction(3).unwrap().operation(),
+            &Operation::assign(variable_ssa("z", 1), variable_ssa("x", 2).into()).unwrap()
         );
     }
 
@@ -558,20 +558,20 @@ mod tests {
         // x_3 = x_2 <---+
         let ssa_block0 = cfg.block(0).unwrap();
         assert_eq!(
-            ssa_block0.instruction(0).unwrap().operations()[0],
-            Operation::assign(variable_ssa("x", 1), expr_const(1)).unwrap()
+            ssa_block0.instruction(0).unwrap().operation(),
+            &Operation::assign(variable_ssa("x", 1), expr_const(1)).unwrap()
         );
 
         let ssa_block1 = cfg.block(1).unwrap();
         assert_eq!(
-            ssa_block1.instruction(0).unwrap().operations()[0],
-            Operation::assign(variable_ssa("x", 2), variable_ssa("x", 1).into()).unwrap()
+            ssa_block1.instruction(0).unwrap().operation(),
+            &Operation::assign(variable_ssa("x", 2), variable_ssa("x", 1).into()).unwrap()
         );
 
         let ssa_block2 = cfg.block(2).unwrap();
         assert_eq!(
-            ssa_block2.instruction(0).unwrap().operations()[0],
-            Operation::assign(variable_ssa("x", 3), variable_ssa("x", 2).into()).unwrap()
+            ssa_block2.instruction(0).unwrap().operation(),
+            &Operation::assign(variable_ssa("x", 3), variable_ssa("x", 2).into()).unwrap()
         );
 
         let ssa_edge01 = cfg.edge(0, 1).unwrap();

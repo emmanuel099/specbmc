@@ -1,12 +1,12 @@
 use crate::error::Result;
 use crate::expr::{BranchTargetBuffer, Cache, Expression, PatternHistoryTable};
-use crate::hir::{Effect, Instruction, Operation};
+use crate::hir::{Block, Effect, Instruction, Operation};
 use crate::ir::Transform;
 
 #[derive(Default, Builder, Debug)]
 pub struct ExplicitEffects {}
 
-impl Transform<Instruction> for ExplicitEffects {
+impl Transform<Block> for ExplicitEffects {
     fn name(&self) -> &'static str {
         "ExplicitEffects"
     }
@@ -15,18 +15,27 @@ impl Transform<Instruction> for ExplicitEffects {
         "Make instruction effects explicit".to_string()
     }
 
-    fn transform(&self, instruction: &mut Instruction) -> Result<()> {
-        if !instruction.has_effects() {
-            return Ok(());
+    fn transform(&self, block: &mut Block) -> Result<()> {
+        let mut instructions_to_insert = Vec::new();
+
+        for (index, inst) in block.instructions().iter().enumerate() {
+            let effect_operations = inst
+                .effects()
+                .iter()
+                .map(encode_effect)
+                .collect::<Result<Vec<Operation>>>()?;
+
+            // Insert explicit effects immediately before the current instruction.
+            // Inserting them before is necessary as the instruction may write to variables which are read in the effect.
+            for effect_op in effect_operations {
+                let mut effect_inst = Instruction::new(effect_op);
+                effect_inst.set_address(inst.address());
+                effect_inst.labels_mut().pseudo();
+                instructions_to_insert.push((index, effect_inst));
+            }
         }
 
-        let effect_operations = instruction
-            .effects()
-            .iter()
-            .map(encode_effect)
-            .collect::<Result<Vec<Operation>>>()?;
-
-        instruction.add_operations(&effect_operations);
+        block.insert_instructions(instructions_to_insert)?;
 
         Ok(())
     }
