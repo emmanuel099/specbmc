@@ -31,7 +31,7 @@ struct Arguments {
     check: Option<environment::Check>,
     solver: Option<environment::Solver>,
     predictor_strategy: Option<environment::PredictorStrategy>,
-    function: Option<String>,
+    program_entry: Option<String>,
     unwind: Option<usize>,
     unwinding_guard: Option<environment::UnwindingGuard>,
     speculation_window: Option<usize>,
@@ -104,10 +104,10 @@ fn parse_arguments() -> Arguments {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("function")
-                .long("func")
-                .value_name("NAME|ID")
-                .help("Sets name/id of the function to be checked")
+            Arg::with_name("program_entry")
+                .long("entry")
+                .value_name("NAME|ADDRESS")
+                .help("Sets name/address of the program entry function")
                 .takes_value(true),
         )
         .arg(
@@ -252,7 +252,7 @@ fn parse_arguments() -> Arguments {
         predictor_strategy: matches
             .value_of("predictor_strategy")
             .map(parse_predictory_strategy),
-        function: matches.value_of("function").map(String::from),
+        program_entry: matches.value_of("program_entry").map(String::from),
         unwind: matches
             .value_of("unwind")
             .map(|v| v.parse::<usize>().unwrap()),
@@ -327,6 +327,10 @@ fn build_environment(arguments: &Arguments) -> Result<environment::Environment> 
 
     if let Some(speculation_window) = arguments.speculation_window {
         env.architecture.speculation_window = speculation_window;
+    }
+
+    if let Some(entry) = &arguments.program_entry {
+        env.analysis.program_entry = Some(entry.clone());
     }
 
     if arguments.debug {
@@ -416,6 +420,17 @@ fn print_assembly_info(arguments: &Arguments) -> Result<()> {
     Ok(())
 }
 
+fn parse_program_entry(s: &str) -> hir::ProgramEntry {
+    if s.starts_with("0x") {
+        let s = s.trim_start_matches("0x");
+        if let Ok(addr) = u64::from_str_radix(s, 16) {
+            return hir::ProgramEntry::Address(addr);
+        }
+    }
+
+    hir::ProgramEntry::Name(s.to_owned())
+}
+
 fn check_program(arguments: &Arguments) -> Result<()> {
     let input_file = &arguments.input_file;
 
@@ -432,7 +447,13 @@ fn check_program(arguments: &Arguments) -> Result<()> {
     );
     let input_file_path = Path::new(input_file);
     let loader = loader::loader_for_file(input_file_path).ok_or("No compatible loader found")?;
-    let program = loader.load_program()?;
+    let mut program = loader.load_program()?;
+
+    // Overwrite program entry if set
+    if let Some(entry) = &env.analysis.program_entry {
+        let entry = parse_program_entry(entry);
+        program.set_entry(entry)?;
+    }
 
     println!("{} Inline functions", style("[2/8]").bold().dim());
     if let Some(path) = &arguments.call_graph_file {

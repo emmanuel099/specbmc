@@ -137,6 +137,8 @@ pub struct Analysis {
     pub start_with_empty_cache: bool,
     #[serde(default)]
     pub observe: Observe,
+    #[serde(default)]
+    pub program_entry: Option<String>,
 }
 
 impl Default for Analysis {
@@ -150,6 +152,7 @@ impl Default for Analysis {
             unwinding_guard: UnwindingGuard::default(),
             start_with_empty_cache: false,
             observe: Observe::default(),
+            program_entry: None,
         }
     }
 }
