@@ -4,14 +4,22 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
+pub enum ProgramEntry {
+    Name(String),
+    Address(u64),
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Program {
     functions: BTreeMap<u64, Function>,
+    entry: Option<ProgramEntry>,
 }
 
 impl Program {
     pub fn new() -> Self {
         Self {
             functions: BTreeMap::new(),
+            entry: None,
         }
     }
 
@@ -38,6 +46,41 @@ impl Program {
         }
         self.functions.insert(addr, func);
         Ok(())
+    }
+
+    pub fn set_entry(&mut self, entry: ProgramEntry) -> Result<()> {
+        match &entry {
+            ProgramEntry::Name(name) => {
+                if self.function_by_name(name).is_none() {
+                    return Err(format!("Entry function '{}' does not exist", name).into());
+                }
+            }
+            ProgramEntry::Address(addr) => {
+                if self.function_by_address(*addr).is_none() {
+                    return Err(
+                        format!("Entry function for address {} does not exist", *addr).into(),
+                    );
+                }
+            }
+        }
+
+        self.entry = Some(entry);
+        Ok(())
+    }
+
+    pub fn entry(&self) -> &Option<ProgramEntry> {
+        &self.entry
+    }
+
+    pub fn entry_function(&self) -> Option<&Function> {
+        if let Some(entry) = &self.entry {
+            match entry {
+                ProgramEntry::Name(name) => self.function_by_name(name),
+                ProgramEntry::Address(addr) => self.function_by_address(*addr),
+            }
+        } else {
+            None
+        }
     }
 }
 

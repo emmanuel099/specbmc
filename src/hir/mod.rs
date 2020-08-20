@@ -23,4 +23,4 @@ pub use self::inlined_program::InlinedProgram;
 pub use self::instruction::Instruction;
 pub use self::operation::Operation;
 pub use self::phi_node::PhiNode;
-pub use self::program::Program;
+pub use self::program::{Program, ProgramEntry};
