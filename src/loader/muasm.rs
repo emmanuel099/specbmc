@@ -45,6 +45,8 @@ impl Loader for MuasmLoader {
 
         let mut program = hir::Program::new();
         program.insert_function(function)?;
+        program.set_entry(hir::ProgramEntry::Address(MAIN_ADDRESS))?;
+
         Ok(program)
     }
 }
