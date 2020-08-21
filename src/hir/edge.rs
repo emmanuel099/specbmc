@@ -8,6 +8,8 @@ pub enum Label {
     Taken,
     Speculate,
     Rollback,
+    Call,
+    Return,
 }
 
 impl fmt::Display for Label {
@@ -16,6 +18,8 @@ impl fmt::Display for Label {
             Self::Taken => write!(f, "taken"),
             Self::Speculate => write!(f, "speculate"),
             Self::Rollback => write!(f, "rollback"),
+            Self::Call => write!(f, "call"),
+            Self::Return => write!(f, "return"),
         }
     }
 }
@@ -51,6 +55,24 @@ impl Labels {
 
     pub fn is_rollback(&self) -> bool {
         self.labels.contains(&Label::Rollback)
+    }
+
+    pub fn call(&mut self) -> &mut Self {
+        self.labels.insert(Label::Call);
+        self
+    }
+
+    pub fn is_call(&self) -> bool {
+        self.labels.contains(&Label::Call)
+    }
+
+    pub fn r#return(&mut self) -> &mut Self {
+        self.labels.insert(Label::Return);
+        self
+    }
+
+    pub fn is_return(&self) -> bool {
+        self.labels.contains(&Label::Return)
     }
 
     pub fn merge(&mut self, other: &Labels) {

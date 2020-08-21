@@ -43,8 +43,13 @@ fn inline_calls(cfg: &mut ControlFlowGraph, program: &Program) -> Result<()> {
                 .get(&func.control_flow_graph().exit().unwrap())
                 .unwrap(); // FIXME
 
-            cfg.unconditional_edge(block_index, *func_entry_block_index)?;
-            cfg.unconditional_edge(*func_exit_block_index, ret_block_index)?;
+            cfg.unconditional_edge(block_index, *func_entry_block_index)?
+                .labels_mut()
+                .call();
+
+            cfg.unconditional_edge(*func_exit_block_index, ret_block_index)?
+                .labels_mut()
+                .r#return();
 
             // TODO increment call depth of func
             remaining_block_indices.extend(mapping.values());
