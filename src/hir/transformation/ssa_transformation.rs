@@ -289,7 +289,7 @@ impl SSARename for ControlFlowGraph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::expr::BitVector;
+    use crate::expr::{BitVector, Memory};
     use crate::hir::Operation;
 
     fn expr_const(value: u64) -> Expression {
@@ -302,6 +302,12 @@ mod tests {
 
     fn variable_ssa(name: &str, version: usize) -> Variable {
         let mut variable = variable(name);
+        variable.set_version(Some(version));
+        variable
+    }
+
+    fn memory_ssa(version: usize) -> Variable {
+        let mut variable = Memory::variable();
         variable.set_version(Some(version));
         variable
     }
@@ -415,12 +421,14 @@ mod tests {
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
         versioning.new_version(&variable("x")).unwrap();
+        versioning.new_version(&Memory::variable()).unwrap();
         instruction.rename_variables(&mut versioning).unwrap();
 
         // Expected: x_2 := load(x_1)
         assert_eq!(
             instruction.operation(),
             &Operation::Load {
+                memory: memory_ssa(1),
                 variable: variable_ssa("x", 2),
                 address: variable_ssa("x", 1).into(),
             }
@@ -437,12 +445,15 @@ mod tests {
         versioning.start_new_scope();
         versioning.new_version(&variable("x")).unwrap();
         versioning.new_version(&variable("y")).unwrap();
+        versioning.new_version(&Memory::variable()).unwrap();
         instruction.rename_variables(&mut versioning).unwrap();
 
         // Expected: store(x_1, y_1)
         assert_eq!(
             instruction.operation(),
             &Operation::Store {
+                memory_in: memory_ssa(1),
+                memory_out: memory_ssa(2),
                 address: variable_ssa("x", 1).into(),
                 expr: variable_ssa("y", 1).into(),
             }
@@ -483,6 +494,7 @@ mod tests {
 
         let mut versioning = VariableVersioning::new();
         versioning.start_new_scope();
+        versioning.new_version(&Memory::variable()).unwrap();
         block.rename_variables(&mut versioning).unwrap();
 
         // Expected:
@@ -502,6 +514,7 @@ mod tests {
         assert_eq!(
             block.instruction(1).unwrap().operation(),
             &Operation::Load {
+                memory: memory_ssa(1),
                 variable: variable_ssa("y", 2),
                 address: variable_ssa("x", 1).into(),
             }

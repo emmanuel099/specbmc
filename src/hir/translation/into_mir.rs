@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{Boolean, Expression};
+use crate::expr::{Boolean, Expression, Memory};
 use crate::hir;
 use crate::ir::TryTranslateInto;
 use crate::mir;
@@ -66,8 +66,30 @@ fn translate_operation(operation: &hir::Operation) -> Result<Option<mir::Node>> 
         Indistinguishable { exprs } => Some(mir::Node::hyper_assume(
             equal_under_self_composition(exprs),
         )?),
-        Store { .. } => panic!("Unexpected store operation, should have been made explicit"),
-        Load { .. } => panic!("Unexpected load operation, should have been made explicit"),
+        Store {
+            address,
+            expr,
+            memory_in,
+            memory_out,
+        } => {
+            // store(address, expr) -> mem := mem-store(mem, address, expr)
+            Some(mir::Node::assign(
+                memory_out.clone(),
+                Memory::store(memory_in.clone().into(), address.clone(), expr.clone())?,
+            )?)
+        }
+        Load {
+            variable,
+            address,
+            memory,
+        } => {
+            // variable := load(expr) -> variable := mem-load(mem, expr)
+            let bit_width = variable.sort().unwrap_bit_vector();
+            Some(mir::Node::assign(
+                variable.clone(),
+                Memory::load(bit_width, memory.clone().into(), address.clone())?,
+            )?)
+        }
         Skip { .. } => None,
         Call { .. } | Branch { .. } | ConditionalBranch { .. } | Barrier => {
             // Ignore because they are already implicitly encoded into the CFG

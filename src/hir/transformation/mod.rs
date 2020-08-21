@@ -1,5 +1,4 @@
 mod explicit_effects;
-mod explicit_memory;
 mod function_inlining;
 mod init_global_variables;
 mod instruction_effects;
@@ -10,7 +9,6 @@ mod ssa_transformation;
 mod transient_execution;
 
 pub use self::explicit_effects::ExplicitEffects;
-pub use self::explicit_memory::ExplicitMemory;
 pub use self::function_inlining::FunctionInlining;
 pub use self::init_global_variables::InitGlobalVariables;
 pub use self::instruction_effects::InstructionEffects;

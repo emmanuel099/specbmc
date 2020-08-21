@@ -40,7 +40,7 @@ pub fn global_variables(cfg: &ControlFlowGraph) -> HashSet<Variable> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::expr::{BitVector, Expression};
+    use crate::expr::{BitVector, Expression, Memory};
     use crate::hir::ControlFlowGraph;
 
     fn expr_const(value: u64) -> Expression {
@@ -69,7 +69,9 @@ mod tests {
 
         assert_eq!(
             global_variables(&cfg),
-            vec![variable("x")].into_iter().collect()
+            vec![variable("x"), Memory::variable()]
+                .into_iter()
+                .collect()
         );
     }
 }

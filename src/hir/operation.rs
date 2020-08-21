@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{Expression, Variable};
+use crate::expr::{Expression, Memory, Variable};
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -13,11 +13,14 @@ pub enum Operation {
     Store {
         address: Expression,
         expr: Expression,
+        memory_in: Variable,
+        memory_out: Variable,
     },
     /// Load the value in memory at index and place the result in the variable.
     Load {
         variable: Variable,
         address: Expression,
+        memory: Variable,
     },
     /// Call the function given by target.
     Call { target: Expression },
@@ -53,14 +56,23 @@ impl Operation {
     pub fn store(address: Expression, expr: Expression) -> Result<Self> {
         address.sort().expect_word()?;
         expr.sort().expect_bit_vector()?;
-        Ok(Self::Store { address, expr })
+        Ok(Self::Store {
+            memory_in: Memory::variable(),
+            memory_out: Memory::variable(),
+            address,
+            expr,
+        })
     }
 
     /// Create a new `Operation::Load`.
     pub fn load(variable: Variable, address: Expression) -> Result<Self> {
         address.sort().expect_word()?;
         variable.sort().expect_bit_vector()?;
-        Ok(Self::Load { variable, address })
+        Ok(Self::Load {
+            memory: Memory::variable(),
+            variable,
+            address,
+        })
     }
 
     /// Create a new `Operation::Call`.
@@ -202,12 +214,22 @@ impl Operation {
     pub fn variables_read(&self) -> Vec<&Variable> {
         match self {
             Self::Assign { expr, .. } => expr.variables(),
-            Self::Store { address, expr, .. } => address
-                .variables()
+            Self::Store {
+                memory_in,
+                address,
+                expr,
+                ..
+            } => vec![memory_in]
                 .into_iter()
+                .chain(address.variables().into_iter())
                 .chain(expr.variables().into_iter())
                 .collect(),
-            Self::Load { address, .. } => address.variables(),
+            Self::Load {
+                memory, address, ..
+            } => vec![memory]
+                .into_iter()
+                .chain(address.variables().into_iter())
+                .collect(),
             Self::Call { target } | Self::Branch { target } => target.variables(),
             Self::ConditionalBranch { condition, target } => condition
                 .variables()
@@ -226,12 +248,22 @@ impl Operation {
     pub fn variables_read_mut(&mut self) -> Vec<&mut Variable> {
         match self {
             Self::Assign { expr, .. } => expr.variables_mut(),
-            Self::Store { address, expr, .. } => address
-                .variables_mut()
+            Self::Store {
+                memory_in,
+                address,
+                expr,
+                ..
+            } => vec![memory_in]
                 .into_iter()
+                .chain(address.variables_mut().into_iter())
                 .chain(expr.variables_mut().into_iter())
                 .collect(),
-            Self::Load { address, .. } => address.variables_mut(),
+            Self::Load {
+                memory, address, ..
+            } => vec![memory]
+                .into_iter()
+                .chain(address.variables_mut().into_iter())
+                .collect(),
             Self::Call { target } | Self::Branch { target } => target.variables_mut(),
             Self::ConditionalBranch { condition, target } => condition
                 .variables_mut()
@@ -251,8 +283,8 @@ impl Operation {
     pub fn variables_written(&self) -> Vec<&Variable> {
         match self {
             Self::Assign { variable, .. } | Self::Load { variable, .. } => vec![variable],
-            Self::Store { .. }
-            | Self::Call { .. }
+            Self::Store { memory_out, .. } => vec![memory_out],
+            Self::Call { .. }
             | Self::Branch { .. }
             | Self::ConditionalBranch { .. }
             | Self::Skip
@@ -268,8 +300,8 @@ impl Operation {
     pub fn variables_written_mut(&mut self) -> Vec<&mut Variable> {
         match self {
             Self::Assign { variable, .. } | Self::Load { variable, .. } => vec![variable],
-            Self::Store { .. }
-            | Self::Call { .. }
+            Self::Store { memory_out, .. } => vec![memory_out],
+            Self::Call { .. }
             | Self::Branch { .. }
             | Self::ConditionalBranch { .. }
             | Self::Skip
@@ -294,8 +326,10 @@ impl fmt::Display for Operation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Assign { variable, expr } => write!(f, "{} = {}", variable, expr),
-            Self::Store { address, expr } => write!(f, "store({}, {})", address, expr),
-            Self::Load { variable, address } => write!(f, "{} = load({})", variable, address),
+            Self::Store { address, expr, .. } => write!(f, "store({}, {})", address, expr),
+            Self::Load {
+                variable, address, ..
+            } => write!(f, "{} = load({})", variable, address),
             Self::Call { target } => write!(f, "call {}", target),
             Self::Branch { target } => write!(f, "branch {}", target),
             Self::ConditionalBranch { condition, target } => {
