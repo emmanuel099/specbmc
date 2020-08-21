@@ -1,0 +1,16 @@
+analysis:
+    spectre_pht: true
+    spectre_stl: false
+    check: all_leaks
+architecture:
+    cache: true
+    btb: false
+    pht: false
+policy:
+    registers:
+        default: low
+        high: ["secret"]
+    memory:
+        default: high
+test:
+    expect: safe

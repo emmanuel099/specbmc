@@ -1,0 +1,12 @@
+    x <- 0
+    cond1 <- 0
+    beqz cond1, EndIf1
+Then1:
+    x <- secret
+EndIf1:
+    spbarr
+    beqz cond2, EndIf2
+Then2:
+    load y, x
+EndIf2:
+    skip

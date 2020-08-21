@@ -350,13 +350,13 @@ fn hir_transformations(
         let mut steps: Vec<Box<dyn Transform<hir::InlinedProgram>>> = Vec::new();
         steps.push(Box::new(LoopUnwinding::new_from_env(env)));
         steps.push(Box::new(InstructionEffects::new_from_env(env)));
+        steps.push(Box::new(ExplicitMemory::default()));
         if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
             steps.push(Box::new(TransientExecution::new_from_env(env)));
         }
         steps.push(Box::new(InitGlobalVariables::new_from_env(env)));
         steps.push(Box::new(Observations::new_from_env(env)));
         steps.push(Box::new(ExplicitEffects::default()));
-        steps.push(Box::new(ExplicitMemory::default()));
         if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
             steps.push(Box::new(NonSpecObsEquivalence::new_from_env(env)));
         }

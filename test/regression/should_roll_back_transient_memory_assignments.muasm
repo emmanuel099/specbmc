@@ -1,0 +1,14 @@
+    zero <- 0
+    store zero, addr
+    cond1 <- 0
+    beqz cond1, EndIf1
+Then1:
+    store secret, addr
+EndIf1:
+    spbarr
+    beqz cond2, EndIf2
+Then2:
+    load x, addr
+    load y, x
+EndIf2:
+    skip
