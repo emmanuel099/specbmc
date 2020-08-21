@@ -326,10 +326,21 @@ impl fmt::Display for Operation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Assign { variable, expr } => write!(f, "{} = {}", variable, expr),
-            Self::Store { address, expr, .. } => write!(f, "store({}, {})", address, expr),
+            Self::Store {
+                address,
+                expr,
+                memory_in,
+                memory_out,
+            } => write!(
+                f,
+                "{} = store({}, {}, {})",
+                memory_out, memory_in, address, expr
+            ),
             Self::Load {
-                variable, address, ..
-            } => write!(f, "{} = load({})", variable, address),
+                variable,
+                address,
+                memory,
+            } => write!(f, "{} = load({}, {})", variable, memory, address),
             Self::Call { target } => write!(f, "call {}", target),
             Self::Branch { target } => write!(f, "branch {}", target),
             Self::ConditionalBranch { condition, target } => {
