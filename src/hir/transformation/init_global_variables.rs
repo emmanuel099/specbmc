@@ -71,15 +71,20 @@ impl InitGlobalVariables {
         havoc_variable(entry_block, Memory::variable())?;
 
         if self.memory_default_low {
-            println!("low addresses {:?}", self.high_memory_addresses); // TODO
-            unimplemented!();
+            low_equivalent(entry_block, Memory::variable().into());
+            for address in &self.high_memory_addresses {
+                let secret_var = BitVector::variable("_secret", 8);
+                havoc_variable(entry_block, secret_var.clone())?;
+                let addr = BitVector::constant_u64(*address, WORD_SIZE);
+                entry_block
+                    .store(addr, secret_var.into())?
+                    .labels_mut()
+                    .pseudo();
+            }
         } else {
             for address in &self.low_memory_addresses {
-                let memory_content_at_address = Memory::load(
-                    8,
-                    Memory::variable().into(),
-                    BitVector::constant_u64(*address, WORD_SIZE),
-                )?;
+                let addr = BitVector::constant_u64(*address, WORD_SIZE);
+                let memory_content_at_address = Memory::load(8, Memory::variable().into(), addr)?;
                 low_equivalent(entry_block, memory_content_at_address);
             }
         }
