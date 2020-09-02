@@ -1,5 +1,9 @@
 # specbmc
+
 Bounded model checker for speculative non-interference.
+
+![specbmc](doc/cli.gif)
+
 
 ## Usage
 
