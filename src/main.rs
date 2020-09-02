@@ -31,6 +31,7 @@ struct Arguments {
     check: Option<environment::Check>,
     solver: Option<environment::Solver>,
     predictor_strategy: Option<environment::PredictorStrategy>,
+    observe: Option<environment::Observe>,
     program_entry: Option<String>,
     unwind: Option<usize>,
     unwinding_guard: Option<environment::UnwindingGuard>,
@@ -84,6 +85,14 @@ fn parse_arguments() -> Arguments {
                 .value_name("TYPE")
                 .possible_values(&["all", "normal", "transient"])
                 .help("Sets leak check type")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("observe")
+                .long("observe")
+                .value_name("OBSERVE")
+                .possible_values(&["sequential", "parallel"])
+                .help("Sets observation type")
                 .takes_value(true),
         )
         .arg(
@@ -229,6 +238,12 @@ fn parse_arguments() -> Arguments {
         _ => panic!("unknown predictor strategy"),
     };
 
+    let parse_observe = |observe: &str| match observe {
+        "sequential" => Observe::Sequential,
+        "parallel" => Observe::Parallel,
+        _ => panic!("unknown observe type"),
+    };
+
     let parse_solver = |solver: &str| match solver {
         "z3" => Solver::Z3,
         "cvc4" => Solver::CVC4,
@@ -252,6 +267,7 @@ fn parse_arguments() -> Arguments {
         predictor_strategy: matches
             .value_of("predictor_strategy")
             .map(parse_predictory_strategy),
+        observe: matches.value_of("observe").map(parse_observe),
         program_entry: matches.value_of("program_entry").map(String::from),
         unwind: matches
             .value_of("unwind")
@@ -311,6 +327,10 @@ fn build_environment(arguments: &Arguments) -> Result<environment::Environment> 
 
     if let Some(strategy) = arguments.predictor_strategy {
         env.analysis.predictor_strategy = strategy;
+    }
+
+    if let Some(observe) = &arguments.observe {
+        env.analysis.observe = observe.clone();
     }
 
     if let Some(solver) = arguments.solver {
