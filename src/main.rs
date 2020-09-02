@@ -35,6 +35,7 @@ struct Arguments {
     program_entry: Option<String>,
     unwind: Option<usize>,
     unwinding_guard: Option<environment::UnwindingGuard>,
+    recursion_limit: Option<usize>,
     speculation_window: Option<usize>,
     debug: bool,
     skip_solving: bool,
@@ -134,6 +135,15 @@ fn parse_arguments() -> Arguments {
                 .value_name("GUARD")
                 .possible_values(&["assumption", "assertion"])
                 .help("Sets the unwinding guard")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("recursion_limit")
+                .short("r")
+                .long("recursion")
+                .value_name("LIMIT")
+                .help("Inlines recursive functions at most LIMIT times")
+                .validator(is_positive_number)
                 .takes_value(true),
         )
         .arg(
@@ -275,6 +285,9 @@ fn parse_arguments() -> Arguments {
         unwinding_guard: matches
             .value_of("unwinding_guard")
             .map(parse_unwinding_guard),
+        recursion_limit: matches
+            .value_of("recursion_limit")
+            .map(|v| v.parse::<usize>().unwrap()),
         speculation_window: matches
             .value_of("speculation_window")
             .map(|v| v.parse::<usize>().unwrap()),
@@ -343,6 +356,10 @@ fn build_environment(arguments: &Arguments) -> Result<environment::Environment> 
 
     if let Some(unwinding_guard) = arguments.unwinding_guard {
         env.analysis.unwinding_guard = unwinding_guard;
+    }
+
+    if let Some(recursion_limit) = arguments.recursion_limit {
+        env.analysis.recursion_limit = recursion_limit;
     }
 
     if let Some(speculation_window) = arguments.speculation_window {
