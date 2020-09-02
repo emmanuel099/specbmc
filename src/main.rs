@@ -110,7 +110,7 @@ fn parse_arguments() -> Arguments {
                 .long("solver")
                 .value_name("SOLVER")
                 .possible_values(&["z3", "cvc4", "yices2"])
-                .help("Sets solver to use")
+                .help("Sets solver")
                 .takes_value(true),
         )
         .arg(
@@ -125,7 +125,7 @@ fn parse_arguments() -> Arguments {
                 .short("k")
                 .long("unwind")
                 .value_name("k")
-                .help("Unwind loops k times")
+                .help("Unwinds loops k times")
                 .validator(is_positive_number)
                 .takes_value(true),
         )
@@ -134,7 +134,7 @@ fn parse_arguments() -> Arguments {
                 .long("unwinding-guard")
                 .value_name("GUARD")
                 .possible_values(&["assumption", "assertion"])
-                .help("Sets the unwinding guard")
+                .help("Sets unwinding guard")
                 .takes_value(true),
         )
         .arg(
@@ -151,7 +151,7 @@ fn parse_arguments() -> Arguments {
                 .short("s")
                 .long("spec-win")
                 .value_name("WINDOW")
-                .help("Sets the maximum length of the speculation window")
+                .help("Sets maximum length of the speculation window")
                 .validator(is_positive_number)
                 .takes_value(true),
         )
@@ -164,53 +164,53 @@ fn parse_arguments() -> Arguments {
         .arg(
             Arg::with_name("skip_solving")
                 .long("skip-solving")
-                .help("Skips solving the SMT formula"),
+                .help("Skips solving SMT formula"),
         )
         .arg(
             Arg::with_name("skip_cex")
                 .long("skip-cex")
-                .help("Skips generating of counterexample"),
+                .help("Skips generating counterexample"),
         )
         .arg(
             Arg::with_name("cfg_file")
                 .long("cfg")
                 .value_name("FILE")
-                .help("Prints CFG into the file (DOT)")
+                .help("Prints control-flow graph into file (DOT)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("transient_cfg_file")
                 .long("trans-cfg")
                 .value_name("FILE")
-                .help("Prints CFG (with transient behavior) into the file (DOT)")
+                .help("Prints CFG (with transient behavior) into file (DOT)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("call_graph_file")
                 .long("call-graph")
                 .value_name("FILE")
-                .help("Prints call graph into the file (DOT)")
+                .help("Prints call graph into file (DOT)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("mir_file")
                 .long("mir")
                 .value_name("FILE")
-                .help("Prints MIR program into the file (DOT)")
+                .help("Prints MIR program into file (DOT)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("lir_file")
                 .long("lir")
                 .value_name("FILE")
-                .help("Prints LIR program into the file (plain text)")
+                .help("Prints LIR program into file (plain text)")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("smt_file")
                 .long("smt")
                 .value_name("FILE")
-                .help("Prints SMT-2 formula into the file (plain text)")
+                .help("Prints SMT-2 formula into file (plain text)")
                 .takes_value(true),
         )
         .arg(
