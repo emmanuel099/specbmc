@@ -1,10 +1,7 @@
 analysis:
     spectre_pht: true
     spectre_stl: false
-    observe:
-        end_of_program: true
-        each_effectful_instruction: true
-        after_rollback: true
+    observe: parallel
 architecture:
     cache: true
     btb: false

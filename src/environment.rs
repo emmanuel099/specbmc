@@ -96,26 +96,28 @@ impl Default for UnwindingGuard {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Observe {
-    #[serde(default = "enabled")]
-    pub end_of_program: bool,
-    #[serde(default = "disabled")]
-    pub each_effectful_instruction: bool,
-    #[serde(default = "disabled")]
-    pub after_rollback: bool,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub locations: Vec<u64>,
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum Observe {
+    #[serde(rename = "sequential")]
+    Sequential,
+    #[serde(rename = "parallel")]
+    Parallel,
+    #[serde(rename = "custom")]
+    Custom {
+        #[serde(default = "enabled")]
+        end_of_program: bool,
+        #[serde(default = "disabled")]
+        each_effectful_instruction: bool,
+        #[serde(default = "disabled")]
+        after_rollback: bool,
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        locations: Vec<u64>,
+    },
 }
 
 impl Default for Observe {
     fn default() -> Self {
-        Self {
-            end_of_program: true,
-            each_effectful_instruction: false,
-            after_rollback: false,
-            locations: Vec::default(),
-        }
+        Self::Sequential
     }
 }
 

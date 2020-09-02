@@ -1,4 +1,4 @@
-use crate::environment::Environment;
+use crate::environment::{Environment, Observe};
 use crate::error::Result;
 use crate::expr;
 use crate::hir::{ControlFlowGraph, Instruction};
@@ -18,14 +18,38 @@ pub struct Observations {
 
 impl Observations {
     pub fn new_from_env(env: &Environment) -> Self {
-        Self {
+        let default = Self {
             cache_available: env.architecture.cache,
             btb_available: env.architecture.branch_target_buffer,
             pht_available: env.architecture.pattern_history_table,
-            obs_end_of_program: env.analysis.observe.end_of_program,
-            obs_each_effectful_instruction: env.analysis.observe.each_effectful_instruction,
-            obs_after_rollback: env.analysis.observe.after_rollback,
-            obs_locations: env.analysis.observe.locations.to_owned(),
+            obs_end_of_program: false,
+            obs_each_effectful_instruction: false,
+            obs_after_rollback: false,
+            obs_locations: Vec::default(),
+        };
+
+        match env.analysis.observe {
+            Observe::Sequential => Self {
+                obs_end_of_program: true,
+                ..default
+            },
+            Observe::Parallel => Self {
+                obs_end_of_program: true,
+                obs_each_effectful_instruction: true,
+                ..default
+            },
+            Observe::Custom {
+                end_of_program,
+                each_effectful_instruction,
+                after_rollback,
+                ref locations,
+            } => Self {
+                obs_end_of_program: end_of_program,
+                obs_each_effectful_instruction: each_effectful_instruction,
+                obs_after_rollback: after_rollback,
+                obs_locations: locations.to_owned(),
+                ..default
+            },
         }
     }
 
