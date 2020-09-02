@@ -220,7 +220,10 @@ impl Transform<ControlFlowGraph> for Observations {
             self.place_observe_after_each_effectul_instruction(cfg)?;
         }
 
-        if self.obs_transient_rollbacks {
+        if self.obs_transient_rollbacks && !self.obs_control_flow_joins {
+            // place_observe_after_rollback is a subset of place_observe_at_control_flow_joins
+            // therefore only place obs after rollback if control flow joins are not enabled,
+            // otherwise this will generate unnecessary obs duplicates.
             self.place_observe_after_rollback(cfg)?;
         }
 
