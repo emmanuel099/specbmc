@@ -110,6 +110,8 @@ pub enum Observe {
         each_effectful_instruction: bool,
         #[serde(default = "disabled")]
         after_rollback: bool,
+        #[serde(default = "disabled")]
+        control_flow_joins: bool,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         locations: Vec<u64>,
     },

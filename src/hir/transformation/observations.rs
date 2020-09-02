@@ -13,6 +13,7 @@ pub struct Observations {
     obs_end_of_program: bool,
     obs_each_effectful_instruction: bool,
     obs_after_rollback: bool,
+    obs_control_flow_joins: bool,
     obs_locations: Vec<u64>,
 }
 
@@ -25,6 +26,7 @@ impl Observations {
             obs_end_of_program: false,
             obs_each_effectful_instruction: false,
             obs_after_rollback: false,
+            obs_control_flow_joins: false,
             obs_locations: Vec::default(),
         };
 
@@ -36,17 +38,21 @@ impl Observations {
             Observe::Parallel => Self {
                 obs_end_of_program: true,
                 obs_each_effectful_instruction: true,
+                obs_after_rollback: true,
+                obs_control_flow_joins: true,
                 ..default
             },
             Observe::Custom {
                 end_of_program,
                 each_effectful_instruction,
                 after_rollback,
+                control_flow_joins,
                 ref locations,
             } => Self {
                 obs_end_of_program: end_of_program,
                 obs_each_effectful_instruction: each_effectful_instruction,
                 obs_after_rollback: after_rollback,
+                obs_control_flow_joins: control_flow_joins,
                 obs_locations: locations.to_owned(),
                 ..default
             },
@@ -126,6 +132,34 @@ impl Observations {
         Ok(())
     }
 
+    fn place_observe_at_control_flow_joins(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+        let join_block_indices: HashSet<usize> = cfg
+            .blocks()
+            .iter()
+            .filter_map(|block| {
+                let edges_in = cfg.edges_in(block.index()).unwrap();
+                if edges_in.len() > 1 {
+                    Some(block.index())
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        let obs_exprs = self.observable_exprs();
+
+        for block_index in join_block_indices {
+            let block = cfg.block_mut(block_index)?;
+
+            // Add the observe at the beginning of the block
+            let mut obs = Instruction::observable(obs_exprs.clone());
+            obs.labels_mut().pseudo();
+            block.insert_instruction(0, obs)?;
+        }
+
+        Ok(())
+    }
+
     fn place_observe_at_program_locations(
         &self,
         cfg: &mut ControlFlowGraph,
@@ -188,6 +222,10 @@ impl Transform<ControlFlowGraph> for Observations {
 
         if self.obs_after_rollback {
             self.place_observe_after_rollback(cfg)?;
+        }
+
+        if self.obs_control_flow_joins {
+            self.place_observe_at_control_flow_joins(cfg)?;
         }
 
         if self.obs_end_of_program {
