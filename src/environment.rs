@@ -107,9 +107,9 @@ pub enum Observe {
         #[serde(default = "enabled")]
         end_of_program: bool,
         #[serde(default = "disabled")]
-        each_effectful_instruction: bool,
+        effectful_instructions: bool,
         #[serde(default = "disabled")]
-        after_rollback: bool,
+        transient_rollbacks: bool,
         #[serde(default = "disabled")]
         control_flow_joins: bool,
         #[serde(default, skip_serializing_if = "Vec::is_empty")]

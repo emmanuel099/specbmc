@@ -11,8 +11,8 @@ pub struct Observations {
     btb_available: bool,
     pht_available: bool,
     obs_end_of_program: bool,
-    obs_each_effectful_instruction: bool,
-    obs_after_rollback: bool,
+    obs_effectful_instructions: bool,
+    obs_transient_rollbacks: bool,
     obs_control_flow_joins: bool,
     obs_locations: Vec<u64>,
 }
@@ -24,8 +24,8 @@ impl Observations {
             btb_available: env.architecture.branch_target_buffer,
             pht_available: env.architecture.pattern_history_table,
             obs_end_of_program: false,
-            obs_each_effectful_instruction: false,
-            obs_after_rollback: false,
+            obs_effectful_instructions: false,
+            obs_transient_rollbacks: false,
             obs_control_flow_joins: false,
             obs_locations: Vec::default(),
         };
@@ -37,21 +37,21 @@ impl Observations {
             },
             Observe::Parallel => Self {
                 obs_end_of_program: true,
-                obs_each_effectful_instruction: true,
-                obs_after_rollback: true,
+                obs_effectful_instructions: true,
+                obs_transient_rollbacks: true,
                 obs_control_flow_joins: true,
                 ..default
             },
             Observe::Custom {
                 end_of_program,
-                each_effectful_instruction,
-                after_rollback,
+                effectful_instructions,
+                transient_rollbacks,
                 control_flow_joins,
                 ref locations,
             } => Self {
                 obs_end_of_program: end_of_program,
-                obs_each_effectful_instruction: each_effectful_instruction,
-                obs_after_rollback: after_rollback,
+                obs_effectful_instructions: effectful_instructions,
+                obs_transient_rollbacks: transient_rollbacks,
                 obs_control_flow_joins: control_flow_joins,
                 obs_locations: locations.to_owned(),
                 ..default
@@ -216,11 +216,11 @@ impl Transform<ControlFlowGraph> for Observations {
     }
 
     fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
-        if self.obs_each_effectful_instruction {
+        if self.obs_effectful_instructions {
             self.place_observe_after_each_effectul_instruction(cfg)?;
         }
 
-        if self.obs_after_rollback {
+        if self.obs_transient_rollbacks {
             self.place_observe_after_rollback(cfg)?;
         }
 
