@@ -100,7 +100,7 @@ analysis:
   # Start with empty (flushed) cache? false, true [default: false]
   # Note: This option is currently only available when using the CVC4 solver.
   start_with_empty_cache: false
-  # Type of observation: sequential, parallel, custom [default: sequential]
+  # Type of observation: sequential, parallel, locations [default: sequential]
   observe: sequential
   # The program entry point: string [default: entry point from binary]
   program_entry: "main"

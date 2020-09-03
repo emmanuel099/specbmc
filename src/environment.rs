@@ -102,19 +102,8 @@ pub enum Observe {
     Sequential,
     #[serde(rename = "parallel")]
     Parallel,
-    #[serde(rename = "custom")]
-    Custom {
-        #[serde(default = "enabled")]
-        end_of_program: bool,
-        #[serde(default = "disabled")]
-        effectful_instructions: bool,
-        #[serde(default = "disabled")]
-        transient_rollbacks: bool,
-        #[serde(default = "disabled")]
-        control_flow_joins: bool,
-        #[serde(default, skip_serializing_if = "Vec::is_empty")]
-        locations: Vec<u64>,
-    },
+    #[serde(rename = "locations")]
+    Locations(Vec<u64>),
 }
 
 impl Default for Observe {

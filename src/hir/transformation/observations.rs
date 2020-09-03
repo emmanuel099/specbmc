@@ -42,17 +42,7 @@ impl Observations {
                 obs_control_flow_joins: true,
                 ..default
             },
-            Observe::Custom {
-                end_of_program,
-                effectful_instructions,
-                transient_rollbacks,
-                control_flow_joins,
-                ref locations,
-            } => Self {
-                obs_end_of_program: end_of_program,
-                obs_effectful_instructions: effectful_instructions,
-                obs_transient_rollbacks: transient_rollbacks,
-                obs_control_flow_joins: control_flow_joins,
+            Observe::Locations(ref locations) => Self {
                 obs_locations: locations.to_owned(),
                 ..default
             },
