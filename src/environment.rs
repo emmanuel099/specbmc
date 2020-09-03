@@ -38,7 +38,7 @@ pub enum Solver {
 
 impl Default for Solver {
     fn default() -> Self {
-        Self::Z3
+        Self::Yices2
     }
 }
 
