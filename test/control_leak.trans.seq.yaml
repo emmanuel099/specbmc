@@ -1,0 +1,16 @@
+analysis:
+    spectre_pht: true
+    spectre_stl: false
+    check: only_transient_leaks
+    observe: sequential
+architecture:
+    cache: false
+    btb: true
+    pht: true
+policy:
+    registers:
+        default: low
+    memory:
+        default: high
+test:
+    expect: unsafe
