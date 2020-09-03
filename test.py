@@ -7,7 +7,7 @@ import time
 import os
 from pathlib import Path
 
-SOLVER = os.getenv('SOLVER', 'yices2')
+SOLVER = os.getenv('SOLVER', '')
 DEFAULT_ARGS = os.getenv('DEFAULT_ARGS', '--skip-cex')
 SPECBMC_BIN = os.getenv('SPECBMC_BIN', 'target/debug/specbmc')
 TIMEOUT = os.getenv('TIMEOUT', 60)  # seconds
@@ -37,7 +37,9 @@ def run_test(test_file, env_file):
         return False
 
     try:
-        args = [SPECBMC_BIN, test_file, '--env', env_file, '--solver', SOLVER]
+        args = [SPECBMC_BIN, test_file, '--env', env_file]
+        if SOLVER:
+            args += ['--solver', SOLVER]
         args += shlex.split(DEFAULT_ARGS)
         start_time = time.time()
         proc = Popen(args, stdout=PIPE, stderr=PIPE)
