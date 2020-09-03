@@ -12,7 +12,6 @@ pub struct Observations {
     pht_available: bool,
     obs_end_of_program: bool,
     obs_effectful_instructions: bool,
-    obs_transient_rollbacks: bool,
     obs_control_flow_joins: bool,
     obs_locations: Vec<u64>,
 }
@@ -25,7 +24,6 @@ impl Observations {
             pht_available: env.architecture.pattern_history_table,
             obs_end_of_program: false,
             obs_effectful_instructions: false,
-            obs_transient_rollbacks: false,
             obs_control_flow_joins: false,
             obs_locations: Vec::default(),
         };
@@ -38,7 +36,6 @@ impl Observations {
             Observe::Parallel => Self {
                 obs_end_of_program: true,
                 obs_effectful_instructions: true,
-                obs_transient_rollbacks: true,
                 obs_control_flow_joins: true,
                 ..default
             },
@@ -90,33 +87,6 @@ impl Observations {
                 obs.labels_mut().pseudo();
                 block.insert_instruction(index + 1, obs)?;
             }
-        }
-
-        Ok(())
-    }
-
-    fn place_observe_after_rollback(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
-        let rollback_block_indices: HashSet<usize> = cfg
-            .edges()
-            .iter()
-            .filter_map(|edge| {
-                if edge.labels().is_rollback() {
-                    Some(edge.tail())
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        let obs_exprs = self.observable_exprs();
-
-        for block_index in rollback_block_indices {
-            let block = cfg.block_mut(block_index)?;
-
-            // Add the observe at the beginning of the block
-            let mut obs = Instruction::observable(obs_exprs.clone());
-            obs.labels_mut().pseudo();
-            block.insert_instruction(0, obs)?;
         }
 
         Ok(())
@@ -208,13 +178,6 @@ impl Transform<ControlFlowGraph> for Observations {
     fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         if self.obs_effectful_instructions {
             self.place_observe_after_each_effectul_instruction(cfg)?;
-        }
-
-        if self.obs_transient_rollbacks && !self.obs_control_flow_joins {
-            // place_observe_after_rollback is a subset of place_observe_at_control_flow_joins
-            // therefore only place obs after rollback if control flow joins are not enabled,
-            // otherwise this will generate unnecessary obs duplicates.
-            self.place_observe_after_rollback(cfg)?;
         }
 
         if self.obs_control_flow_joins {
