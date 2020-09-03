@@ -1,5 +1,8 @@
 # specbmc
 
+[![Actions](https://github.com/emmanuel099/specbmc/workflows/CI/badge.svg?branch=master)](https://github.com/emmanuel099/specbmc/actions)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 Bounded model checker for speculative non-interference.
 
 ![specbmc](doc/cli.gif)
