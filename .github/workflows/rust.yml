@@ -36,5 +36,8 @@ jobs:
           chmod +x yices &&
           sudo mv yices /usr/bin/
 
+      - name: Install CVC4
+        run: sudo apt install -y cvc4
+
       - name: Run system tests
         run: python3 test.py
