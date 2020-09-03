@@ -37,6 +37,4 @@ jobs:
           sudo mv yices /usr/bin/
 
       - name: Run system tests
-        env:
-          SOLVER: yices2
         run: python3 test.py
