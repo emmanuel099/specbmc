@@ -108,7 +108,7 @@ pub enum Observe {
 
 impl Default for Observe {
     fn default() -> Self {
-        Self::Sequential
+        Self::Parallel
     }
 }
 
