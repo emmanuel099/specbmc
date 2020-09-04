@@ -1,4 +1,6 @@
-use crate::environment::{Environment, PredictorStrategy, SPECULATION_WINDOW_SIZE, WORD_SIZE};
+use crate::environment::{
+    Environment, Observe, PredictorStrategy, SPECULATION_WINDOW_SIZE, WORD_SIZE,
+};
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Predictor, Sort, Variable};
 use crate::hir::{Block, ControlFlowGraph, Edge, Operation, RemovedEdgeGuard};
@@ -31,6 +33,30 @@ pub struct TransientExecution {
     spectre_stl: bool,
     predictor_strategy: PredictorStrategy,
     speculation_window: usize,
+    // If disabled, no intermediate resolve edges will be added, meaning
+    // that transient execution continues until max. speculation window is reached.
+    // This may miss some leaks, esp. when using the sequential observe type.
+    //
+    // With parallel observe the following type of leaks will be missed (assume only cache is visible):
+    //     <transient execution>
+    //     ...
+    //     beqz secret, Else
+    // Then:
+    //     load tmp, 21
+    //     <intermediate resolve with spec win X>
+    //     load tmp, 42
+    //     jmp End
+    // Else:
+    //     load tmp, 42
+    //     <intermediate resolve with spec win X>
+    //     load tmp, 21
+    // End:
+    //     ...
+    //     <resolve>
+    // Without intermediate resolve cache will always contain {21,42}.
+    // With intermediate resolve there may exists a spec win X, s.t. {21} and {42} is in cache,
+    // therefore we get an control-flow leak because of secret condition.
+    intermediate_resolve: bool,
 }
 
 impl TransientExecution {
@@ -40,6 +66,7 @@ impl TransientExecution {
             spectre_stl: env.analysis.spectre_stl,
             predictor_strategy: env.analysis.predictor_strategy,
             speculation_window: env.architecture.speculation_window,
+            intermediate_resolve: env.analysis.observe != Observe::Parallel,
         }
     }
 
@@ -74,6 +101,7 @@ impl TransientExecution {
                                 &mut transient_start_rollback_points,
                                 &inst_ref,
                                 self.speculation_window,
+                                self.intermediate_resolve,
                             )?;
                         }
                     }
@@ -85,6 +113,7 @@ impl TransientExecution {
                                 &mut transient_start_rollback_points,
                                 &inst_ref,
                                 self.speculation_window,
+                                self.intermediate_resolve,
                             )?;
                         }
                     }
@@ -151,8 +180,10 @@ impl TransientExecution {
             }
         }
 
-        add_transient_resolve_edges(&mut transient_cfg)?;
-        append_spec_win_decrease_to_all_blocks(&mut transient_cfg)?;
+        if self.intermediate_resolve {
+            add_transient_resolve_edges(&mut transient_cfg)?;
+            append_spec_win_decrease_to_all_blocks(&mut transient_cfg)?;
+        }
 
         // Mark all blocks as transient
         for block in transient_cfg.blocks_mut() {
@@ -170,6 +201,7 @@ impl Default for TransientExecution {
             spectre_stl: false,
             predictor_strategy: PredictorStrategy::default(),
             speculation_window: 100,
+            intermediate_resolve: true,
         }
     }
 }
@@ -279,6 +311,7 @@ fn add_transient_execution_start(
     transient_start_rollback_points: &mut BTreeMap<InstructionRef, (usize, usize)>,
     inst_ref: &InstructionRef,
     max_spec_window: usize,
+    intermediate_resolve: bool,
 ) -> Result<()> {
     let head_index = inst_ref.block();
     let tail_index = cfg.split_block_at(head_index, inst_ref.index())?;
@@ -287,32 +320,34 @@ fn add_transient_execution_start(
         let transient_start = cfg.new_block();
         transient_start.set_transient();
 
-        // initial speculation window size
-        let spec_window = Predictor::speculation_window(
-            Predictor::variable().into(),
-            BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
-        )?;
-        transient_start
-            .assign(spec_win(), spec_window)?
-            .labels_mut()
-            .pseudo();
+        if intermediate_resolve {
+            // initial speculation window size
+            let spec_window = Predictor::speculation_window(
+                Predictor::variable().into(),
+                BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
+            )?;
+            transient_start
+                .assign(spec_win(), spec_window)?
+                .labels_mut()
+                .pseudo();
 
-        let zero = BitVector::constant_u64(0, SPECULATION_WINDOW_SIZE);
-        transient_start
-            .assume(BitVector::sgt(spec_win().into(), zero)?)?
-            .labels_mut()
-            .pseudo();
+            let zero = BitVector::constant_u64(0, SPECULATION_WINDOW_SIZE);
+            transient_start
+                .assume(BitVector::sgt(spec_win().into(), zero)?)?
+                .labels_mut()
+                .pseudo();
 
-        transient_start
-            .assume(BitVector::sle(
-                spec_win().into(),
-                BitVector::constant_u64(
-                    max_spec_window.try_into().unwrap(),
-                    SPECULATION_WINDOW_SIZE,
-                ),
-            )?)?
-            .labels_mut()
-            .pseudo();
+            transient_start
+                .assume(BitVector::sle(
+                    spec_win().into(),
+                    BitVector::constant_u64(
+                        max_spec_window.try_into().unwrap(),
+                        SPECULATION_WINDOW_SIZE,
+                    ),
+                )?)?
+                .labels_mut()
+                .pseudo();
+        }
 
         transient_start.index()
     };
