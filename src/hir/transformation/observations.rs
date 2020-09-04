@@ -1,7 +1,7 @@
 use crate::environment::{Environment, Observe};
 use crate::error::Result;
 use crate::expr;
-use crate::hir::{ControlFlowGraph, Instruction};
+use crate::hir::{Block, ControlFlowGraph, Instruction};
 use crate::ir::Transform;
 use std::collections::HashSet;
 
@@ -66,8 +66,6 @@ impl Observations {
         &self,
         cfg: &mut ControlFlowGraph,
     ) -> Result<()> {
-        let obs_exprs = self.observable_exprs();
-
         for block in cfg.blocks_mut() {
             let effectful_inst_indices: Vec<usize> = block
                 .instructions()
@@ -83,9 +81,7 @@ impl Observations {
                 .collect();
 
             for index in effectful_inst_indices.iter().rev() {
-                let mut obs = Instruction::observable(obs_exprs.clone());
-                obs.labels_mut().pseudo();
-                block.insert_instruction(index + 1, obs)?;
+                self.insert_observe_instruction_at(block, index + 1)?;
             }
         }
 
@@ -106,15 +102,10 @@ impl Observations {
             })
             .collect();
 
-        let obs_exprs = self.observable_exprs();
-
         for block_index in join_block_indices {
-            let block = cfg.block_mut(block_index)?;
-
             // Add the observe at the beginning of the block
-            let mut obs = Instruction::observable(obs_exprs.clone());
-            obs.labels_mut().pseudo();
-            block.insert_instruction(0, obs)?;
+            let block = cfg.block_mut(block_index)?;
+            self.insert_observe_instruction_at(block, 0)?;
         }
 
         Ok(())
@@ -125,8 +116,6 @@ impl Observations {
         cfg: &mut ControlFlowGraph,
         locations: &[u64],
     ) -> Result<()> {
-        let obs_exprs = self.observable_exprs();
-
         for block in cfg.blocks_mut() {
             let effectful_inst_indices: Vec<usize> = block
                 .instructions()
@@ -146,9 +135,7 @@ impl Observations {
                 .collect();
 
             for index in effectful_inst_indices.iter().rev() {
-                let mut obs = Instruction::observable(obs_exprs.clone());
-                obs.labels_mut().pseudo();
-                block.insert_instruction(index + 1, obs)?;
+                self.insert_observe_instruction_at(block, index + 1)?;
             }
         }
 
@@ -157,12 +144,22 @@ impl Observations {
 
     fn place_observe_at_end_of_program(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         let exit_block = cfg.exit_block_mut()?;
-        exit_block
-            .observable(self.observable_exprs())
-            .labels_mut()
-            .pseudo();
+        self.append_observe_instruction(exit_block);
 
         Ok(())
+    }
+
+    fn insert_observe_instruction_at(&self, block: &mut Block, index: usize) -> Result<()> {
+        let obs_exprs = self.observable_exprs();
+        let mut obs = Instruction::observable(obs_exprs);
+        obs.labels_mut().pseudo();
+        block.insert_instruction(index, obs)
+    }
+
+    fn append_observe_instruction(&self, block: &mut Block) {
+        let obs_exprs = self.observable_exprs();
+        let obs = block.observable(obs_exprs);
+        obs.labels_mut().pseudo();
     }
 }
 
