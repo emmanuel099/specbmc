@@ -176,6 +176,35 @@ impl Default for Architecture {
     }
 }
 
+pub type Address = u64;
+
+/// A (half-open) range bounded inclusively below and exclusively above (start..end).
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub struct AddressRange {
+    start: Address,
+    end: Address,
+}
+
+impl AddressRange {
+    pub fn new(start: Address, end: Address) -> Self {
+        Self { start, end }
+    }
+
+    pub fn empty() -> Self {
+        Self { start: 0, end: 0 }
+    }
+
+    pub fn addresses(&self) -> impl Iterator<Item = Address> {
+        self.start..self.end
+    }
+}
+
+impl Default for AddressRange {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum SecurityLevel {
     #[serde(rename = "low")]
@@ -195,7 +224,7 @@ pub struct GenericSecurityPolicy<T: Eq + std::hash::Hash> {
 }
 
 pub type RegistersSecurityPolicy = GenericSecurityPolicy<String>;
-pub type MemorySecurityPolicy = GenericSecurityPolicy<u64>;
+pub type MemorySecurityPolicy = GenericSecurityPolicy<AddressRange>;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SecurityPolicy {

@@ -1,4 +1,4 @@
-use crate::environment::{Environment, SecurityLevel, WORD_SIZE};
+use crate::environment::{AddressRange, Environment, SecurityLevel, WORD_SIZE};
 use crate::error::Result;
 use crate::expr::{
     BitVector, BranchTargetBuffer, Cache, CacheValue, Expression, Memory, PatternHistoryTable,
@@ -6,7 +6,7 @@ use crate::expr::{
 };
 use crate::hir::{analysis, Block, ControlFlowGraph};
 use crate::ir::Transform;
-use std::collections::HashSet;
+use std::collections::{BTreeSet, HashSet};
 
 #[derive(Builder, Debug)]
 pub struct InitGlobalVariables {
@@ -14,8 +14,8 @@ pub struct InitGlobalVariables {
     btb_available: bool,
     pht_available: bool,
     memory_default_low: bool,
-    low_memory_addresses: HashSet<u64>,
-    high_memory_addresses: HashSet<u64>,
+    low_memory_addresses: BTreeSet<u64>,
+    high_memory_addresses: BTreeSet<u64>,
     registers_default_low: bool,
     low_registers: HashSet<String>,
     high_registers: HashSet<String>,
@@ -32,8 +32,8 @@ impl InitGlobalVariables {
             btb_available: env.architecture.branch_target_buffer,
             pht_available: env.architecture.pattern_history_table,
             memory_default_low: memory_policy.default_level == SecurityLevel::Low,
-            low_memory_addresses: memory_policy.low.clone(),
-            high_memory_addresses: memory_policy.high.clone(),
+            low_memory_addresses: address_ranges_to_addresses(&memory_policy.low),
+            high_memory_addresses: address_ranges_to_addresses(&memory_policy.high),
             registers_default_low: register_policy.default_level == SecurityLevel::Low,
             low_registers: register_policy.low.clone(),
             high_registers: register_policy.high.clone(),
@@ -157,8 +157,8 @@ impl Default for InitGlobalVariables {
             btb_available: false,
             pht_available: false,
             memory_default_low: false,
-            low_memory_addresses: HashSet::new(),
-            high_memory_addresses: HashSet::new(),
+            low_memory_addresses: BTreeSet::new(),
+            high_memory_addresses: BTreeSet::new(),
             registers_default_low: true,
             low_registers: HashSet::new(),
             high_registers: HashSet::new(),
@@ -199,4 +199,16 @@ fn havoc_variable(block: &mut Block, var: Variable) -> Result<()> {
 
 fn low_equivalent(block: &mut Block, expr: Expression) {
     block.indistinguishable(vec![expr]).labels_mut().pseudo();
+}
+
+fn address_ranges_to_addresses(address_ranges: &HashSet<AddressRange>) -> BTreeSet<u64> {
+    let mut addresses = BTreeSet::new();
+
+    address_ranges.iter().for_each(|range| {
+        for addr in range.addresses() {
+            addresses.insert(addr);
+        }
+    });
+
+    addresses
 }

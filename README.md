@@ -128,7 +128,7 @@ policy:
     high: []
     # List of low-security registers [default: empty] (only makes sense when default is high)
     low: []
-  memory:
+  memory: # Memory locations defined by sections with start and end address (end is exclusive)
     # The default security policy of all memory locations: low, high [default: high]
     default: high
     # List of high-security memory locations [default: empty] (only makes sense when default is low)
@@ -163,6 +163,13 @@ policy:
     high: ["secret"]
   memory:
     default: high
+    low:
+      - # section A
+        start: 0x200000
+        end: 0x201000
+      - # section B
+        start: 0x300000
+        end: 0x301000
 ```
 
 #### Environment Auto-loading:
