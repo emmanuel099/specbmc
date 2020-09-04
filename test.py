@@ -27,9 +27,6 @@ def get_expected_value_from_environment(env_file: str):
 
 
 def run_test(test_file, env_file):
-    print(f'test {test_file} with environment {env_file} ... ',
-          end='', flush=True)
-
     try:
         expected = get_expected_value_from_environment(env_file)
     except:
@@ -84,18 +81,23 @@ print(f'TIMEOUT={TIMEOUT}s')
 
 print()
 
-some_test_failed = False
+failed_tests = []
 
 for test_file in find_tests():
     for env_file in find_environments_for_test(test_file):
+        test_name = f'{test_file} with environment {env_file}'
+        print(f'test {test_name} ... ', end='', flush=True)
         if not run_test(test_file, env_file):
-            some_test_failed = True
+            failed_tests.append(test_name)
 
 print()
 
-if some_test_failed:
-    print("Some tests failed!")
+if failed_tests:
+    print(f'{len(failed_tests)} tests failed!')
+    print('\nFailed tests:')
+    for failed_test in failed_tests:
+        print(f'  - {failed_test}')
     exit(1)
 
-print("All tests passed.")
+print('All tests passed.')
 exit(0)
