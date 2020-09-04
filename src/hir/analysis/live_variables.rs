@@ -26,6 +26,7 @@ impl LiveVariables {
 }
 
 /// Computes the set of live variables for each basic block.
+/// (backwards may analysis)
 ///
 /// This analysis is limited to DAGs only.
 pub fn live_variables(cfg: &ControlFlowGraph) -> Result<LiveVariables> {
