@@ -94,14 +94,13 @@ impl Transform<ControlFlowGraph> for NonSpecObsEquivalence {
 fn create_nonspec_indistinguishable_equivalent(inst: &Instruction) -> Instruction {
     assert!(inst.is_observable());
 
-    if let Operation::Observable { exprs } = inst.operation() {
-        let mut nonspec_exprs = exprs.to_owned();
-        nonspec_exprs.iter_mut().for_each(|expr| {
-            expr.variables_mut()
-                .into_iter()
-                .for_each(replace_variable_with_nonspec_equivalent);
-        });
-        Instruction::indistinguishable(nonspec_exprs)
+    if let Operation::Observable { expr } = inst.operation() {
+        let mut nonspec_expr = expr.clone();
+        nonspec_expr
+            .variables_mut()
+            .into_iter()
+            .for_each(replace_variable_with_nonspec_equivalent);
+        Instruction::indistinguishable(nonspec_expr)
     } else {
         unreachable!()
     }

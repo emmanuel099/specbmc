@@ -39,10 +39,10 @@ pub enum Operation {
     Assert { condition: Expression },
     /// Assume that the condition is true.
     Assume { condition: Expression },
-    /// The listed expressions are observable to an adversary.
-    Observable { exprs: Vec<Expression> },
-    /// The listed expressions are indistinguishable for an adversary.
-    Indistinguishable { exprs: Vec<Expression> },
+    /// The expression is observable by an adversary.
+    Observable { expr: Expression },
+    /// The expression is indistinguishable to an adversary.
+    Indistinguishable { expr: Expression },
 }
 
 impl Operation {
@@ -117,13 +117,13 @@ impl Operation {
     }
 
     /// Create a new `Operation::Observable`
-    pub fn observable(exprs: Vec<Expression>) -> Self {
-        Self::Observable { exprs }
+    pub fn observable(expr: Expression) -> Self {
+        Self::Observable { expr }
     }
 
     /// Create a new `Operation::Indistinguishable`
-    pub fn indistinguishable(exprs: Vec<Expression>) -> Self {
-        Self::Indistinguishable { exprs }
+    pub fn indistinguishable(expr: Expression) -> Self {
+        Self::Indistinguishable { expr }
     }
 
     pub fn is_assign(&self) -> bool {
@@ -213,7 +213,9 @@ impl Operation {
     /// Get each `Variable` read by this `Operation`.
     pub fn variables_read(&self) -> Vec<&Variable> {
         match self {
-            Self::Assign { expr, .. } => expr.variables(),
+            Self::Assign { expr, .. }
+            | Self::Observable { expr }
+            | Self::Indistinguishable { expr } => expr.variables(),
             Self::Store {
                 memory_in,
                 address,
@@ -238,16 +240,15 @@ impl Operation {
                 .collect(),
             Self::Assert { condition } | Self::Assume { condition } => condition.variables(),
             Self::Skip | Self::Barrier => Vec::new(),
-            Self::Observable { exprs } | Self::Indistinguishable { exprs } => {
-                exprs.iter().flat_map(Expression::variables).collect()
-            }
         }
     }
 
     /// Get a mutable reference to each `Variable` read by this `Operation`.
     pub fn variables_read_mut(&mut self) -> Vec<&mut Variable> {
         match self {
-            Self::Assign { expr, .. } => expr.variables_mut(),
+            Self::Assign { expr, .. }
+            | Self::Observable { expr }
+            | Self::Indistinguishable { expr } => expr.variables_mut(),
             Self::Store {
                 memory_in,
                 address,
@@ -272,10 +273,6 @@ impl Operation {
                 .collect(),
             Self::Assert { condition } | Self::Assume { condition } => condition.variables_mut(),
             Self::Skip | Self::Barrier => Vec::new(),
-            Self::Observable { exprs } | Self::Indistinguishable { exprs } => exprs
-                .iter_mut()
-                .flat_map(Expression::variables_mut)
-                .collect(),
         }
     }
 
@@ -350,26 +347,8 @@ impl fmt::Display for Operation {
             Self::Assume { condition } => write!(f, "assume {}", condition),
             Self::Skip => write!(f, "skip"),
             Self::Barrier => write!(f, "barrier"),
-            Self::Observable { exprs } => {
-                write!(f, "observable(")?;
-                if !exprs.is_empty() {
-                    write!(f, "{}", exprs.first().unwrap())?;
-                    for expr in exprs.iter().skip(1) {
-                        write!(f, ", {}", expr)?;
-                    }
-                }
-                write!(f, ")")
-            }
-            Self::Indistinguishable { exprs } => {
-                write!(f, "indistinguishable(")?;
-                if !exprs.is_empty() {
-                    write!(f, "{}", exprs.first().unwrap())?;
-                    for expr in exprs.iter().skip(1) {
-                        write!(f, ", {}", expr)?;
-                    }
-                }
-                write!(f, ")")
-            }
+            Self::Observable { expr } => write!(f, "observable({})", expr),
+            Self::Indistinguishable { expr } => write!(f, "indistinguishable({})", expr),
         }
     }
 }

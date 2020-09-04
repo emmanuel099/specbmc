@@ -129,13 +129,13 @@ impl Instruction {
     }
 
     /// Create a new `Observable` instruction.
-    pub fn observable(exprs: Vec<Expression>) -> Self {
-        Self::new(Operation::observable(exprs))
+    pub fn observable(expr: Expression) -> Self {
+        Self::new(Operation::observable(expr))
     }
 
     /// Create a new `Indistinguishable` instruction.
-    pub fn indistinguishable(exprs: Vec<Expression>) -> Self {
-        Self::new(Operation::indistinguishable(exprs))
+    pub fn indistinguishable(expr: Expression) -> Self {
+        Self::new(Operation::indistinguishable(expr))
     }
 
     /// Get the operation of this `Instruction`

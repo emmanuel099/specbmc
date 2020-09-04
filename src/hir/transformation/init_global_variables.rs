@@ -198,7 +198,7 @@ fn havoc_variable(block: &mut Block, var: Variable) -> Result<()> {
 }
 
 fn low_equivalent(block: &mut Block, expr: Expression) {
-    block.indistinguishable(vec![expr]).labels_mut().pseudo();
+    block.indistinguishable(expr).labels_mut().pseudo();
 }
 
 fn address_ranges_to_addresses(address_ranges: &HashSet<AddressRange>) -> BTreeSet<u64> {

@@ -240,15 +240,14 @@ impl Block {
     }
 
     /// Adds an observable operation to the end of this block.
-    pub fn observable(&mut self, exprs: Vec<Expression>) -> &mut Instruction {
-        self.instructions.push(Instruction::observable(exprs));
+    pub fn observable(&mut self, expr: Expression) -> &mut Instruction {
+        self.instructions.push(Instruction::observable(expr));
         self.instructions.last_mut().unwrap()
     }
 
     /// Adds an indistinguishable operation to the end of this block.
-    pub fn indistinguishable(&mut self, exprs: Vec<Expression>) -> &mut Instruction {
-        self.instructions
-            .push(Instruction::indistinguishable(exprs));
+    pub fn indistinguishable(&mut self, expr: Expression) -> &mut Instruction {
+        self.instructions.push(Instruction::indistinguishable(expr));
         self.instructions.last_mut().unwrap()
     }
 
