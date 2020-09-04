@@ -150,16 +150,20 @@ impl Observations {
     }
 
     fn insert_observe_instruction_at(&self, block: &mut Block, index: usize) -> Result<()> {
-        let obs_exprs = self.observable_exprs();
-        let mut obs = Instruction::observable(obs_exprs);
-        obs.labels_mut().pseudo();
-        block.insert_instruction(index, obs)
+        for expr in self.observable_exprs() {
+            let mut obs = Instruction::observable(vec![expr]);
+            obs.labels_mut().pseudo();
+            block.insert_instruction(index, obs)?;
+        }
+
+        Ok(())
     }
 
     fn append_observe_instruction(&self, block: &mut Block) {
-        let obs_exprs = self.observable_exprs();
-        let obs = block.observable(obs_exprs);
-        obs.labels_mut().pseudo();
+        for expr in self.observable_exprs() {
+            let obs = block.observable(vec![expr]);
+            obs.labels_mut().pseudo();
+        }
     }
 }
 
