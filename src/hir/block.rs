@@ -94,11 +94,20 @@ impl Block {
     }
 
     /// Deletes an `Instruction` by its index.
-    pub fn remove_instruction(&mut self, index: usize) -> Result<()> {
+    pub fn remove_instruction(&mut self, index: usize) -> Result<Instruction> {
         if index >= self.instructions.len() {
             return Err(format!("No instruction with index {} found", index).into());
         }
-        self.instructions.remove(index);
+        Ok(self.instructions.remove(index))
+    }
+
+    /// Deletes multiple `Instruction`s by their indices.
+    pub fn remove_instructions(&mut self, indices: &[usize]) -> Result<()> {
+        let mut indices = indices.to_owned();
+        indices.sort();
+        for index in indices.into_iter().rev() {
+            self.remove_instruction(index)?;
+        }
         Ok(())
     }
 
