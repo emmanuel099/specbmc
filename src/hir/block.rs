@@ -182,6 +182,24 @@ impl Block {
         self.phi_nodes.last_mut().unwrap()
     }
 
+    /// Deletes a `PhiNode` by its index.
+    pub fn remove_phi_node(&mut self, index: usize) -> Result<PhiNode> {
+        if index >= self.phi_nodes.len() {
+            return Err(format!("No phi node with index {} found", index).into());
+        }
+        Ok(self.phi_nodes.remove(index))
+    }
+
+    /// Deletes multiple `PhiNode`s by their indices.
+    pub fn remove_phi_nodes(&mut self, indices: &[usize]) -> Result<()> {
+        let mut indices = indices.to_owned();
+        indices.sort();
+        for index in indices.into_iter().rev() {
+            self.remove_phi_node(index)?;
+        }
+        Ok(())
+    }
+
     /// Adds an assign operation to the end of this block.
     pub fn assign(&mut self, variable: Variable, expr: Expression) -> Result<&mut Instruction> {
         self.instructions.push(Instruction::assign(variable, expr)?);
