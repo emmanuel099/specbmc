@@ -1,0 +1,19 @@
+    load array1_size, 0x201030
+    ZF <- (array1_size - rdi) = 0x0
+    CF <- ult(array1_size, array1_size - rdi)
+    cond <- and(CF = 0x0, ZF = 0x0)
+    beqz cond, EndIf
+Then:
+    load rax, 0x201018
+    load rax, rax + rdi * 0x8
+    rax <- rax << 0xC
+    load array2, 0x201020
+    rax <- rax + array2
+    load rax, rax
+    load temp, 0x201038
+    temp <- temp /\ rax
+    store temp, 0x201038
+EndIf:
+    load return_addr, rsp
+    rsp <- rsp + 0x8
+    %jmp return_addr

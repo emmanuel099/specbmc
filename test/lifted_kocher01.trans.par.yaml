@@ -1,0 +1,20 @@
+analysis:
+    spectre_pht: true
+    spectre_stl: false
+    check: only_transient_leaks
+    observe: parallel
+architecture:
+    cache: true
+    btb: true
+    pht: true
+policy:
+    registers:
+        default: low
+    memory:
+        default: high
+        low:
+            - # bss section
+              start: 0x201010
+              end: 0x201049
+test:
+    expect: unsafe
