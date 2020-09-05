@@ -4,11 +4,11 @@ Then:
     load x, 0
     beqz x, NestedElse
 NestedThen:
-    load tmp, 21
+    load tmp, 21 % resolve after this instruction if spec-win is 3
     load tmp, 42
     jmp End
 NestedElse:
-    load tmp, 42
+    load tmp, 42 % resolve after this instruction if spec-win is 3
     load tmp, 21
 End:
-    skip
+    skip % observe that the cache contains {21} vs {42} -> leak

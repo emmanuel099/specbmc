@@ -92,7 +92,7 @@ fn parse_arguments() -> Arguments {
             Arg::with_name("observe")
                 .long("observe")
                 .value_name("OBSERVE")
-                .possible_values(&["sequential", "parallel"])
+                .possible_values(&["sequential", "parallel", "full"])
                 .help("Sets observation type")
                 .takes_value(true),
         )
@@ -251,6 +251,7 @@ fn parse_arguments() -> Arguments {
     let parse_observe = |observe: &str| match observe {
         "sequential" => Observe::Sequential,
         "parallel" => Observe::Parallel,
+        "full" => Observe::Full,
         _ => panic!("unknown observe type"),
     };
 

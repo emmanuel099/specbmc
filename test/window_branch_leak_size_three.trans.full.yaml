@@ -2,7 +2,7 @@ analysis:
     spectre_pht: true
     spectre_stl: false
     check: only_transient_leaks
-    observe: parallel
+    observe: full
 architecture:
     cache: true
     btb: false
@@ -13,4 +13,4 @@ policy:
     memory:
         default: high
 test:
-    expect: safe
+    expect: unsafe

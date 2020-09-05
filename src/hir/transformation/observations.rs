@@ -33,7 +33,7 @@ impl Observations {
                 obs_end_of_program: true,
                 ..default
             },
-            Observe::Parallel => Self {
+            Observe::Parallel | Observe::Full => Self {
                 obs_end_of_program: true,
                 obs_effectful_instructions: true,
                 obs_control_flow_joins: true,

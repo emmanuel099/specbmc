@@ -103,7 +103,14 @@ analysis:
   # Start with empty (flushed) cache? false, true [default: false]
   # Note: This option is currently only available when using the CVC4 solver.
   start_with_empty_cache: false
-  # Type of observation: sequential, parallel, locations [default: parallel]
+  # Type of observation: sequential, parallel, full [default: parallel]
+  #   - sequential: Observe only at the end of the program.
+  #                 Transient execution can resolve at any time.
+  #   - parallel:   Observe each instruction and control-flow join.
+  #                 Transient execution resolves only if speculation window is exceeded.
+  #                 Much cheaper than `full` but may miss some special types of control-flow leaks,
+  #                 see `test/window_branch_leak_size_three.muasm`.
+  #   - full:       Same as parallel but transient execution can resolve at any time.
   observe: parallel
   # The program entry point: string [default: entry point from binary]
   program_entry: "main"
