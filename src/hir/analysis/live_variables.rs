@@ -48,6 +48,11 @@ pub fn live_variables(cfg: &ControlFlowGraph) -> Result<LiveVariables> {
                 out.insert(var.to_owned());
             });
         }
+        for edge in cfg.edges_out(block_index)? {
+            edge.variables_read().into_iter().for_each(|var| {
+                out.insert(var.clone());
+            })
+        }
 
         // inp = gen U (out / kill)
         let mut inp: HashSet<Variable> = out.clone();
