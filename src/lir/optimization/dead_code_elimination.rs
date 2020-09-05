@@ -56,9 +56,9 @@ fn variable_definitions(nodes: &[Node]) -> HashMap<&Variable, usize> {
     let mut defs = HashMap::new();
 
     nodes.iter().enumerate().for_each(|(index, node)| {
-        if let Node::Let { var, .. } = node {
+        node.variables_defined().iter().for_each(|&var| {
             defs.insert(var, index);
-        }
+        });
     });
 
     defs
@@ -95,15 +95,7 @@ fn mark(nodes: &[Node]) -> BitVec {
             }
         };
 
-        match &nodes[index] {
-            Node::Let { expr, .. } => {
-                expr.variables().iter().for_each(mark_def);
-            }
-            Node::Assert { condition } | Node::Assume { condition } => {
-                condition.variables().iter().for_each(mark_def)
-            }
-            _ => (),
-        }
+        nodes[index].variables_used().iter().for_each(mark_def);
     }
 
     marks
