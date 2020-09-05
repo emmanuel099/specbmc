@@ -1,0 +1,17 @@
+solver: cvc4
+analysis:
+    spectre_pht: true
+    spectre_stl: false
+    check: all_leaks
+    observe: parallel
+architecture:
+    cache: true
+    btb: false
+    pht: false
+policy:
+    registers:
+        default: low
+    memory:
+        default: high
+test:
+    expect: unsafe
