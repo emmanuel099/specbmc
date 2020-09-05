@@ -6,6 +6,12 @@ use std::collections::HashSet;
 pub fn global_variables(cfg: &ControlFlowGraph) -> HashSet<Variable> {
     let mut globals = HashSet::new();
 
+    for edge in cfg.edges() {
+        edge.variables_read().into_iter().for_each(|variable| {
+            globals.insert(variable.clone());
+        });
+    }
+
     for block in cfg.blocks() {
         let mut killed = HashSet::new();
 
