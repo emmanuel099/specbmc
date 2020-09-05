@@ -5,6 +5,7 @@ mod instruction_effects;
 mod loop_unwinding;
 mod non_spec_obs_equiv;
 mod observations;
+mod optimization;
 mod ssa_transformation;
 mod transient_execution;
 
@@ -15,6 +16,7 @@ pub use self::instruction_effects::InstructionEffects;
 pub use self::loop_unwinding::LoopUnwinding;
 pub use self::non_spec_obs_equiv::NonSpecObsEquivalence;
 pub use self::observations::Observations;
+pub use self::optimization::Optimizer;
 pub use self::ssa_transformation::{SSAForm, SSATransformation};
 pub use self::transient_execution::TransientExecution;
 

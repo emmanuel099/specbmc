@@ -397,6 +397,7 @@ fn hir_transformations(
             steps.push(Box::new(NonSpecObsEquivalence::new_from_env(env)));
         }
         steps.push(Box::new(SSATransformation::new(SSAForm::Pruned)));
+        steps.push(Box::new(Optimizer::new_from_env(env)));
         steps
     };
 
