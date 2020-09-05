@@ -5,11 +5,13 @@ use crate::ir::Transform;
 
 mod constant_propagation;
 mod copy_propagation;
+mod dead_code_elimination;
 mod phi_elimination;
 mod redundant_instruction_elimination;
 
 use constant_propagation::ConstantPropagation;
 use copy_propagation::CopyPropagation;
+use dead_code_elimination::DeadCodeElimination;
 use phi_elimination::PhiElimination;
 use redundant_instruction_elimination::RedundantInstructionElimination;
 
@@ -62,6 +64,7 @@ impl Optimizer {
                 Box::new(CopyPropagation::new()),
                 Box::new(PhiElimination::new()),
                 Box::new(RedundantInstructionElimination::new()),
+                Box::new(DeadCodeElimination::new()),
             ],
             repetitions: 5,
         }
