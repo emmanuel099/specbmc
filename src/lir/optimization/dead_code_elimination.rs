@@ -16,6 +16,7 @@ use std::collections::HashMap;
 pub struct DeadCodeElimination {}
 
 impl DeadCodeElimination {
+    #[allow(dead_code)] // This doesn't play nicely with our current CEX construction approach
     pub fn new() -> Self {
         Self {}
     }

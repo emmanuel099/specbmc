@@ -9,7 +9,7 @@ pub enum ProgramEntry {
     Address(u64),
 }
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Default)]
 pub struct Program {
     functions: BTreeMap<u64, Function>,
     entry: Option<ProgramEntry>,

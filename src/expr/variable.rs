@@ -4,7 +4,7 @@ use std::fmt;
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Variable {
     name: String,
-    sort: Sort,
+    sort: Box<Sort>,
     version: Option<usize>,     // Version in SSA form
     composition: Option<usize>, // Composition Number when self-composed
 }
@@ -17,7 +17,7 @@ impl Variable {
     {
         Self {
             name: name.into(),
-            sort,
+            sort: Box::new(sort),
             version: None,
             composition: None,
         }

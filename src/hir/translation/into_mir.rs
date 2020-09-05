@@ -60,12 +60,14 @@ fn translate_operation(operation: &hir::Operation) -> Result<Option<mir::Node>> 
         Assign { variable, expr } => Some(mir::Node::assign(variable.clone(), expr.clone())?),
         Assert { condition } => Some(mir::Node::assert(condition.clone())?),
         Assume { condition } => Some(mir::Node::assume(condition.clone())?),
-        Observable { expr } => Some(mir::Node::hyper_assert(equal_under_self_composition(
-            &vec![expr.clone()],
-        ))?),
-        Indistinguishable { expr } => Some(mir::Node::hyper_assume(equal_under_self_composition(
-            &vec![expr.clone()],
-        ))?),
+        Observable { expr } => Some(mir::Node::hyper_assert(equal_under_self_composition(&[
+            expr.clone(),
+        ]))?),
+        Indistinguishable { expr } => {
+            Some(mir::Node::hyper_assume(equal_under_self_composition(&[
+                expr.clone(),
+            ]))?)
+        }
         Store {
             address,
             expr,

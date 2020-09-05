@@ -222,11 +222,7 @@ impl FalconTranslator {
                         let expr = translate_expr(src)?;
                         let expr = maybe_cast(expr, variable.sort())?;
                         // Only assign new value if condition holds, otherwise assign identity
-                        let expr = expr::Expression::ite(
-                            condition.clone(),
-                            expr.clone(),
-                            variable.clone().into(),
-                        )?;
+                        let expr = expr::Expression::ite(condition, expr, variable.clone().into())?;
                         block.assign(variable, expr)
                     }
                     il::Operation::Branch { target } => {

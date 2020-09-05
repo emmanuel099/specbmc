@@ -63,7 +63,7 @@ fn inline_calls(cfg: &mut ControlFlowGraph, program: &Program) -> Result<()> {
 fn find_next_call_in_block(block: &Block) -> Option<(usize, u64)> {
     for (index, inst) in block.instructions().iter().enumerate() {
         if let Operation::Call { target } = inst.operation() {
-            if let Some(address) = target.try_into().ok() {
+            if let Ok(address) = target.try_into() {
                 return Some((index, address));
             }
         }
