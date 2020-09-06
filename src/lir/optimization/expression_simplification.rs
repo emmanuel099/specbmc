@@ -17,10 +17,7 @@ impl ExpressionSimplification {
 
 impl Optimization for ExpressionSimplification {
     fn optimize(&self, program: &mut Program) -> Result<OptimizationResult> {
-        let simplified = program
-            .nodes_mut()
-            .iter_mut()
-            .fold(false, |simplified, node| simplify_node(node) || simplified);
+        let simplified = simplify_program(program);
 
         if simplified {
             Ok(OptimizationResult::Changed)
@@ -30,10 +27,15 @@ impl Optimization for ExpressionSimplification {
     }
 }
 
+fn simplify_program(program: &mut Program) -> bool {
+    program
+        .nodes_mut()
+        .iter_mut()
+        .fold(false, |simplified, node| simplify_node(node) || simplified)
+}
+
 fn simplify_node(node: &mut Node) -> bool {
-    match node {
-        Node::Let { expr, .. } => expr.simplify(),
-        Node::Assert { condition } | Node::Assume { condition } => condition.simplify(),
-        _ => false,
-    }
+    node.expressions_mut()
+        .iter_mut()
+        .fold(false, |simplified, expr| expr.simplify() || simplified)
 }

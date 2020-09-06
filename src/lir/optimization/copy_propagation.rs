@@ -77,14 +77,9 @@ impl PropagateCopies for Node {
             }
         };
 
-        match self {
-            Self::Let { expr, .. } => expr.variables_mut().into_iter().for_each(replace_if_copied),
-            Self::Assert { condition } | Self::Assume { condition } => condition
-                .variables_mut()
-                .into_iter()
-                .for_each(replace_if_copied),
-            _ => (),
-        }
+        self.variables_used_mut()
+            .into_iter()
+            .for_each(replace_if_copied);
     }
 }
 

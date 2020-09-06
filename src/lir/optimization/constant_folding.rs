@@ -18,10 +18,7 @@ impl ConstantFolding {
 
 impl Optimization for ConstantFolding {
     fn optimize(&self, program: &mut Program) -> Result<OptimizationResult> {
-        let folded = program
-            .nodes_mut()
-            .iter_mut()
-            .fold(false, |folded, node| fold_node(node) || folded);
+        let folded = fold_program(program);
 
         if folded {
             Ok(OptimizationResult::Changed)
@@ -31,10 +28,15 @@ impl Optimization for ConstantFolding {
     }
 }
 
+fn fold_program(program: &mut Program) -> bool {
+    program
+        .nodes_mut()
+        .iter_mut()
+        .fold(false, |folded, node| fold_node(node) || folded)
+}
+
 fn fold_node(node: &mut Node) -> bool {
-    match node {
-        Node::Let { expr, .. } => expr.fold(),
-        Node::Assert { condition } | Node::Assume { condition } => condition.fold(),
-        _ => false,
-    }
+    node.expressions_mut()
+        .iter_mut()
+        .fold(false, |folded, expr| expr.fold() || folded)
 }

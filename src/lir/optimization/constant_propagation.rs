@@ -69,13 +69,9 @@ impl PropagateConstants for Program {
 
 impl PropagateConstants for Node {
     fn propagate_constants(&mut self, constants: &ConstantVariables) {
-        match self {
-            Self::Let { expr, .. } => expr.propagate_constants(constants),
-            Self::Assert { condition } | Self::Assume { condition } => {
-                condition.propagate_constants(constants)
-            }
-            _ => (),
-        }
+        self.expressions_mut()
+            .iter_mut()
+            .for_each(|expr| expr.propagate_constants(constants))
     }
 }
 
