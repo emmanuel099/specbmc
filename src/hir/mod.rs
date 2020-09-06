@@ -1,4 +1,8 @@
 //! SpecBMC HIR
+//!
+//! The design of HIR has been heavily inspired by Falcon IL (https://github.com/falconre/falcon).
+//! Major parts of ControlFlowGraph and SSA-Transformation have been copied and adapted from Falcon
+//! (see copyright block of each of those files).
 
 pub mod analysis;
 mod block;
