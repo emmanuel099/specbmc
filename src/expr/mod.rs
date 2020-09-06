@@ -8,6 +8,7 @@ mod bitvector;
 mod boolean;
 mod constant;
 mod integer;
+mod optimization;
 mod sort;
 mod variable;
 
@@ -17,6 +18,7 @@ pub use self::bitvector::{BitVector, BitVectorValue};
 pub use self::boolean::Boolean;
 pub use self::constant::Constant;
 pub use self::integer::Integer;
+pub use self::optimization::*;
 pub use self::sort::Sort;
 pub use self::variable::Variable;
 
