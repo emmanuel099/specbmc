@@ -77,7 +77,7 @@ impl Transform<ControlFlowGraph> for Optimizer {
     }
 
     fn description(&self) -> String {
-        "Optimization".to_string()
+        "Optimize".to_string()
     }
 
     fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {

@@ -478,11 +478,9 @@ fn check_program(arguments: &Arguments) -> Result<()> {
         println!("{}:\n{}\n---", "Environment".bold(), style(&env).cyan());
     }
 
-    println!(
-        "{} Load program '{}'",
-        style("[1/8]").bold().dim(),
-        input_file.yellow()
-    );
+    let bullet_point = style(">>").bold().dim();
+
+    println!("{} Load program '{}'", bullet_point, input_file.yellow());
     let input_file_path = Path::new(input_file);
     let loader = loader::loader_for_file(input_file_path).ok_or("No compatible loader found")?;
     let mut program = loader.load_program()?;
@@ -493,7 +491,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
         program.set_entry(entry)?;
     }
 
-    println!("{} Inline functions", style("[2/8]").bold().dim());
+    println!("{} Inline functions", bullet_point);
     if let Some(path) = &arguments.call_graph_file {
         let call_graph = hir::analysis::call_graph(&program);
         call_graph.render_to_file(Path::new(path))?;
@@ -507,7 +505,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
             .render_to_file(Path::new(path))?;
     }
 
-    println!("{} Transform HIR ...", style("[3/8]").bold().dim());
+    println!("{} Transform HIR ...", bullet_point);
     hir_transformations(&env, &mut hir_program)?;
 
     if let Some(path) = &arguments.transient_cfg_file {
@@ -516,18 +514,18 @@ fn check_program(arguments: &Arguments) -> Result<()> {
             .render_to_file(Path::new(path))?;
     }
 
-    println!("{} Translate into MIR", style("[4/8]").bold().dim());
+    println!("{} Translate into MIR", bullet_point);
     let mir_program = mir::Program::try_translate_from(&hir_program)?;
 
     if let Some(path) = &arguments.mir_file {
         mir_program.block_graph().render_to_file(Path::new(path))?;
     }
 
-    println!("{} Translate into LIR", style("[5/8]").bold().dim());
+    println!("{} Translate into LIR", bullet_point);
     let mut lir_program = lir::Program::try_translate_from(&mir_program)?;
     lir_program.validate()?;
 
-    println!("{} Optimize LIR", style("[6/8]").bold().dim());
+    println!("{} Optimize LIR", bullet_point);
     lir_optimize(&env, &mut lir_program)?;
 
     if let Some(path) = &arguments.lir_file {
@@ -541,8 +539,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
 
     println!(
         "{} Encode LIR as SMT formula (solver={})",
-        style("[7/8]").bold().dim(),
-        env.solver
+        bullet_point, env.solver
     );
     solver.encode_program(&lir_program)?;
 
@@ -550,7 +547,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
         return Ok(());
     }
 
-    println!("{} Search for leaks ...", style("[8/8]").bold().dim());
+    println!("{} Search for leaks ...", bullet_point);
     match solver.check_assertions()? {
         CheckResult::AssertionsHold => {
             println!("{}", "Program is safe.".bold().green());
