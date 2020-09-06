@@ -114,6 +114,24 @@ impl Node {
             .chain(self.variables_defined().into_iter())
             .collect()
     }
+
+    /// Get each `Expression` of this `Node`.
+    pub fn expressions(&self) -> Vec<&Expression> {
+        match self {
+            Self::Let { expr, .. } => vec![expr],
+            Self::Assert { condition } | Self::Assume { condition } => vec![condition],
+            Self::Comment(_) => Vec::new(),
+        }
+    }
+
+    /// Get a mutable reference to each `Expression` of this `Node`.
+    pub fn expressions_mut(&mut self) -> Vec<&mut Expression> {
+        match self {
+            Self::Let { expr, .. } => vec![expr],
+            Self::Assert { condition } | Self::Assume { condition } => vec![condition],
+            Self::Comment(_) => Vec::new(),
+        }
+    }
 }
 
 impl fmt::Display for Node {
