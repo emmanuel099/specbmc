@@ -251,7 +251,7 @@ impl Default for SecurityPolicy {
     }
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Environment {
     #[serde(rename = "optimization", default)]
     pub optimization_level: OptimizationLevel,
@@ -275,6 +275,20 @@ impl Environment {
             .map_err(|_| format!("Environment file '{}' could not be loaded", path.display()))?;
         let reader = BufReader::new(file);
         Ok(serde_yaml::from_reader(reader)?)
+    }
+}
+
+impl Default for Environment {
+    fn default() -> Self {
+        Self {
+            optimization_level: OptimizationLevel::default(),
+            solver: Solver::default(),
+            analysis: Analysis::default(),
+            architecture: Architecture::default(),
+            policy: SecurityPolicy::default(),
+            debug: false,
+            generate_counterexample: true,
+        }
     }
 }
 
