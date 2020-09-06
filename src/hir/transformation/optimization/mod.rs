@@ -3,12 +3,14 @@ use crate::error::Result;
 use crate::hir::ControlFlowGraph;
 use crate::ir::Transform;
 
+mod constant_folding;
 mod constant_propagation;
 mod copy_propagation;
 mod dead_code_elimination;
 mod phi_elimination;
 mod redundant_instruction_elimination;
 
+use constant_folding::ConstantFolding;
 use constant_propagation::ConstantPropagation;
 use copy_propagation::CopyPropagation;
 use dead_code_elimination::DeadCodeElimination;
@@ -60,6 +62,7 @@ impl Optimizer {
     pub fn full() -> Self {
         Self {
             optimizations: vec![
+                Box::new(ConstantFolding::new()),
                 Box::new(ConstantPropagation::new()),
                 Box::new(CopyPropagation::new()),
                 Box::new(PhiElimination::new()),
