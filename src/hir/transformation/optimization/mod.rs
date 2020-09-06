@@ -7,6 +7,7 @@ mod constant_folding;
 mod constant_propagation;
 mod copy_propagation;
 mod dead_code_elimination;
+mod expression_simplification;
 mod phi_elimination;
 mod redundant_instruction_elimination;
 
@@ -14,6 +15,7 @@ use constant_folding::ConstantFolding;
 use constant_propagation::ConstantPropagation;
 use copy_propagation::CopyPropagation;
 use dead_code_elimination::DeadCodeElimination;
+use expression_simplification::ExpressionSimplification;
 use phi_elimination::PhiElimination;
 use redundant_instruction_elimination::RedundantInstructionElimination;
 
@@ -65,6 +67,7 @@ impl Optimizer {
                 Box::new(ConstantFolding::new()),
                 Box::new(ConstantPropagation::new()),
                 Box::new(CopyPropagation::new()),
+                Box::new(ExpressionSimplification::new()),
                 Box::new(PhiElimination::new()),
                 Box::new(RedundantInstructionElimination::new()),
                 Box::new(DeadCodeElimination::new()),
