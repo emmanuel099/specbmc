@@ -41,7 +41,7 @@ trait DceCritical {
 
 impl DceCritical for Instruction {
     fn is_critical(&self) -> bool {
-        self.variables_written().is_empty()
+        self.variables_written().is_empty() || self.has_effects()
     }
 }
 
