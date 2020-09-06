@@ -8,7 +8,7 @@
 use crate::error::Result;
 use crate::expr::{Expression, Operator, Variable};
 use crate::hir::transformation::optimization::{Optimization, OptimizationResult};
-use crate::hir::{Block, ControlFlowGraph, Edge, Effect, Instruction, Operation};
+use crate::hir::{Block, ControlFlowGraph, Edge, Operation};
 use std::collections::HashMap;
 
 pub struct ConstantPropagation {}
@@ -83,74 +83,9 @@ impl PropagateConstants for Edge {
 
 impl PropagateConstants for Block {
     fn propagate_constants(&mut self, constants: &ConstantVariables) {
-        self.instructions_mut()
+        self.expressions_mut()
             .iter_mut()
-            .for_each(|inst| inst.propagate_constants(constants));
-    }
-}
-
-impl PropagateConstants for Instruction {
-    fn propagate_constants(&mut self, constants: &ConstantVariables) {
-        self.effects_mut()
-            .iter_mut()
-            .for_each(|effect| effect.propagate_constants(constants));
-
-        self.operation_mut().propagate_constants(constants);
-    }
-}
-
-impl PropagateConstants for Effect {
-    fn propagate_constants(&mut self, constants: &ConstantVariables) {
-        match self {
-            Self::Conditional { condition, effect } => {
-                condition.propagate_constants(constants);
-                effect.propagate_constants(constants);
-            }
-            Self::CacheFetch { address, .. } => {
-                address.propagate_constants(constants);
-            }
-            Self::BranchTarget { location, target } => {
-                location.propagate_constants(constants);
-                target.propagate_constants(constants);
-            }
-            Self::BranchCondition {
-                location,
-                condition,
-            } => {
-                location.propagate_constants(constants);
-                condition.propagate_constants(constants);
-            }
-        }
-    }
-}
-
-impl PropagateConstants for Operation {
-    fn propagate_constants(&mut self, constants: &ConstantVariables) {
-        match self {
-            Self::Assign { expr, .. }
-            | Self::Observable { expr }
-            | Self::Indistinguishable { expr } => {
-                expr.propagate_constants(constants);
-            }
-            Self::Store { address, expr, .. } => {
-                address.propagate_constants(constants);
-                expr.propagate_constants(constants);
-            }
-            Self::Load { address, .. } => {
-                address.propagate_constants(constants);
-            }
-            Self::Call { target } | Self::Branch { target } => {
-                target.propagate_constants(constants);
-            }
-            Self::ConditionalBranch { condition, target } => {
-                condition.propagate_constants(constants);
-                target.propagate_constants(constants);
-            }
-            Self::Assert { condition } | Self::Assume { condition } => {
-                condition.propagate_constants(constants);
-            }
-            Self::Skip | Self::Barrier => {}
-        }
+            .for_each(|expr| expr.propagate_constants(constants));
     }
 }
 
