@@ -117,15 +117,25 @@ fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::ControlFlowGraph> {
         instruction_indices.insert(address, (*new_entry, *new_exit));
     }
 
-    let resolve_edge_block_indices =
-        |from_address: u64, to_address: u64| -> Option<(usize, usize)> {
-            let (_, from_exit) = instruction_indices.get(&from_address).unwrap();
-            if let Some((to_entry, _)) = instruction_indices.get(&to_address) {
-                Some((*from_exit, *to_entry))
-            } else {
-                None
-            }
-        };
+    // Add a dedicated entry block.
+    // This makes sure that the entry block has no predecessors.
+    let entry = cfg.new_block().index();
+    cfg.unconditional_edge(entry, 0)?;
+    cfg.set_entry(entry)?;
+
+    // Add a dedicated exit block.
+    // This makes sure that there is only a single end block without successors.
+    let exit = cfg.new_block().index();
+    cfg.set_exit(exit)?;
+
+    let resolve_edge_block_indices = |from_address: u64, to_address: u64| -> (usize, usize) {
+        let (_, from_block) = instruction_indices.get(&from_address).unwrap();
+        if let Some((to_block, _)) = instruction_indices.get(&to_address) {
+            (*from_block, *to_block)
+        } else {
+            (*from_block, exit)
+        }
+    };
 
     // Add edges between instruction graphs
     for instruction in program.instructions() {
@@ -133,52 +143,31 @@ fn translate_ir_to_hir(program: &ir::Program) -> Result<hir::ControlFlowGraph> {
         match instruction.operation() {
             ir::Operation::Jump { target } => {
                 let target_address = resolve_target_address(target)?;
-                if let Some((from, to)) = resolve_edge_block_indices(address, target_address) {
-                    cfg.unconditional_edge(from, to)?;
-                }
+                let (from, to) = resolve_edge_block_indices(address, target_address);
+                cfg.unconditional_edge(from, to)?;
             }
             ir::Operation::BranchIfZero { reg, target } => {
                 let cond_not_taken =
                     expr::Expression::unequal(reg.to_hir_expr()?, 0.to_hir_expr()?)?;
-                if let Some((from, to)) = resolve_edge_block_indices(address, address + 1) {
-                    cfg.conditional_edge(from, to, cond_not_taken)?;
-                }
+                let (from, to) = resolve_edge_block_indices(address, address + 1);
+                cfg.conditional_edge(from, to, cond_not_taken)?;
 
                 let cond_taken = expr::Expression::equal(reg.to_hir_expr()?, 0.to_hir_expr()?)?;
                 let target_address = resolve_target_address(target)?;
-                if let Some((from, to)) = resolve_edge_block_indices(address, target_address) {
-                    cfg.conditional_edge(from, to, cond_taken)?
-                        .labels_mut()
-                        .taken();
-                }
+                let (from, to) = resolve_edge_block_indices(address, target_address);
+                cfg.conditional_edge(from, to, cond_taken)?
+                    .labels_mut()
+                    .taken();
             }
             _ => {
-                if let Some((from, to)) = resolve_edge_block_indices(address, address + 1) {
-                    cfg.unconditional_edge(from, to)?;
-                }
+                let (from, to) = resolve_edge_block_indices(address, address + 1);
+                cfg.unconditional_edge(from, to)?;
             }
         };
     }
 
-    // Add a dedicated entry block.
-    // This makes sure that the entry block has no predecessors.
-    let entry = cfg.new_block().index();
-    cfg.unconditional_edge(entry, 0)?;
-    cfg.set_entry(entry)?;
-
-    // Add a dedicated exit block and connect all end blocks (= blocks without successor) to it.
-    // This makes sure that there is only a single end block.
-    let end_blocks: Vec<usize> = cfg
-        .graph()
-        .vertices_without_successors()
-        .iter()
-        .map(|block| block.index())
-        .collect();
-    let exit = cfg.new_block().index();
-    for end_block in end_blocks {
-        cfg.unconditional_edge(end_block, exit)?;
-    }
-    cfg.set_exit(exit)?;
+    // The only block without successors should be the exit block.
+    assert!(cfg.graph().vertices_without_successors() == vec![cfg.exit_block()?]);
 
     cfg.simplify()?;
 
