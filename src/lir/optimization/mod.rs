@@ -11,6 +11,7 @@ mod expression_simplification;
 use constant_folding::ConstantFolding;
 use constant_propagation::ConstantPropagation;
 use copy_propagation::CopyPropagation;
+use dead_code_elimination::DeadCodeElimination;
 use expression_simplification::ExpressionSimplification;
 
 #[derive(Eq, PartialEq)]
@@ -33,7 +34,14 @@ impl Optimizer {
         match env.optimization_level {
             OptimizationLevel::Disabled => Self::none(),
             OptimizationLevel::Basic => Self::basic(),
-            OptimizationLevel::Full => Self::full(),
+            OptimizationLevel::Full => {
+                if env.generate_counterexample {
+                    // Dead code elimination on LIR-level doesn't play nicely with our current CEX construction approach
+                    Self::full_without_dce()
+                } else {
+                    Self::full()
+                }
+            }
         }
     }
 
@@ -52,6 +60,19 @@ impl Optimizer {
     }
 
     pub fn full() -> Self {
+        Self {
+            optimizations: vec![
+                Box::new(ConstantFolding::new()),
+                Box::new(ConstantPropagation::new()),
+                Box::new(ExpressionSimplification::new()),
+                Box::new(CopyPropagation::new()),
+                Box::new(DeadCodeElimination::new()),
+            ],
+            repetitions: 5,
+        }
+    }
+
+    fn full_without_dce() -> Self {
         Self {
             optimizations: vec![
                 Box::new(ConstantFolding::new()),
