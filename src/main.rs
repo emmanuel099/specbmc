@@ -375,6 +375,10 @@ fn build_environment(arguments: &Arguments) -> Result<environment::Environment> 
         env.debug = true;
     }
 
+    if arguments.skip_cex {
+        env.generate_counterexample = false;
+    }
+
     Ok(env)
 }
 
@@ -542,7 +546,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
         CheckResult::AssertionViolated { model } => {
             println!("{}", "Leak detected!".bold().red());
 
-            if !arguments.skip_cex {
+            if env.generate_counterexample {
                 let counter_example = cex::build_counter_example(&hir_program, model.as_ref())?;
                 counter_example
                     .control_flow_graph()

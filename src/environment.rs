@@ -265,6 +265,8 @@ pub struct Environment {
     pub policy: SecurityPolicy,
     #[serde(default = "disabled")]
     pub debug: bool,
+    #[serde(default = "enabled")]
+    pub generate_counterexample: bool,
 }
 
 impl Environment {
