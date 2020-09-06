@@ -317,6 +317,36 @@ impl Operation {
             .chain(self.variables_written().into_iter())
             .collect()
     }
+
+    /// Get each `Expression` of this `Operation`.
+    pub fn expressions(&self) -> Vec<&Expression> {
+        match self {
+            Self::Assign { expr, .. }
+            | Self::Observable { expr }
+            | Self::Indistinguishable { expr } => vec![expr],
+            Self::Store { address, expr, .. } => vec![address, expr],
+            Self::Load { address, .. } => vec![address],
+            Self::Call { target } | Self::Branch { target } => vec![target],
+            Self::ConditionalBranch { condition, target } => vec![condition, target],
+            Self::Assert { condition } | Self::Assume { condition } => vec![condition],
+            Self::Skip | Self::Barrier => Vec::new(),
+        }
+    }
+
+    /// Get a mutable reference to each `Expression` of this `Operation`.
+    pub fn expressions_mut(&mut self) -> Vec<&mut Expression> {
+        match self {
+            Self::Assign { expr, .. }
+            | Self::Observable { expr }
+            | Self::Indistinguishable { expr } => vec![expr],
+            Self::Store { address, expr, .. } => vec![address, expr],
+            Self::Load { address, .. } => vec![address],
+            Self::Call { target } | Self::Branch { target } => vec![target],
+            Self::ConditionalBranch { condition, target } => vec![condition, target],
+            Self::Assert { condition } | Self::Assume { condition } => vec![condition],
+            Self::Skip | Self::Barrier => Vec::new(),
+        }
+    }
 }
 
 impl fmt::Display for Operation {

@@ -276,6 +276,24 @@ impl Instruction {
             .chain(self.variables_written().into_iter())
             .collect()
     }
+
+    /// Get each `Expression` of this `Operation`.
+    pub fn expressions(&self) -> Vec<&Expression> {
+        self.effects
+            .iter()
+            .flat_map(Effect::expressions)
+            .chain(self.operation.expressions())
+            .collect()
+    }
+
+    /// Get a mutable reference to each `Expression` of this `Operation`.
+    pub fn expressions_mut(&mut self) -> Vec<&mut Expression> {
+        self.effects
+            .iter_mut()
+            .flat_map(Effect::expressions_mut)
+            .chain(self.operation.expressions_mut())
+            .collect()
+    }
 }
 
 impl fmt::Display for Instruction {

@@ -101,6 +101,38 @@ impl Effect {
                 .collect(),
         }
     }
+
+    /// Get each `Expression` of this `Effect`.
+    pub fn expressions(&self) -> Vec<&Expression> {
+        match self {
+            Self::Conditional { condition, effect } => vec![condition]
+                .into_iter()
+                .chain(effect.expressions())
+                .collect(),
+            Self::CacheFetch { address, .. } => vec![address],
+            Self::BranchTarget { location, target } => vec![location, target],
+            Self::BranchCondition {
+                location,
+                condition,
+            } => vec![location, condition],
+        }
+    }
+
+    /// Get a mutable reference to each `Expression` of this `Effect`.
+    pub fn expressions_mut(&mut self) -> Vec<&mut Expression> {
+        match self {
+            Self::Conditional { condition, effect } => vec![condition]
+                .into_iter()
+                .chain(effect.expressions_mut())
+                .collect(),
+            Self::CacheFetch { address, .. } => vec![address],
+            Self::BranchTarget { location, target } => vec![location, target],
+            Self::BranchCondition {
+                location,
+                condition,
+            } => vec![location, condition],
+        }
+    }
 }
 
 impl fmt::Display for Effect {

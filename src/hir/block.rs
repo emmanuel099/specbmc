@@ -325,6 +325,22 @@ impl Block {
             .chain(self.variables_written().into_iter())
             .collect()
     }
+
+    /// Get each `Expression` of this `Block`.
+    pub fn expressions(&self) -> Vec<&Expression> {
+        self.instructions
+            .iter()
+            .flat_map(Instruction::expressions)
+            .collect()
+    }
+
+    /// Get a mutable reference to each `Expression` of this `Block`.
+    pub fn expressions_mut(&mut self) -> Vec<&mut Expression> {
+        self.instructions
+            .iter_mut()
+            .flat_map(Instruction::expressions_mut)
+            .collect()
+    }
 }
 
 impl graph::Vertex for Block {
