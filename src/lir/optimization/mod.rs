@@ -1,3 +1,4 @@
+use crate::environment::{Environment, OptimizationLevel};
 use crate::error::Result;
 use crate::lir::Program;
 
@@ -28,6 +29,14 @@ pub struct Optimizer {
 }
 
 impl Optimizer {
+    pub fn new_from_env(env: &Environment) -> Self {
+        match env.optimization_level {
+            OptimizationLevel::Disabled => Self::none(),
+            OptimizationLevel::Basic => Self::basic(),
+            OptimizationLevel::Full => Self::full(),
+        }
+    }
+
     pub fn none() -> Self {
         Self {
             optimizations: Vec::new(),

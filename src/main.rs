@@ -423,20 +423,6 @@ fn hir_transformations(
     Ok(())
 }
 
-fn lir_optimize(env: &environment::Environment, program: &mut lir::Program) -> Result<()> {
-    use lir::optimization::*;
-
-    let optimizer = match env.optimization_level {
-        environment::OptimizationLevel::Disabled => Optimizer::none(),
-        environment::OptimizationLevel::Basic => Optimizer::basic(),
-        environment::OptimizationLevel::Full => Optimizer::full(),
-    };
-
-    optimizer.optimize(program)?;
-
-    Ok(())
-}
-
 fn spec_bmc(arguments: &Arguments) -> Result<()> {
     if arguments.print_assembly_info {
         print_assembly_info(arguments)?;
@@ -526,7 +512,8 @@ fn check_program(arguments: &Arguments) -> Result<()> {
     lir_program.validate()?;
 
     println!("{} Optimize LIR", bullet_point);
-    lir_optimize(&env, &mut lir_program)?;
+    let lir_optimizer = lir::optimization::Optimizer::new_from_env(&env);
+    lir_optimizer.optimize(&mut lir_program)?;
 
     if let Some(path) = &arguments.lir_file {
         lir_program.dump_to_file(Path::new(path))?;
