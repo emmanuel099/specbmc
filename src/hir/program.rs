@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::hir::Function;
+use crate::hir::{Function, Memory};
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -13,6 +13,7 @@ pub enum ProgramEntry {
 pub struct Program {
     functions: BTreeMap<u64, Function>,
     entry: Option<ProgramEntry>,
+    memory: Memory,
 }
 
 impl Program {
@@ -20,6 +21,7 @@ impl Program {
         Self {
             functions: BTreeMap::new(),
             entry: None,
+            memory: Memory::default(),
         }
     }
 
@@ -81,6 +83,14 @@ impl Program {
         } else {
             None
         }
+    }
+
+    pub fn memory(&self) -> &Memory {
+        &self.memory
+    }
+
+    pub fn memory_mut(&mut self) -> &mut Memory {
+        &mut self.memory
     }
 }
 

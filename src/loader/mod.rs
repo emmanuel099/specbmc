@@ -37,11 +37,16 @@ impl fmt::Display for FunctionInfo {
 pub struct MemorySectionInfo {
     pub start_address: u64,
     pub end_address: u64,
+    pub permissions: hir::MemoryPermissions,
 }
 
 impl fmt::Display for MemorySectionInfo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "0x{:X} - 0x{:X}", self.start_address, self.end_address)
+        write!(
+            f,
+            "0x{:X} - 0x{:X}: {:?}",
+            self.start_address, self.end_address, self.permissions
+        )
     }
 }
 

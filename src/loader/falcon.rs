@@ -44,9 +44,11 @@ impl loader::Loader for FalconLoader {
         let mut memory_sections = Vec::new();
         for (&start_address, section) in elf.memory()?.sections() {
             let end_address = start_address + section.len() as u64;
+            let permissions = translate_memory_permissions(section.permissions());
             memory_sections.push(loader::MemorySectionInfo {
                 start_address,
                 end_address,
+                permissions,
             });
         }
 
@@ -70,11 +72,19 @@ impl loader::Loader for FalconLoader {
         };
 
         let mut hir_prog = hir::Program::new();
+
         for function in program.functions() {
             let hir_func = translator.translate_function(function)?;
             hir_prog.insert_function(hir_func)?;
         }
         hir_prog.set_entry(hir::ProgramEntry::Address(elf.program_entry()))?;
+
+        for (&start_address, section) in elf.memory()?.sections() {
+            let end_address = start_address + section.len() as u64;
+            let permissions = translate_memory_permissions(section.permissions());
+            let mem_section = hir::MemorySection::new(start_address, end_address, permissions);
+            hir_prog.memory_mut().insert_section(mem_section);
+        }
 
         Ok(hir_prog)
     }
@@ -103,6 +113,22 @@ fn lift_elf(elf: &Elf) -> Result<il::Program> {
         }
         Err(_) => Err("Failed to load ELF file!".into()),
     }
+}
+
+fn translate_memory_permissions(
+    perms: falcon::memory::MemoryPermissions,
+) -> hir::MemoryPermissions {
+    let mut permissions = hir::MemoryPermissions::empty();
+    if perms.contains(falcon::memory::MemoryPermissions::READ) {
+        permissions |= hir::MemoryPermissions::READ;
+    }
+    if perms.contains(falcon::memory::MemoryPermissions::WRITE) {
+        permissions |= hir::MemoryPermissions::WRITE;
+    }
+    if perms.contains(falcon::memory::MemoryPermissions::EXECUTE) {
+        permissions |= hir::MemoryPermissions::EXECUTE;
+    }
+    permissions
 }
 
 struct FalconTranslator {
