@@ -3,11 +3,13 @@
 [![Actions](https://github.com/emmanuel099/specbmc/workflows/CI/badge.svg?branch=master)](https://github.com/emmanuel099/specbmc/actions)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Bounded model checker for speculative non-interference.
+Bounded (software) model checker for speculative non-interference.
+
+`specbmc` automatically detects Spectre-PHT and Spectre-STL vulnerabilites in binary programs.
 
 ![specbmc](doc/cli.gif)
 
-Please note that `specbmc` has been implemented as part of my Master's Thesis and is therfore not considered "production ready".
+Please note that `specbmc` has been implemented as part of my Master's Thesis and is therefore not considered "production ready".
 
 This work has been inspired by [Spectector](https://spectector.github.io/).
 
