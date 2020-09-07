@@ -479,6 +479,10 @@ impl ControlFlowGraph {
                     continue;
                 }
 
+                if edge_should_not_be_simplified(outgoing_edge) {
+                    continue;
+                }
+
                 // If this successor is already being merged, skip it
                 let successor = outgoing_edge.tail();
                 if blocks_being_merged.contains(&successor) {
@@ -553,8 +557,14 @@ impl ControlFlowGraph {
                 continue;
             }
 
+            let outgoing_edge = self.edge(block_index, successor)?;
+
+            if edge_should_not_be_simplified(outgoing_edge) {
+                continue;
+            }
+
             // The labels of the outgoing edge will be merged into all the rewired edges
-            let outgoing_edge_labels = self.edge(block_index, successor)?.labels().clone();
+            let outgoing_edge_labels = outgoing_edge.labels().clone();
 
             // Rewire predecessor's outgoing edges from self to successor
             for predecessor in predecessors {
@@ -705,6 +715,12 @@ impl RenderGraph for ControlFlowGraph {
     fn render_to_str(&self) -> String {
         self.graph().dot_graph()
     }
+}
+
+// Returns true if the edge should not be removed during simplification.
+// This is useful, e.g., to retain the structure of calls.
+fn edge_should_not_be_simplified(edge: &Edge) -> bool {
+    edge.labels().is_call() || edge.labels().is_return()
 }
 
 #[cfg(test)]
