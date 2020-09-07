@@ -22,9 +22,11 @@ impl FunctionInlining {
         let entry_func = program
             .entry_function()
             .ok_or("no entry function defined")?;
+
         let mut cfg = entry_func.control_flow_graph().clone();
         self.inline_calls(&mut cfg, program)?;
         cfg.simplify()?;
+
         Ok(InlinedProgram::new(cfg))
     }
 
@@ -41,7 +43,7 @@ impl FunctionInlining {
         while let Some((block_index, call_depth_in_caller)) = remaining_block_indices.pop() {
             let block = cfg.block(block_index)?;
 
-            if let Some((instruction_index, address)) = find_next_call_in_block(block) {
+            if let Some((call_inst_index, address)) = find_next_call_in_block(block) {
                 if let Some(func) = program.function_by_address(address) {
                     let func_call_depth = call_depth_in_caller
                         .get(&address)
@@ -51,7 +53,7 @@ impl FunctionInlining {
                         continue;
                     }
 
-                    let ret_block_index = cfg.split_block_at(block_index, instruction_index + 1)?;
+                    let ret_block_index = cfg.split_block_at(block_index, call_inst_index + 1)?;
 
                     let func_block_index_mapping = cfg.insert(func.control_flow_graph())?;
                     let func_entry_block_index = func_block_index_mapping
