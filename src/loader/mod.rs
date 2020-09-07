@@ -34,9 +34,21 @@ impl fmt::Display for FunctionInfo {
     }
 }
 
+pub struct MemorySectionInfo {
+    pub start_address: u64,
+    pub end_address: u64,
+}
+
+impl fmt::Display for MemorySectionInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "0x{:X} - 0x{:X}", self.start_address, self.end_address)
+    }
+}
+
 pub struct AssemblyInfo {
     pub entry: u64,
     pub functions: Vec<FunctionInfo>,
+    pub memory_sections: Vec<MemorySectionInfo>,
 }
 
 impl fmt::Display for AssemblyInfo {
@@ -45,6 +57,12 @@ impl fmt::Display for AssemblyInfo {
         writeln!(f, "Functions:")?;
         for func in &self.functions {
             writeln!(f, "  {}", func)?;
+        }
+        if !self.memory_sections.is_empty() {
+            writeln!(f, "Memory Sections:")?;
+            for section in &self.memory_sections {
+                writeln!(f, "  {}", section)?;
+            }
         }
         Ok(())
     }

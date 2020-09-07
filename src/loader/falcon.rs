@@ -41,9 +41,19 @@ impl loader::Loader for FalconLoader {
             });
         }
 
+        let mut memory_sections = Vec::new();
+        for (&start_address, section) in elf.memory()?.sections() {
+            let end_address = start_address + section.len() as u64;
+            memory_sections.push(loader::MemorySectionInfo {
+                start_address,
+                end_address,
+            });
+        }
+
         Ok(loader::AssemblyInfo {
             entry: elf.program_entry(),
             functions,
+            memory_sections,
         })
     }
 

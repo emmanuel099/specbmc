@@ -33,6 +33,7 @@ impl Loader for MuasmLoader {
         Ok(AssemblyInfo {
             entry: MAIN_ADDRESS,
             functions: vec![main],
+            memory_sections: Vec::default(),
         })
     }
 
