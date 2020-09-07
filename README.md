@@ -7,8 +7,13 @@ Bounded model checker for speculative non-interference.
 
 ![specbmc](doc/cli.gif)
 
+Please note that `specbmc` has been implemented as part of my Master's Thesis and is therfore not considered "production ready".
+
+This work has been inspired by ![Spectector](https://spectector.github.io/).
 
 ## Usage
+
+Input files are currently limited to µASM files and ELF binaries.
 
 ### Command Line
 
