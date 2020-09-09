@@ -49,7 +49,7 @@ impl Block {
     }
 
     pub fn execution_condition_variable_for_index(index: usize) -> Variable {
-        Variable::new(format!("_exec_{}", index), Sort::boolean())
+        Variable::new(format!("_exec_{:X}", index), Sort::boolean())
     }
 
     pub fn add_node(&mut self, node: Node) {
