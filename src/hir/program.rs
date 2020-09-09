@@ -44,7 +44,7 @@ impl Program {
     pub fn insert_function(&mut self, func: Function) -> Result<()> {
         let addr = func.address();
         if self.functions.contains_key(&addr) {
-            return Err(format!("Function with address {} exists already", addr).into());
+            return Err(format!("Function with address 0x{:X} exists already", addr).into());
         }
         self.functions.insert(addr, func);
         Ok(())
