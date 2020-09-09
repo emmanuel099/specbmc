@@ -2,7 +2,7 @@ use crate::cex::{
     AnnotatedBlock, AnnotatedEdge, Composition, ControlFlowGraph, CounterExample, Effect,
 };
 use crate::error::Result;
-use crate::expr::{Constant, Expression, Variable};
+use crate::expr::{Constant, Expression, Sort, Variable};
 use crate::hir;
 use crate::solver::Model;
 
@@ -184,8 +184,7 @@ trait Evaluate {
 
 impl Evaluate for Variable {
     fn evaluate(&self, model: &dyn Model, composition: Composition) -> Option<Constant> {
-        if self.sort().is_predictor() {
-            // FIXME
+        if skip_eval(self.sort()) {
             return None;
         }
         model.get_interpretation(&self.self_compose(composition.number()))
@@ -194,10 +193,21 @@ impl Evaluate for Variable {
 
 impl Evaluate for Expression {
     fn evaluate(&self, model: &dyn Model, composition: Composition) -> Option<Constant> {
-        if self.sort().is_predictor() {
-            // FIXME
+        if skip_eval(self.sort()) {
             return None;
         }
         model.evaluate(&self.self_compose(composition.number()))
     }
+}
+
+/// Returns true for sorts which should not be evaluated.
+/// We skip the listed sorts for now because they immensely blow up the counter example,
+/// making it unable to read an interpret.
+/// This can be dropped once a better output format is implemented.
+fn skip_eval(sort: &Sort) -> bool {
+    sort.is_memory()
+        || sort.is_cache()
+        || sort.is_predictor()
+        || sort.is_branch_target_buffer()
+        || sort.is_pattern_history_table()
 }
