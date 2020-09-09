@@ -1,4 +1,4 @@
-use crate::environment::{Environment, WORD_SIZE};
+use crate::environment::Environment;
 use crate::error::Result;
 use crate::expr::BitVector;
 use crate::hir::{Effect, Instruction, Operation};
@@ -40,28 +40,22 @@ impl InstructionEffects {
             }
             Operation::Call { target } | Operation::Branch { target } => {
                 if self.btb_available {
-                    let location = BitVector::constant_u64(
-                        instruction.address().unwrap_or_default(),
-                        WORD_SIZE,
-                    );
+                    let location =
+                        BitVector::word_constant(instruction.address().unwrap_or_default());
                     effects.push(Effect::branch_target(location, target.clone()));
                 }
             }
             Operation::ConditionalBranch { condition, target } => {
                 if self.btb_available {
-                    let location = BitVector::constant_u64(
-                        instruction.address().unwrap_or_default(),
-                        WORD_SIZE,
-                    );
+                    let location =
+                        BitVector::word_constant(instruction.address().unwrap_or_default());
                     effects.push(
                         Effect::branch_target(location, target.clone()).only_if(condition.clone()),
                     );
                 }
                 if self.pht_available {
-                    let location = BitVector::constant_u64(
-                        instruction.address().unwrap_or_default(),
-                        WORD_SIZE,
-                    );
+                    let location =
+                        BitVector::word_constant(instruction.address().unwrap_or_default());
                     effects.push(Effect::branch_condition(location, condition.clone()));
                 }
             }

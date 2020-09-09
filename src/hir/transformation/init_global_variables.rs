@@ -1,4 +1,4 @@
-use crate::environment::{AddressRange, Environment, SecurityLevel, WORD_SIZE};
+use crate::environment::{AddressRange, Environment, SecurityLevel};
 use crate::error::Result;
 use crate::expr::{
     BitVector, BranchTargetBuffer, Cache, CacheValue, Expression, Memory, PatternHistoryTable,
@@ -75,7 +75,7 @@ impl InitGlobalVariables {
             for address in &self.high_memory_addresses {
                 let secret_var = BitVector::variable("_secret", 8);
                 havoc_variable(entry_block, secret_var.clone())?;
-                let addr = BitVector::constant_u64(*address, WORD_SIZE);
+                let addr = BitVector::word_constant(*address);
                 entry_block
                     .store(addr, secret_var.into())?
                     .labels_mut()
@@ -83,7 +83,7 @@ impl InitGlobalVariables {
             }
         } else {
             for address in &self.low_memory_addresses {
-                let addr = BitVector::constant_u64(*address, WORD_SIZE);
+                let addr = BitVector::word_constant(*address);
                 let memory_content_at_address = Memory::load(8, Memory::variable().into(), addr)?;
                 low_equivalent(entry_block, memory_content_at_address);
             }

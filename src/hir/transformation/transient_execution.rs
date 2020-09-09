@@ -1,6 +1,4 @@
-use crate::environment::{
-    Environment, Observe, PredictorStrategy, SPECULATION_WINDOW_SIZE, WORD_SIZE,
-};
+use crate::environment::{Environment, Observe, PredictorStrategy, SPECULATION_WINDOW_SIZE};
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Predictor, Sort, Variable};
 use crate::hir::{Block, ControlFlowGraph, Edge, Operation, RemovedEdgeGuard};
@@ -330,7 +328,7 @@ fn add_transient_execution_start(
             // initial speculation window size
             let spec_window = Predictor::speculation_window(
                 Predictor::variable().into(),
-                BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
+                BitVector::word_constant(inst_ref.address()),
             )?;
             transient_start
                 .assign(spec_win(), spec_window)?
@@ -360,7 +358,7 @@ fn add_transient_execution_start(
 
     let transient_exec = Predictor::speculate(
         Predictor::variable().into(),
-        BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
+        BitVector::word_constant(inst_ref.address()),
     )?;
 
     let normal_exec = Boolean::not(transient_exec.clone())?;
@@ -393,7 +391,7 @@ fn transient_store(
 
     let bypass = Predictor::speculate(
         Predictor::variable().into(),
-        BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
+        BitVector::word_constant(inst_ref.address()),
     )?;
     let execute = Boolean::not(bypass.clone())?;
 
@@ -429,7 +427,7 @@ fn transient_conditional_branch(
 
     let speculate = Predictor::speculate(
         Predictor::variable().into(),
-        BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
+        BitVector::word_constant(inst_ref.address()),
     )?;
     let execute_correctly = Boolean::not(speculate.clone())?;
 
@@ -450,7 +448,7 @@ fn transient_conditional_branch(
                     if edge.labels().is_taken() {
                         let taken = Predictor::taken(
                             Predictor::variable().into(),
-                            BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
+                            BitVector::word_constant(inst_ref.address()),
                         )?;
                         cfg.block_mut(speculate_index)?
                             .assume(taken.clone())?
@@ -462,7 +460,7 @@ fn transient_conditional_branch(
                     } else {
                         let not_taken = Boolean::not(Predictor::taken(
                             Predictor::variable().into(),
-                            BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
+                            BitVector::word_constant(inst_ref.address()),
                         )?)?;
                         cfg.block_mut(speculate_index)?
                             .assume(not_taken.clone())?
@@ -482,7 +480,7 @@ fn transient_conditional_branch(
 
                     let taken = Predictor::taken(
                         Predictor::variable().into(),
-                        BitVector::constant_u64(inst_ref.address(), WORD_SIZE),
+                        BitVector::word_constant(inst_ref.address()),
                     )?;
                     let not_taken = Boolean::not(taken.clone())?;
 
@@ -761,8 +759,8 @@ mod tests {
 
     #[test]
     fn test_transient_store() {
-        let addr = BitVector::constant_u64(42, WORD_SIZE);
-        let var = Variable::new("x", Sort::bit_vector(WORD_SIZE));
+        let addr = BitVector::word_constant(42);
+        let var = Variable::new("x", Sort::word());
 
         // Given:
         let given_cfg = {
@@ -770,7 +768,7 @@ mod tests {
 
             let block = cfg.new_block();
             block
-                .assign(var.clone(), BitVector::constant_u64(0, WORD_SIZE))
+                .assign(var.clone(), BitVector::word_constant(0))
                 .unwrap()
                 .set_address(Some(1));
             block
@@ -804,7 +802,7 @@ mod tests {
             let block0_index = {
                 let block = cfg.new_block();
                 block
-                    .assign(var.clone(), BitVector::constant_u64(0, WORD_SIZE))
+                    .assign(var.clone(), BitVector::word_constant(0))
                     .unwrap()
                     .set_address(Some(1));
                 block.index()
@@ -828,11 +826,9 @@ mod tests {
                 block.index()
             };
 
-            let store_bypass = Predictor::speculate(
-                Predictor::variable().into(),
-                BitVector::constant_u64(2, WORD_SIZE),
-            )
-            .unwrap();
+            let store_bypass =
+                Predictor::speculate(Predictor::variable().into(), BitVector::word_constant(2))
+                    .unwrap();
             let store_exec = Boolean::not(store_bypass.clone()).unwrap();
 
             cfg.conditional_edge(block0_index, block1_index, store_exec)
@@ -872,7 +868,7 @@ mod tests {
             let block0_index = {
                 let block = cfg.new_block();
                 block
-                    .conditional_branch(cond.clone(), BitVector::constant_u64(4, WORD_SIZE))
+                    .conditional_branch(cond.clone(), BitVector::word_constant(4))
                     .unwrap()
                     .set_address(Some(4));
                 block.index()
@@ -897,7 +893,7 @@ mod tests {
                     .unwrap()
                     .set_address(Some(2));
                 block
-                    .branch(BitVector::constant_u64(5, WORD_SIZE))
+                    .branch(BitVector::word_constant(5))
                     .unwrap()
                     .set_address(Some(3));
                 block.index()
@@ -966,7 +962,7 @@ mod tests {
                     .unwrap()
                     .set_address(Some(2));
                 block
-                    .branch(BitVector::constant_u64(5, WORD_SIZE))
+                    .branch(BitVector::word_constant(5))
                     .unwrap()
                     .set_address(Some(3));
                 block.index()
@@ -980,7 +976,7 @@ mod tests {
             let block4_index = {
                 let block = cfg.new_block();
                 block
-                    .conditional_branch(cond.clone(), BitVector::constant_u64(4, WORD_SIZE))
+                    .conditional_branch(cond.clone(), BitVector::word_constant(4))
                     .unwrap()
                     .set_address(Some(4));
                 block.index()
@@ -1000,18 +996,14 @@ mod tests {
             cfg.unconditional_edge(block1_index, block3_index).unwrap();
             cfg.unconditional_edge(block2_index, block3_index).unwrap();
 
-            let speculate = Predictor::speculate(
-                Predictor::variable().into(),
-                BitVector::constant_u64(1, WORD_SIZE),
-            )
-            .unwrap();
+            let speculate =
+                Predictor::speculate(Predictor::variable().into(), BitVector::word_constant(1))
+                    .unwrap();
             let not_speculate = Boolean::not(speculate.clone()).unwrap();
 
-            let speculate_taken = Predictor::taken(
-                Predictor::variable().into(),
-                BitVector::constant_u64(1, WORD_SIZE),
-            )
-            .unwrap();
+            let speculate_taken =
+                Predictor::taken(Predictor::variable().into(), BitVector::word_constant(1))
+                    .unwrap();
             let speculate_not_taken = Boolean::not(speculate_taken.clone()).unwrap();
 
             cfg.conditional_edge(block0_index, block4_index, not_speculate)
@@ -1056,7 +1048,7 @@ mod tests {
             let block0_index = {
                 let block = cfg.new_block();
                 block
-                    .conditional_branch(cond.clone(), BitVector::constant_u64(4, WORD_SIZE))
+                    .conditional_branch(cond.clone(), BitVector::word_constant(4))
                     .unwrap()
                     .set_address(Some(4));
                 block.index()
@@ -1081,7 +1073,7 @@ mod tests {
                     .unwrap()
                     .set_address(Some(2));
                 block
-                    .branch(BitVector::constant_u64(5, WORD_SIZE))
+                    .branch(BitVector::word_constant(5))
                     .unwrap()
                     .set_address(Some(3));
                 block.index()
@@ -1150,7 +1142,7 @@ mod tests {
                     .unwrap()
                     .set_address(Some(2));
                 block
-                    .branch(BitVector::constant_u64(5, WORD_SIZE))
+                    .branch(BitVector::word_constant(5))
                     .unwrap()
                     .set_address(Some(3));
                 block.index()
@@ -1164,7 +1156,7 @@ mod tests {
             let block4_index = {
                 let block = cfg.new_block();
                 block
-                    .conditional_branch(cond.clone(), BitVector::constant_u64(4, WORD_SIZE))
+                    .conditional_branch(cond.clone(), BitVector::word_constant(4))
                     .unwrap()
                     .set_address(Some(4));
                 block.index()
@@ -1184,11 +1176,9 @@ mod tests {
             cfg.unconditional_edge(block1_index, block3_index).unwrap();
             cfg.unconditional_edge(block2_index, block3_index).unwrap();
 
-            let speculate = Predictor::speculate(
-                Predictor::variable().into(),
-                BitVector::constant_u64(1, WORD_SIZE),
-            )
-            .unwrap();
+            let speculate =
+                Predictor::speculate(Predictor::variable().into(), BitVector::word_constant(1))
+                    .unwrap();
             let not_speculate = Boolean::not(speculate.clone()).unwrap();
 
             let speculate_neg_cond = Boolean::not(cond.clone()).unwrap();

@@ -1,3 +1,4 @@
+use crate::environment;
 use crate::error::Result;
 use crate::expr::{Constant, Expression, Sort, Variable};
 pub use falcon::il::Constant as BitVectorValue;
@@ -137,9 +138,17 @@ impl BitVector {
         Variable::new(name, Sort::bit_vector(bits))
     }
 
+    pub fn word_variable(name: &str) -> Variable {
+        Variable::new(name, Sort::word())
+    }
+
     pub fn constant(value: BitVectorValue) -> Expression {
         let bits = value.bits();
         Expression::constant(Constant::bit_vector(value), Sort::bit_vector(bits))
+    }
+
+    pub fn word_constant(value: u64) -> Expression {
+        Self::constant_u64(value, environment::WORD_SIZE)
     }
 
     pub fn constant_u64(value: u64, bits: usize) -> Expression {
@@ -170,6 +179,10 @@ impl BitVector {
             vec![expr],
             Sort::bit_vector(bits),
         ))
+    }
+
+    pub fn word_from_boolean(expr: Expression) -> Result<Expression> {
+        Self::from_boolean(environment::WORD_SIZE, expr)
     }
 
     bv_unary!(not, Self::Not);
@@ -227,6 +240,10 @@ impl BitVector {
         Self::zero_extend(bits - width, expr)
     }
 
+    pub fn zero_extend_to_word(expr: Expression) -> Result<Expression> {
+        Self::zero_extend_abs(environment::WORD_SIZE, expr)
+    }
+
     /// Sign-extend the bit-vector given by `expr` with `n` additional bits.
     ///
     /// The width of the resulting bit vector is bit-width of `expr` + `n`.
@@ -248,6 +265,10 @@ impl BitVector {
         expr.sort().expect_bit_vector()?;
         let width = expr.sort().unwrap_bit_vector();
         Self::sign_extend(bits - width, expr)
+    }
+
+    pub fn sign_extend_to_word(expr: Expression) -> Result<Expression> {
+        Self::sign_extend_abs(environment::WORD_SIZE, expr)
     }
 
     pub fn extract(highest_bit: usize, lowest_bit: usize, expr: Expression) -> Result<Expression> {

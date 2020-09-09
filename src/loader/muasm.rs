@@ -1,4 +1,3 @@
-use crate::environment::WORD_SIZE;
 use crate::error::Result;
 use crate::expr;
 use crate::hir;
@@ -186,34 +185,34 @@ trait ExpressionBuilder {
 #[allow(clippy::use_self)]
 impl ExpressionBuilder for u64 {
     fn to_hir_expr(&self) -> Result<expr::Expression> {
-        Ok(expr::BitVector::constant_u64(*self, WORD_SIZE))
+        Ok(expr::BitVector::word_constant(*self))
     }
 }
 
 impl VariableBuilder for ir::Register {
     fn to_hir_variable(&self) -> expr::Variable {
-        expr::BitVector::variable(self.name(), WORD_SIZE)
+        expr::BitVector::word_variable(self.name())
     }
 }
 
 impl ExpressionBuilder for ir::Register {
     fn to_hir_expr(&self) -> Result<expr::Expression> {
-        Ok(expr::BitVector::variable(self.name(), WORD_SIZE).into())
+        Ok(expr::BitVector::word_variable(self.name()).into())
     }
 }
 
 impl ExpressionBuilder for ir::Expression {
     fn to_hir_expr(&self) -> Result<expr::Expression> {
         match self {
-            Self::NumberLiteral(lit) => Ok(expr::BitVector::constant_u64(*lit, WORD_SIZE)),
+            Self::NumberLiteral(lit) => Ok(expr::BitVector::word_constant(*lit)),
             Self::RegisterRef(reg) => reg.to_hir_expr(),
             Self::Unary { op, expr } => {
                 let expr = expr.to_hir_expr()?;
                 match op {
                     ir::UnaryOperator::Neg => expr::BitVector::neg(expr),
                     ir::UnaryOperator::Not => expr::BitVector::not(expr),
-                    ir::UnaryOperator::SExt => expr::BitVector::sign_extend_abs(WORD_SIZE, expr),
-                    ir::UnaryOperator::ZExt => expr::BitVector::zero_extend_abs(WORD_SIZE, expr),
+                    ir::UnaryOperator::SExt => expr::BitVector::sign_extend_to_word(expr),
+                    ir::UnaryOperator::ZExt => expr::BitVector::zero_extend_to_word(expr),
                 }
             }
             Self::Binary { op, lhs, rhs } => {
@@ -234,36 +233,35 @@ impl ExpressionBuilder for ir::Expression {
                     ir::BinaryOperator::AShr => expr::BitVector::ashr(lhs, rhs),
                     ir::BinaryOperator::LShr => expr::BitVector::lshr(lhs, rhs),
                     ir::BinaryOperator::ULe => {
-                        expr::BitVector::from_boolean(WORD_SIZE, expr::BitVector::ule(lhs, rhs)?)
+                        expr::BitVector::word_from_boolean(expr::BitVector::ule(lhs, rhs)?)
                     }
                     ir::BinaryOperator::ULt => {
-                        expr::BitVector::from_boolean(WORD_SIZE, expr::BitVector::ult(lhs, rhs)?)
+                        expr::BitVector::word_from_boolean(expr::BitVector::ult(lhs, rhs)?)
                     }
                     ir::BinaryOperator::UGe => {
-                        expr::BitVector::from_boolean(WORD_SIZE, expr::BitVector::uge(lhs, rhs)?)
+                        expr::BitVector::word_from_boolean(expr::BitVector::uge(lhs, rhs)?)
                     }
                     ir::BinaryOperator::UGt => {
-                        expr::BitVector::from_boolean(WORD_SIZE, expr::BitVector::ugt(lhs, rhs)?)
+                        expr::BitVector::word_from_boolean(expr::BitVector::ugt(lhs, rhs)?)
                     }
                     ir::BinaryOperator::SLe => {
-                        expr::BitVector::from_boolean(WORD_SIZE, expr::BitVector::sle(lhs, rhs)?)
+                        expr::BitVector::word_from_boolean(expr::BitVector::sle(lhs, rhs)?)
                     }
                     ir::BinaryOperator::SLt => {
-                        expr::BitVector::from_boolean(WORD_SIZE, expr::BitVector::slt(lhs, rhs)?)
+                        expr::BitVector::word_from_boolean(expr::BitVector::slt(lhs, rhs)?)
                     }
                     ir::BinaryOperator::SGe => {
-                        expr::BitVector::from_boolean(WORD_SIZE, expr::BitVector::sge(lhs, rhs)?)
+                        expr::BitVector::word_from_boolean(expr::BitVector::sge(lhs, rhs)?)
                     }
                     ir::BinaryOperator::SGt => {
-                        expr::BitVector::from_boolean(WORD_SIZE, expr::BitVector::sgt(lhs, rhs)?)
+                        expr::BitVector::word_from_boolean(expr::BitVector::sgt(lhs, rhs)?)
                     }
                     ir::BinaryOperator::r#Eq => {
-                        expr::BitVector::from_boolean(WORD_SIZE, expr::Expression::equal(lhs, rhs)?)
+                        expr::BitVector::word_from_boolean(expr::Expression::equal(lhs, rhs)?)
                     }
-                    ir::BinaryOperator::Neq => expr::BitVector::from_boolean(
-                        WORD_SIZE,
-                        expr::Expression::unequal(lhs, rhs)?,
-                    ),
+                    ir::BinaryOperator::Neq => {
+                        expr::BitVector::word_from_boolean(expr::Expression::unequal(lhs, rhs)?)
+                    }
                 }
             }
             Self::Conditional { cond, then, r#else } => expr::Expression::ite(

@@ -267,12 +267,8 @@ impl Expr2Smt<()> for expr::CacheValue {
                 );
 
                 for address in addresses {
-                    cache = expr::Cache::evict(
-                        8,
-                        cache,
-                        expr::BitVector::constant_u64(address, environment::WORD_SIZE),
-                    )
-                    .unwrap();
+                    cache = expr::Cache::evict(8, cache, expr::BitVector::word_constant(address))
+                        .unwrap();
                 }
 
                 cache
@@ -284,12 +280,8 @@ impl Expr2Smt<()> for expr::CacheValue {
                 );
 
                 for address in addresses {
-                    cache = expr::Cache::fetch(
-                        8,
-                        cache,
-                        expr::BitVector::constant_u64(address, environment::WORD_SIZE),
-                    )
-                    .unwrap();
+                    cache = expr::Cache::fetch(8, cache, expr::BitVector::word_constant(address))
+                        .unwrap();
                 }
 
                 cache
@@ -515,7 +507,7 @@ fn define_memory<T>(solver: &mut Solver<T>, access_widths: &[usize]) -> Result<(
                 expr::Variable::new("mem", mem_array_sort.clone()).into(),
                 expr::BitVector::add(
                     expr::Variable::new("addr", expr::Sort::word()).into(),
-                    expr::BitVector::constant_u64(byte.try_into().unwrap(), environment::WORD_SIZE),
+                    expr::BitVector::word_constant(byte.try_into().unwrap()),
                 )?,
             )?);
         }
@@ -537,7 +529,7 @@ fn define_memory<T>(solver: &mut Solver<T>, access_widths: &[usize]) -> Result<(
                 store_expr,
                 expr::BitVector::add(
                     expr::Variable::new("addr", expr::Sort::word()).into(),
-                    expr::BitVector::constant_u64(byte.try_into().unwrap(), environment::WORD_SIZE),
+                    expr::BitVector::word_constant(byte.try_into().unwrap()),
                 )?,
                 expr::BitVector::extract(
                     bit_offset + 7,
@@ -599,7 +591,7 @@ fn define_cache<T>(solver: &mut Solver<T>, access_widths: &[usize]) -> Result<()
                 insert_expr,
                 expr::BitVector::add(
                     expr::Variable::new("addr", expr::Sort::word()).into(),
-                    expr::BitVector::constant_u64(byte.try_into().unwrap(), environment::WORD_SIZE),
+                    expr::BitVector::word_constant(byte.try_into().unwrap()),
                 )?,
                 expr::Boolean::constant(true),
             )?;
@@ -621,7 +613,7 @@ fn define_cache<T>(solver: &mut Solver<T>, access_widths: &[usize]) -> Result<()
                 insert_expr,
                 expr::BitVector::add(
                     expr::Variable::new("addr", expr::Sort::word()).into(),
-                    expr::BitVector::constant_u64(byte.try_into().unwrap(), environment::WORD_SIZE),
+                    expr::BitVector::word_constant(byte.try_into().unwrap()),
                 )?,
                 expr::Boolean::constant(false),
             )?;
