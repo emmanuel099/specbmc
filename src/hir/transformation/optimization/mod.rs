@@ -59,8 +59,8 @@ impl Optimizer {
             pre_optimizations: Vec::new(),
             repeated_optimizations: vec![
                 Box::new(ConstantFolding::new()),
-                Box::new(ConstantPropagation::new()),
                 Box::new(CopyPropagation::new()),
+                Box::new(ConstantPropagation::new()),
                 Box::new(ExpressionSimplification::new()),
                 Box::new(PhiElimination::new()),
                 Box::new(DeadCodeElimination::new()),
@@ -75,8 +75,8 @@ impl Optimizer {
             pre_optimizations: Vec::new(),
             repeated_optimizations: vec![
                 Box::new(ConstantFolding::new()),
-                Box::new(ConstantPropagation::new()),
                 Box::new(CopyPropagation::new()),
+                Box::new(ConstantPropagation::new()),
                 Box::new(ExpressionSimplification::new()),
                 Box::new(PhiElimination::new()),
                 Box::new(DeadCodeElimination::new()),
