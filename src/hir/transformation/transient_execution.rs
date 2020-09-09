@@ -217,6 +217,15 @@ impl Transform<ControlFlowGraph> for TransientExecution {
     }
 
     fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+        const MAX_SPEC_WINDOW: usize = 1 << (SPECULATION_WINDOW_SIZE - 1);
+        if self.speculation_window >= MAX_SPEC_WINDOW {
+            return Err(format!(
+                "Expected speculation window < {}, but was {}",
+                MAX_SPEC_WINDOW, self.speculation_window
+            )
+            .into());
+        }
+
         let (mut default_cfg, transient_start_rollback_points) = self.build_default_cfg(cfg)?;
 
         let (transient_cfg, transient_entry_points) = self.build_transient_cfg(cfg)?;
