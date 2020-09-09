@@ -76,6 +76,10 @@ impl Variable {
 
 impl fmt::Display for Variable {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{}", self.identifier(), self.sort())
+        if cfg!(debug_assertions) {
+            write!(f, "{}:{}", self.identifier(), self.sort())
+        } else {
+            write!(f, "{}", self.identifier())
+        }
     }
 }
