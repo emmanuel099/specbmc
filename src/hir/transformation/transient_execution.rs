@@ -283,7 +283,10 @@ fn saved_variable_for(var: &Variable) -> Variable {
 fn save_variables(block: &mut Block, variables: &HashSet<&Variable>) -> Result<()> {
     for &var in variables.iter() {
         let saved_var = saved_variable_for(var);
-        block.assign(saved_var, var.clone().into())?;
+        block
+            .assign(saved_var, var.clone().into())?
+            .labels_mut()
+            .pseudo();
     }
     Ok(())
 }
@@ -291,7 +294,10 @@ fn save_variables(block: &mut Block, variables: &HashSet<&Variable>) -> Result<(
 fn restore_variables(block: &mut Block, variables: &HashSet<&Variable>) -> Result<()> {
     for &var in variables.iter() {
         let saved_var = saved_variable_for(var);
-        block.assign(var.clone(), saved_var.into())?;
+        block
+            .assign(var.clone(), saved_var.into())?
+            .labels_mut()
+            .pseudo();
     }
     Ok(())
 }
