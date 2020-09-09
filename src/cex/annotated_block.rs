@@ -97,10 +97,16 @@ impl From<&hir::Block> for Block {
     fn from(hir_block: &hir::Block) -> Self {
         let mut cex_block = Block::new(hir_block.index());
         cex_block.set_transient(hir_block.is_transient());
+
         for inst in hir_block.instructions() {
+            if inst.labels().is_pseudo() {
+                continue;
+            }
+
             let cex_inst = AnnotatedInstruction::new(inst.clone());
             cex_block.add_instructions(cex_inst);
         }
+
         cex_block
     }
 }
