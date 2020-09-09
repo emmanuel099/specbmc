@@ -1,3 +1,5 @@
+use crate::environment;
+
 mod explicit_effects;
 mod function_inlining;
 mod init_global_variables;
@@ -88,4 +90,24 @@ impl<T: Transform<ControlFlowGraph>> Transform<InlinedProgram> for T {
         self.transform(cfg)?;
         Ok(())
     }
+}
+
+pub fn create_transformations(
+    env: &environment::Environment,
+) -> Vec<Box<dyn Transform<InlinedProgram>>> {
+    let mut steps: Vec<Box<dyn Transform<InlinedProgram>>> = Vec::new();
+    steps.push(Box::new(LoopUnwinding::new_from_env(env)));
+    steps.push(Box::new(InstructionEffects::new_from_env(env)));
+    if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
+        steps.push(Box::new(TransientExecution::new_from_env(env)));
+    }
+    steps.push(Box::new(InitGlobalVariables::new_from_env(env)));
+    steps.push(Box::new(Observations::new_from_env(env)));
+    steps.push(Box::new(ExplicitEffects::default()));
+    if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
+        steps.push(Box::new(NonSpecObsEquivalence::new_from_env(env)));
+    }
+    steps.push(Box::new(SSATransformation::new(SSAForm::Pruned)));
+    steps.push(Box::new(Optimizer::new_from_env(env)));
+    steps
 }

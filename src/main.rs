@@ -6,7 +6,7 @@ use console::style;
 
 use specbmc::environment;
 use specbmc::error::Result;
-use specbmc::ir::{Transform, TryTranslateFrom, Validate};
+use specbmc::ir::{TryTranslateFrom, Validate};
 use specbmc::loader;
 use specbmc::solver::*;
 use specbmc::util::{DumpToFile, RenderGraph};
@@ -386,25 +386,7 @@ fn hir_transformations(
     env: &environment::Environment,
     program: &mut hir::InlinedProgram,
 ) -> Result<()> {
-    use hir::transformation::*;
-
-    let transformations = {
-        let mut steps: Vec<Box<dyn Transform<hir::InlinedProgram>>> = Vec::new();
-        steps.push(Box::new(LoopUnwinding::new_from_env(env)));
-        steps.push(Box::new(InstructionEffects::new_from_env(env)));
-        if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
-            steps.push(Box::new(TransientExecution::new_from_env(env)));
-        }
-        steps.push(Box::new(InitGlobalVariables::new_from_env(env)));
-        steps.push(Box::new(Observations::new_from_env(env)));
-        steps.push(Box::new(ExplicitEffects::default()));
-        if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
-            steps.push(Box::new(NonSpecObsEquivalence::new_from_env(env)));
-        }
-        steps.push(Box::new(SSATransformation::new(SSAForm::Pruned)));
-        steps.push(Box::new(Optimizer::new_from_env(env)));
-        steps
-    };
+    let transformations = hir::transformation::create_transformations(env);
 
     for (idx, transformation) in transformations.iter().enumerate() {
         println!(
