@@ -9,12 +9,14 @@ use std::fmt;
 #[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Label {
     Pseudo, // Instruction isn't part of the assembly
+    Helper, // A single complex instruction may be described by multiple simpler instructions, which can be marked as helpers (e.g. update of the status register).
 }
 
 impl fmt::Display for Label {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Pseudo => write!(f, "pseudo"),
+            Self::Helper => write!(f, "helper"),
         }
     }
 }
@@ -32,6 +34,15 @@ impl Labels {
 
     pub fn is_pseudo(&self) -> bool {
         self.labels.contains(&Label::Pseudo)
+    }
+
+    pub fn helper(&mut self) -> &mut Self {
+        self.labels.insert(Label::Helper);
+        self
+    }
+
+    pub fn is_helper(&self) -> bool {
+        self.labels.contains(&Label::Helper)
     }
 
     pub fn merge(&mut self, other: &Labels) {

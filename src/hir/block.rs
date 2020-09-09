@@ -151,7 +151,7 @@ impl Block {
     pub fn instruction_count_ignoring_pseudo_instructions(&self) -> usize {
         self.instructions
             .iter()
-            .filter(|inst| !inst.labels().is_pseudo())
+            .filter(|inst| !inst.labels().is_pseudo() && !inst.labels().is_helper())
             .count()
     }
 
