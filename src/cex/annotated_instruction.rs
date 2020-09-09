@@ -1,6 +1,6 @@
 use crate::cex::{AnnotatedElement, Effect};
-use crate::expr::{Constant, Expression, Variable};
-use crate::hir::Instruction;
+use crate::expr::{Constant, Expression, Operator, Sort, Variable};
+use crate::hir::{Instruction, Operation};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -64,13 +64,43 @@ impl fmt::Display for AnnotatedInstruction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}", self.instruction())?;
         for (composition, annotation) in &self.annotations {
+            let op = self.instruction().operation();
+            let instantiated_op = instantiate_operation(op, &annotation.configuration);
+            writeln!(f, " - {}$ {}", composition, instantiated_op)?;
+
             for (target, value) in &annotation.assignments {
-                writeln!(f, "${} {} = {}", composition, target, value)?;
+                writeln!(f, " - {}@ {} = {}", composition, target, value)?;
             }
+
             for effect in &annotation.effects {
-                writeln!(f, "#{} {}", composition, effect)?;
+                writeln!(f, " - {}# {}", composition, effect)?;
             }
         }
         Ok(())
+    }
+}
+
+fn instantiate_operation(op: &Operation, config: &HashMap<Variable, Constant>) -> Operation {
+    let mut instantiated_op = op.clone();
+    instantiated_op
+        .expressions_mut()
+        .iter_mut()
+        .for_each(|expr| instantiate_expression(expr, config));
+
+    instantiated_op
+}
+
+fn instantiate_expression(expr: &mut Expression, config: &HashMap<Variable, Constant>) {
+    match expr.operator() {
+        Operator::Variable(var) => {
+            if let Some(constant) = config.get(var) {
+                *expr = Expression::constant(constant.clone(), Sort::boolean());
+            }
+        }
+        _ => {
+            expr.operands_mut()
+                .iter_mut()
+                .for_each(|op| instantiate_expression(op, config));
+        }
     }
 }
