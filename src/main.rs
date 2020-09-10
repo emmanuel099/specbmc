@@ -343,8 +343,8 @@ fn build_environment(arguments: &Arguments) -> Result<environment::Environment> 
         env.analysis.predictor_strategy = strategy;
     }
 
-    if let Some(observe) = &arguments.observe {
-        env.analysis.observe = observe.clone();
+    if let Some(observe) = arguments.observe {
+        env.analysis.observe = observe;
     }
 
     if let Some(solver) = arguments.solver {

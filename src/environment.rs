@@ -96,7 +96,7 @@ impl Default for UnwindingGuard {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Observe {
     #[serde(rename = "sequential")]
     Sequential, // Sequential with intermediate resolve edges
