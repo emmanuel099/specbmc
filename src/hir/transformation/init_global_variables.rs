@@ -1,3 +1,4 @@
+use crate::environment::SecurityLevel;
 use crate::error::Result;
 use crate::expr::{
     BitVector, BranchTargetBuffer, Cache, CacheValue, Expression, Memory, PatternHistoryTable,
@@ -12,10 +13,10 @@ pub struct InitGlobalVariables {
     cache_available: bool,
     btb_available: bool,
     pht_available: bool,
-    memory_default_low: bool,
+    memory_default_security_level: SecurityLevel,
     low_memory_addresses: BTreeSet<u64>,
     high_memory_addresses: BTreeSet<u64>,
-    registers_default_low: bool,
+    registers_default_security_level: SecurityLevel,
     low_registers: HashSet<String>,
     high_registers: HashSet<String>,
     start_with_empty_cache: bool,
@@ -35,10 +36,17 @@ impl InitGlobalVariables {
         for reg in uninitialized_regs {
             havoc_variable(entry_block, reg.clone())?;
 
-            if self.low_registers.contains(reg.name())
-                || (self.registers_default_low && !self.high_registers.contains(reg.name()))
-            {
-                low_equivalent(entry_block, reg.clone().into());
+            match self.registers_default_security_level {
+                SecurityLevel::Low => {
+                    if !self.high_registers.contains(reg.name()) {
+                        low_equivalent(entry_block, reg.clone().into());
+                    }
+                }
+                SecurityLevel::High => {
+                    if self.low_registers.contains(reg.name()) {
+                        low_equivalent(entry_block, reg.clone().into());
+                    }
+                }
             }
         }
 
@@ -51,22 +59,26 @@ impl InitGlobalVariables {
 
         havoc_variable(entry_block, Memory::variable())?;
 
-        if self.memory_default_low {
-            low_equivalent(entry_block, Memory::variable().into());
-            for address in &self.high_memory_addresses {
-                let secret_var = BitVector::variable("_secret", 8);
-                havoc_variable(entry_block, secret_var.clone())?;
-                let addr = BitVector::word_constant(*address);
-                entry_block
-                    .store(addr, secret_var.into())?
-                    .labels_mut()
-                    .pseudo();
+        match self.memory_default_security_level {
+            SecurityLevel::Low => {
+                low_equivalent(entry_block, Memory::variable().into());
+                for address in &self.high_memory_addresses {
+                    let secret_var = BitVector::variable("_secret", 8);
+                    havoc_variable(entry_block, secret_var.clone())?;
+                    let addr = BitVector::word_constant(*address);
+                    entry_block
+                        .store(addr, secret_var.into())?
+                        .labels_mut()
+                        .pseudo();
+                }
             }
-        } else {
-            for address in &self.low_memory_addresses {
-                let addr = BitVector::word_constant(*address);
-                let memory_content_at_address = Memory::load(8, Memory::variable().into(), addr)?;
-                low_equivalent(entry_block, memory_content_at_address);
+            SecurityLevel::High => {
+                for address in &self.low_memory_addresses {
+                    let addr = BitVector::word_constant(*address);
+                    let memory_content_at_address =
+                        Memory::load(8, Memory::variable().into(), addr)?;
+                    low_equivalent(entry_block, memory_content_at_address);
+                }
             }
         }
 
@@ -137,10 +149,10 @@ impl Default for InitGlobalVariables {
             cache_available: false,
             btb_available: false,
             pht_available: false,
-            memory_default_low: false,
+            memory_default_security_level: SecurityLevel::High,
             low_memory_addresses: BTreeSet::new(),
             high_memory_addresses: BTreeSet::new(),
-            registers_default_low: true,
+            registers_default_security_level: SecurityLevel::Low,
             low_registers: HashSet::new(),
             high_registers: HashSet::new(),
             start_with_empty_cache: false,

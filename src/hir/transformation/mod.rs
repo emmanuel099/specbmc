@@ -107,9 +107,9 @@ pub fn create_transformations(
 
     steps.push(Box::new(
         InstructionEffectsBuilder::default()
-            .cache_available(env.architecture.cache)
-            .btb_available(env.architecture.branch_target_buffer)
-            .pht_available(env.architecture.pattern_history_table)
+            .model_cache_effects(env.architecture.cache)
+            .model_btb_effects(env.architecture.branch_target_buffer)
+            .model_pht_effects(env.architecture.pattern_history_table)
             .build()?,
     ));
 
@@ -130,12 +130,10 @@ pub fn create_transformations(
             .cache_available(env.architecture.cache)
             .btb_available(env.architecture.branch_target_buffer)
             .pht_available(env.architecture.pattern_history_table)
-            .memory_default_low(env.policy.memory.default_level == environment::SecurityLevel::Low)
+            .memory_default_security_level(env.policy.memory.default_level)
             .low_memory_addresses(address_ranges_to_addresses(&env.policy.memory.low))
             .high_memory_addresses(address_ranges_to_addresses(&env.policy.memory.high))
-            .registers_default_low(
-                env.policy.registers.default_level == environment::SecurityLevel::Low,
-            )
+            .registers_default_security_level(env.policy.registers.default_level)
             .low_registers(env.policy.registers.low.clone())
             .high_registers(env.policy.registers.high.clone())
             .start_with_empty_cache(env.analysis.start_with_empty_cache)

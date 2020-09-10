@@ -5,9 +5,9 @@ use crate::ir::Transform;
 
 #[derive(Default, Builder, Debug)]
 pub struct InstructionEffects {
-    cache_available: bool,
-    btb_available: bool,
-    pht_available: bool,
+    model_cache_effects: bool,
+    model_btb_effects: bool,
+    model_pht_effects: bool,
 }
 
 impl InstructionEffects {
@@ -16,7 +16,7 @@ impl InstructionEffects {
 
         match instruction.operation() {
             Operation::Store { address, expr, .. } => {
-                if self.cache_available {
+                if self.model_cache_effects {
                     let bit_width = expr.sort().unwrap_bit_vector();
                     effects.push(Effect::cache_fetch(address.clone(), bit_width));
                 }
@@ -24,27 +24,27 @@ impl InstructionEffects {
             Operation::Load {
                 variable, address, ..
             } => {
-                if self.cache_available {
+                if self.model_cache_effects {
                     let bit_width = variable.sort().unwrap_bit_vector();
                     effects.push(Effect::cache_fetch(address.clone(), bit_width));
                 }
             }
             Operation::Call { target } | Operation::Branch { target } => {
-                if self.btb_available {
+                if self.model_btb_effects {
                     let location =
                         BitVector::word_constant(instruction.address().unwrap_or_default());
                     effects.push(Effect::branch_target(location, target.clone()));
                 }
             }
             Operation::ConditionalBranch { condition, target } => {
-                if self.btb_available {
+                if self.model_btb_effects {
                     let location =
                         BitVector::word_constant(instruction.address().unwrap_or_default());
                     effects.push(
                         Effect::branch_target(location, target.clone()).only_if(condition.clone()),
                     );
                 }
-                if self.pht_available {
+                if self.model_pht_effects {
                     let location =
                         BitVector::word_constant(instruction.address().unwrap_or_default());
                     effects.push(Effect::branch_condition(location, condition.clone()));
