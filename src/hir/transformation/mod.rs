@@ -99,32 +99,14 @@ pub fn create_transformations(
 ) -> Result<Vec<Box<dyn Transform<InlinedProgram>>>> {
     let mut steps: Vec<Box<dyn Transform<InlinedProgram>>> = Vec::new();
 
-    steps.push(Box::new(
-        LoopUnwindingBuilder::default()
-            .unwinding_bound(env.analysis.unwind)
-            .unwinding_guard(env.analysis.unwinding_guard)
-            .build()?,
-    ));
-
-    steps.push(Box::new(
-        InstructionEffectsBuilder::default()
-            .model_cache_effects(env.architecture.cache)
-            .model_btb_effects(env.architecture.branch_target_buffer)
-            .model_pht_effects(env.architecture.pattern_history_table)
-            .build()?,
-    ));
+    steps.push(Box::new(create_loop_unwinding_transformation(env)?));
+    steps.push(Box::new(create_instruction_effects_transformation(env)?));
 
     if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
-        steps.push(Box::new(
-            TransientExecutionBuilder::default()
-                .spectre_pht(env.analysis.spectre_pht)
-                .spectre_stl(env.analysis.spectre_stl)
-                .predictor_strategy(env.analysis.predictor_strategy)
-                .speculation_window(env.architecture.speculation_window)
-                .intermediate_resolve(env.analysis.observe != environment::Observe::Parallel)
-                .build()?,
-        ));
+        steps.push(Box::new(create_transient_execution_transformation(env)?));
     }
+
+    steps.push(Box::new(ExplicitEffects::default()));
 
     let mut observable_variables = HashSet::new();
     if env.architecture.cache {
@@ -137,71 +119,20 @@ pub fn create_transformations(
         observable_variables.insert(expr::PatternHistoryTable::variable());
     }
 
-    steps.push(Box::new(ExplicitEffects::default()));
+    steps.push(Box::new(create_observations_transformation(
+        env,
+        &observable_variables,
+    )?));
 
-    match env.analysis.observe {
-        environment::Observe::Sequential => {
-            steps.push(Box::new(
-                ObservationsBuilder::default()
-                    .observable_variables(observable_variables.clone())
-                    .observe_variable_writes(false)
-                    .observe_at_control_flow_joins(false)
-                    .observe_at_end_of_program(true)
-                    .build()?,
-            ));
-        }
-        environment::Observe::Parallel | environment::Observe::Full => {
-            steps.push(Box::new(
-                ObservationsBuilder::default()
-                    .observable_variables(observable_variables.clone())
-                    .observe_variable_writes(true)
-                    .observe_at_control_flow_joins(true)
-                    .observe_at_end_of_program(true)
-                    .build()?,
-            ));
-        }
-    }
-
-    {
-        let low_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.low);
-        let high_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.high);
-
-        let mut low_security_variables = env.policy.registers.low.clone();
-        low_security_variables.insert(expr::Predictor::variable().name().to_owned());
-        for var in &observable_variables {
-            low_security_variables.insert(var.name().to_owned());
-        }
-
-        let high_security_variables = env.policy.registers.high.clone();
-
-        let mut initial_variable_value = HashMap::new();
-        if env.analysis.start_with_empty_cache {
-            let empty_cache =
-                expr::Expression::constant(expr::CacheValue::empty().into(), expr::Sort::cache());
-            initial_variable_value.insert(expr::Cache::variable().name().to_owned(), empty_cache);
-        }
-
-        steps.push(Box::new(
-            InitGlobalVariablesBuilder::default()
-                .default_memory_security_level(env.policy.memory.default_level)
-                .low_security_memory_addresses(low_security_memory_addresses)
-                .high_security_memory_addresses(high_security_memory_addresses)
-                .default_variable_security_level(env.policy.registers.default_level)
-                .low_security_variables(low_security_variables)
-                .high_security_variables(high_security_variables)
-                .initial_variable_value(initial_variable_value)
-                .build()?,
-        ));
-    }
+    steps.push(Box::new(create_init_global_variables_transformation(
+        env,
+        &observable_variables,
+    )?));
 
     if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
-        steps.push(Box::new(
-            NonSpecObsEquivalenceBuilder::default()
-                .cache_available(env.architecture.cache)
-                .btb_available(env.architecture.branch_target_buffer)
-                .pht_available(env.architecture.pattern_history_table)
-                .build()?,
-        ));
+        steps.push(Box::new(create_non_spec_obs_equivalence_transformation(
+            env,
+        )?));
     }
 
     steps.push(Box::new(SSATransformation::new(SSAForm::Pruned)));
@@ -217,6 +148,100 @@ pub fn create_transformations(
     }
 
     Ok(steps)
+}
+
+fn create_loop_unwinding_transformation(env: &environment::Environment) -> Result<LoopUnwinding> {
+    Ok(LoopUnwindingBuilder::default()
+        .unwinding_bound(env.analysis.unwind)
+        .unwinding_guard(env.analysis.unwinding_guard)
+        .build()?)
+}
+
+fn create_instruction_effects_transformation(
+    env: &environment::Environment,
+) -> Result<InstructionEffects> {
+    Ok(InstructionEffectsBuilder::default()
+        .model_cache_effects(env.architecture.cache)
+        .model_btb_effects(env.architecture.branch_target_buffer)
+        .model_pht_effects(env.architecture.pattern_history_table)
+        .build()?)
+}
+
+fn create_transient_execution_transformation(
+    env: &environment::Environment,
+) -> Result<TransientExecution> {
+    Ok(TransientExecutionBuilder::default()
+        .spectre_pht(env.analysis.spectre_pht)
+        .spectre_stl(env.analysis.spectre_stl)
+        .predictor_strategy(env.analysis.predictor_strategy)
+        .speculation_window(env.architecture.speculation_window)
+        .intermediate_resolve(env.analysis.observe != environment::Observe::Parallel)
+        .build()?)
+}
+
+fn create_observations_transformation(
+    env: &environment::Environment,
+    observable_variables: &HashSet<expr::Variable>,
+) -> Result<Observations> {
+    match env.analysis.observe {
+        environment::Observe::Sequential => Ok(ObservationsBuilder::default()
+            .observable_variables(observable_variables.clone())
+            .observe_variable_writes(false)
+            .observe_at_control_flow_joins(false)
+            .observe_at_end_of_program(true)
+            .build()?),
+        environment::Observe::Parallel | environment::Observe::Full => {
+            Ok(ObservationsBuilder::default()
+                .observable_variables(observable_variables.clone())
+                .observe_variable_writes(true)
+                .observe_at_control_flow_joins(true)
+                .observe_at_end_of_program(true)
+                .build()?)
+        }
+    }
+}
+
+fn create_init_global_variables_transformation(
+    env: &environment::Environment,
+    observable_variables: &HashSet<expr::Variable>,
+) -> Result<InitGlobalVariables> {
+    let low_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.low);
+    let high_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.high);
+
+    let mut low_security_variables = env.policy.registers.low.clone();
+    low_security_variables.insert(expr::Predictor::variable().name().to_owned());
+    for var in observable_variables {
+        low_security_variables.insert(var.name().to_owned());
+    }
+
+    let high_security_variables = env.policy.registers.high.clone();
+
+    let mut initial_variable_value = HashMap::new();
+    if env.analysis.start_with_empty_cache {
+        let empty_cache =
+            expr::Expression::constant(expr::CacheValue::empty().into(), expr::Sort::cache());
+        initial_variable_value.insert(expr::Cache::variable().name().to_owned(), empty_cache);
+    }
+
+    Ok(InitGlobalVariablesBuilder::default()
+        .default_memory_security_level(env.policy.memory.default_level)
+        .low_security_memory_addresses(low_security_memory_addresses)
+        .high_security_memory_addresses(high_security_memory_addresses)
+        .default_variable_security_level(env.policy.registers.default_level)
+        .low_security_variables(low_security_variables)
+        .high_security_variables(high_security_variables)
+        .initial_variable_value(initial_variable_value)
+        .build()?)
+}
+
+fn create_non_spec_obs_equivalence_transformation(
+    env: &environment::Environment,
+) -> Result<NonSpecObsEquivalence> {
+    Ok(NonSpecObsEquivalenceBuilder::default()
+        .cache_available(env.architecture.cache)
+        .btb_available(env.architecture.branch_target_buffer)
+        .pht_available(env.architecture.pattern_history_table)
+        .build()?)
 }
 
 fn address_ranges_to_addresses(
