@@ -126,34 +126,41 @@ pub fn create_transformations(
         ));
     }
 
+    let mut observable_variables = HashSet::new();
+    if env.architecture.cache {
+        observable_variables.insert(expr::Cache::variable());
+    }
+    if env.architecture.branch_target_buffer {
+        observable_variables.insert(expr::BranchTargetBuffer::variable());
+    }
+    if env.architecture.pattern_history_table {
+        observable_variables.insert(expr::PatternHistoryTable::variable());
+    }
+
+    steps.push(Box::new(ExplicitEffects::default()));
+
     match env.analysis.observe {
         environment::Observe::Sequential => {
             steps.push(Box::new(
                 ObservationsBuilder::default()
-                    .cache_available(env.architecture.cache)
-                    .btb_available(env.architecture.branch_target_buffer)
-                    .pht_available(env.architecture.pattern_history_table)
-                    .obs_end_of_program(true)
-                    .obs_effectful_instructions(false)
-                    .obs_control_flow_joins(false)
+                    .observable_variables(observable_variables.clone())
+                    .observe_variable_writes(false)
+                    .observe_at_control_flow_joins(false)
+                    .observe_at_end_of_program(true)
                     .build()?,
             ));
         }
         environment::Observe::Parallel | environment::Observe::Full => {
             steps.push(Box::new(
                 ObservationsBuilder::default()
-                    .cache_available(env.architecture.cache)
-                    .btb_available(env.architecture.branch_target_buffer)
-                    .pht_available(env.architecture.pattern_history_table)
-                    .obs_end_of_program(true)
-                    .obs_effectful_instructions(true)
-                    .obs_control_flow_joins(true)
+                    .observable_variables(observable_variables.clone())
+                    .observe_variable_writes(true)
+                    .observe_at_control_flow_joins(true)
+                    .observe_at_end_of_program(true)
                     .build()?,
             ));
         }
     }
-
-    steps.push(Box::new(ExplicitEffects::default()));
 
     {
         let low_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.low);
@@ -161,9 +168,9 @@ pub fn create_transformations(
 
         let mut low_security_variables = env.policy.registers.low.clone();
         low_security_variables.insert(expr::Predictor::variable().name().to_owned());
-        low_security_variables.insert(expr::Cache::variable().name().to_owned());
-        low_security_variables.insert(expr::BranchTargetBuffer::variable().name().to_owned());
-        low_security_variables.insert(expr::PatternHistoryTable::variable().name().to_owned());
+        for var in &observable_variables {
+            low_security_variables.insert(var.name().to_owned());
+        }
 
         let high_security_variables = env.policy.registers.high.clone();
 

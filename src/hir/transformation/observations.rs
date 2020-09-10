@@ -1,56 +1,46 @@
 use crate::error::Result;
-use crate::expr;
+use crate::expr::Variable;
 use crate::hir::{Block, ControlFlowGraph, Instruction};
 use crate::ir::Transform;
 use std::collections::HashSet;
 
 #[derive(Default, Builder, Debug)]
 pub struct Observations {
-    cache_available: bool,
-    btb_available: bool,
-    pht_available: bool,
-    obs_end_of_program: bool,
-    obs_effectful_instructions: bool,
-    obs_control_flow_joins: bool,
+    observable_variables: HashSet<Variable>,
+    observe_variable_writes: bool,
+    observe_at_control_flow_joins: bool,
+    observe_at_end_of_program: bool,
 }
 
 impl Observations {
-    fn observable_exprs(&self) -> Vec<expr::Expression> {
-        let mut exprs = Vec::new();
-
-        if self.cache_available {
-            exprs.push(expr::Cache::variable().into());
-        }
-        if self.btb_available {
-            exprs.push(expr::BranchTargetBuffer::variable().into());
-        }
-        if self.pht_available {
-            exprs.push(expr::PatternHistoryTable::variable().into());
-        }
-
-        exprs
-    }
-
-    fn place_observe_after_each_effectul_instruction(
-        &self,
-        cfg: &mut ControlFlowGraph,
-    ) -> Result<()> {
+    fn place_observe_at_variable_writes(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         for block in cfg.blocks_mut() {
-            let effectful_inst_indices: Vec<usize> = block
+            let observable_writes: Vec<(usize, Vec<Variable>)> = block
                 .instructions()
                 .iter()
                 .enumerate()
                 .filter_map(|(index, inst)| {
-                    if inst.has_effects() {
-                        Some(index)
-                    } else {
+                    let vars: Vec<Variable> = inst
+                        .variables_written()
+                        .into_iter()
+                        .filter(|var| self.observable_variables.contains(var))
+                        .cloned()
+                        .collect();
+
+                    if vars.is_empty() {
                         None
+                    } else {
+                        Some((index, vars))
                     }
                 })
                 .collect();
 
-            for index in effectful_inst_indices.iter().rev() {
-                self.insert_observe_instruction_at(block, index + 1)?;
+            for (index, vars) in observable_writes.iter().rev() {
+                for var in vars {
+                    let mut obs = Instruction::observable(var.clone().into());
+                    obs.labels_mut().pseudo();
+                    block.insert_instruction(index + 1, obs)?;
+                }
             }
         }
 
@@ -88,8 +78,8 @@ impl Observations {
     }
 
     fn insert_observe_instruction_at(&self, block: &mut Block, index: usize) -> Result<()> {
-        for expr in self.observable_exprs() {
-            let mut obs = Instruction::observable(expr);
+        for var in &self.observable_variables {
+            let mut obs = Instruction::observable(var.clone().into());
             obs.labels_mut().pseudo();
             block.insert_instruction(index, obs)?;
         }
@@ -98,8 +88,8 @@ impl Observations {
     }
 
     fn append_observe_instruction(&self, block: &mut Block) {
-        for expr in self.observable_exprs() {
-            let obs = block.observable(expr);
+        for var in &self.observable_variables {
+            let obs = block.observable(var.clone().into());
             obs.labels_mut().pseudo();
         }
     }
@@ -115,15 +105,15 @@ impl Transform<ControlFlowGraph> for Observations {
     }
 
     fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
-        if self.obs_effectful_instructions {
-            self.place_observe_after_each_effectul_instruction(cfg)?;
+        if self.observe_variable_writes {
+            self.place_observe_at_variable_writes(cfg)?;
         }
 
-        if self.obs_control_flow_joins {
+        if self.observe_at_control_flow_joins {
             self.place_observe_at_control_flow_joins(cfg)?;
         }
 
-        if self.obs_end_of_program {
+        if self.observe_at_end_of_program {
             self.place_observe_at_end_of_program(cfg)?;
         }
 
