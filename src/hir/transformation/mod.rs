@@ -99,11 +99,11 @@ pub fn create_transformations(
 ) -> Result<Vec<Box<dyn Transform<InlinedProgram>>>> {
     let mut steps: Vec<Box<dyn Transform<InlinedProgram>>> = Vec::new();
 
-    steps.push(Box::new(create_loop_unwinding_transformation(env)?));
-    steps.push(Box::new(create_instruction_effects_transformation(env)?));
+    steps.push(Box::new(loop_unwinding(env)?));
+    steps.push(Box::new(instruction_effects(env)?));
 
     if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
-        steps.push(Box::new(create_transient_execution_transformation(env)?));
+        steps.push(Box::new(transient_execution(env)?));
     }
 
     steps.push(Box::new(ExplicitEffects::default()));
@@ -119,20 +119,12 @@ pub fn create_transformations(
         observable_variables.insert(expr::PatternHistoryTable::variable());
     }
 
-    steps.push(Box::new(create_observations_transformation(
-        env,
-        &observable_variables,
-    )?));
+    steps.push(Box::new(observations(env, &observable_variables)?));
 
-    steps.push(Box::new(create_init_global_variables_transformation(
-        env,
-        &observable_variables,
-    )?));
+    steps.push(Box::new(init_global_variables(env, &observable_variables)?));
 
     if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
-        steps.push(Box::new(create_non_spec_obs_equivalence_transformation(
-            env,
-        )?));
+        steps.push(Box::new(non_spec_obs_equivalence(env)?));
     }
 
     steps.push(Box::new(SSATransformation::new(SSAForm::Pruned)));
@@ -150,16 +142,14 @@ pub fn create_transformations(
     Ok(steps)
 }
 
-fn create_loop_unwinding_transformation(env: &environment::Environment) -> Result<LoopUnwinding> {
+fn loop_unwinding(env: &environment::Environment) -> Result<LoopUnwinding> {
     Ok(LoopUnwindingBuilder::default()
         .unwinding_bound(env.analysis.unwind)
         .unwinding_guard(env.analysis.unwinding_guard)
         .build()?)
 }
 
-fn create_instruction_effects_transformation(
-    env: &environment::Environment,
-) -> Result<InstructionEffects> {
+fn instruction_effects(env: &environment::Environment) -> Result<InstructionEffects> {
     Ok(InstructionEffectsBuilder::default()
         .model_cache_effects(env.architecture.cache)
         .model_btb_effects(env.architecture.branch_target_buffer)
@@ -167,9 +157,7 @@ fn create_instruction_effects_transformation(
         .build()?)
 }
 
-fn create_transient_execution_transformation(
-    env: &environment::Environment,
-) -> Result<TransientExecution> {
+fn transient_execution(env: &environment::Environment) -> Result<TransientExecution> {
     Ok(TransientExecutionBuilder::default()
         .spectre_pht(env.analysis.spectre_pht)
         .spectre_stl(env.analysis.spectre_stl)
@@ -179,7 +167,7 @@ fn create_transient_execution_transformation(
         .build()?)
 }
 
-fn create_observations_transformation(
+fn observations(
     env: &environment::Environment,
     observable_variables: &HashSet<expr::Variable>,
 ) -> Result<Observations> {
@@ -201,7 +189,7 @@ fn create_observations_transformation(
     }
 }
 
-fn create_init_global_variables_transformation(
+fn init_global_variables(
     env: &environment::Environment,
     observable_variables: &HashSet<expr::Variable>,
 ) -> Result<InitGlobalVariables> {
@@ -234,9 +222,7 @@ fn create_init_global_variables_transformation(
         .build()?)
 }
 
-fn create_non_spec_obs_equivalence_transformation(
-    env: &environment::Environment,
-) -> Result<NonSpecObsEquivalence> {
+fn non_spec_obs_equivalence(env: &environment::Environment) -> Result<NonSpecObsEquivalence> {
     Ok(NonSpecObsEquivalenceBuilder::default()
         .cache_available(env.architecture.cache)
         .btb_available(env.architecture.branch_target_buffer)
