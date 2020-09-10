@@ -152,7 +152,6 @@ pub fn create_transformations(
                     .obs_end_of_program(true)
                     .obs_effectful_instructions(false)
                     .obs_control_flow_joins(false)
-                    .obs_locations(Vec::default())
                     .build()?,
             ));
         }
@@ -165,20 +164,6 @@ pub fn create_transformations(
                     .obs_end_of_program(true)
                     .obs_effectful_instructions(true)
                     .obs_control_flow_joins(true)
-                    .obs_locations(Vec::default())
-                    .build()?,
-            ));
-        }
-        environment::Observe::Locations(ref locations) => {
-            steps.push(Box::new(
-                ObservationsBuilder::default()
-                    .cache_available(env.architecture.cache)
-                    .btb_available(env.architecture.branch_target_buffer)
-                    .pht_available(env.architecture.pattern_history_table)
-                    .obs_end_of_program(false)
-                    .obs_effectful_instructions(false)
-                    .obs_control_flow_joins(false)
-                    .obs_locations(locations.to_owned())
                     .build()?,
             ));
         }

@@ -104,8 +104,6 @@ pub enum Observe {
     Parallel, // Parallel without intermediate resolve edges (faster than full; may miss some control-flow leaks)
     #[serde(rename = "full")]
     Full, // Same as parallel but with intermediate resolve edges
-    #[serde(rename = "locations")]
-    Locations(Vec<u64>),
 }
 
 impl Default for Observe {

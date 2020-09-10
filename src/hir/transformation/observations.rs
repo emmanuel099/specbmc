@@ -12,7 +12,6 @@ pub struct Observations {
     obs_end_of_program: bool,
     obs_effectful_instructions: bool,
     obs_control_flow_joins: bool,
-    obs_locations: Vec<u64>,
 }
 
 impl Observations {
@@ -81,37 +80,6 @@ impl Observations {
         Ok(())
     }
 
-    fn place_observe_at_program_locations(
-        &self,
-        cfg: &mut ControlFlowGraph,
-        locations: &[u64],
-    ) -> Result<()> {
-        for block in cfg.blocks_mut() {
-            let effectful_inst_indices: Vec<usize> = block
-                .instructions()
-                .iter()
-                .enumerate()
-                .filter_map(|(index, inst)| {
-                    if let Some(address) = inst.address() {
-                        if locations.contains(&address) {
-                            Some(index)
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                })
-                .collect();
-
-            for index in effectful_inst_indices.iter().rev() {
-                self.insert_observe_instruction_at(block, index + 1)?;
-            }
-        }
-
-        Ok(())
-    }
-
     fn place_observe_at_end_of_program(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         let exit_block = cfg.exit_block_mut()?;
         self.append_observe_instruction(exit_block);
@@ -157,10 +125,6 @@ impl Transform<ControlFlowGraph> for Observations {
 
         if self.obs_end_of_program {
             self.place_observe_at_end_of_program(cfg)?;
-        }
-
-        if !self.obs_locations.is_empty() {
-            self.place_observe_at_program_locations(cfg, &self.obs_locations)?;
         }
 
         Ok(())
