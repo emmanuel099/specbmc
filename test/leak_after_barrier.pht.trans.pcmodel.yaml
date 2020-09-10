@@ -1,0 +1,18 @@
+analysis:
+    spectre_pht: true
+    spectre_stl: false
+    check: only_transient_leaks
+    model: pc
+architecture:
+    cache: true
+    btb: false
+    pht: true
+policy:
+    registers:
+        default: low
+        high:
+            - secret
+    memory:
+        default: high
+test:
+    expect: safe
