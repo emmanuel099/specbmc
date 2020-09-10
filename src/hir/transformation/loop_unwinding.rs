@@ -1,4 +1,4 @@
-use crate::environment::{Environment, UnwindingGuard};
+use crate::environment::UnwindingGuard;
 use crate::error::Result;
 use crate::hir::{ControlFlowGraph, RemovedEdgeGuard};
 use crate::ir::Transform;
@@ -11,13 +11,6 @@ pub struct LoopUnwinding {
 }
 
 impl LoopUnwinding {
-    pub fn new_from_env(env: &Environment) -> Self {
-        Self {
-            unwinding_bound: env.analysis.unwind,
-            unwinding_guard: env.analysis.unwinding_guard,
-        }
-    }
-
     fn unwind_loop(
         &self,
         cfg: &mut ControlFlowGraph,

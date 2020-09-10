@@ -1,4 +1,3 @@
-use crate::environment::Environment;
 use crate::error::Result;
 use crate::expr::BitVector;
 use crate::hir::{Effect, Instruction, Operation};
@@ -12,14 +11,6 @@ pub struct InstructionEffects {
 }
 
 impl InstructionEffects {
-    pub fn new_from_env(env: &Environment) -> Self {
-        Self {
-            cache_available: env.architecture.cache,
-            btb_available: env.architecture.branch_target_buffer,
-            pht_available: env.architecture.pattern_history_table,
-        }
-    }
-
     fn instruction_effects(&self, instruction: &Instruction) -> Vec<Effect> {
         let mut effects = Vec::new();
 

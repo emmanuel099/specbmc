@@ -1,4 +1,3 @@
-use crate::environment::Environment;
 use crate::error::Result;
 use crate::expr::{BranchTargetBuffer, Cache, Expression, PatternHistoryTable, Sort, Variable};
 use crate::hir::{ControlFlowGraph, Instruction, Operation};
@@ -12,14 +11,6 @@ pub struct NonSpecObsEquivalence {
 }
 
 impl NonSpecObsEquivalence {
-    pub fn new_from_env(env: &Environment) -> Self {
-        Self {
-            cache_available: env.architecture.cache,
-            btb_available: env.architecture.branch_target_buffer,
-            pht_available: env.architecture.pattern_history_table,
-        }
-    }
-
     /// Initially each microarchitectual component has the same state as their non-speculative counterpart.
     fn add_initial_spec_nonspec_equivalence_constraints(
         &self,

@@ -1,4 +1,3 @@
-use crate::environment::{Environment, OptimizationLevel};
 use crate::error::Result;
 use crate::hir::ControlFlowGraph;
 use crate::ir::Transform;
@@ -37,23 +36,6 @@ pub struct Optimizer {
 }
 
 impl Optimizer {
-    pub fn new_from_env(env: &Environment) -> Self {
-        match env.optimization_level {
-            OptimizationLevel::Disabled => Self::none(),
-            OptimizationLevel::Basic => Self::basic(),
-            OptimizationLevel::Full => Self::full(),
-        }
-    }
-
-    pub fn none() -> Self {
-        Self {
-            pre_optimizations: Vec::new(),
-            repeated_optimizations: Vec::new(),
-            post_optimizations: Vec::new(),
-            repetitions: 0,
-        }
-    }
-
     pub fn basic() -> Self {
         Self {
             pre_optimizations: Vec::new(),

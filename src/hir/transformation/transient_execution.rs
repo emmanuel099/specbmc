@@ -1,4 +1,4 @@
-use crate::environment::{Environment, Observe, PredictorStrategy, SPECULATION_WINDOW_SIZE};
+use crate::environment::{PredictorStrategy, SPECULATION_WINDOW_SIZE};
 use crate::error::Result;
 use crate::expr::{BitVector, Boolean, Predictor, Sort, Variable};
 use crate::hir::{Block, ControlFlowGraph, Edge, Operation, RemovedEdgeGuard};
@@ -58,16 +58,6 @@ pub struct TransientExecution {
 }
 
 impl TransientExecution {
-    pub fn new_from_env(env: &Environment) -> Self {
-        Self {
-            spectre_pht: env.analysis.spectre_pht,
-            spectre_stl: env.analysis.spectre_stl,
-            predictor_strategy: env.analysis.predictor_strategy,
-            speculation_window: env.architecture.speculation_window,
-            intermediate_resolve: env.analysis.observe != Observe::Parallel,
-        }
-    }
-
     #[allow(clippy::clippy::type_complexity)]
     fn build_default_cfg(
         &self,

@@ -1,4 +1,3 @@
-use crate::environment::{Environment, Observe};
 use crate::error::Result;
 use crate::expr;
 use crate::hir::{Block, ControlFlowGraph, Instruction};
@@ -17,35 +16,6 @@ pub struct Observations {
 }
 
 impl Observations {
-    pub fn new_from_env(env: &Environment) -> Self {
-        let default = Self {
-            cache_available: env.architecture.cache,
-            btb_available: env.architecture.branch_target_buffer,
-            pht_available: env.architecture.pattern_history_table,
-            obs_end_of_program: false,
-            obs_effectful_instructions: false,
-            obs_control_flow_joins: false,
-            obs_locations: Vec::default(),
-        };
-
-        match env.analysis.observe {
-            Observe::Sequential => Self {
-                obs_end_of_program: true,
-                ..default
-            },
-            Observe::Parallel | Observe::Full => Self {
-                obs_end_of_program: true,
-                obs_effectful_instructions: true,
-                obs_control_flow_joins: true,
-                ..default
-            },
-            Observe::Locations(ref locations) => Self {
-                obs_locations: locations.to_owned(),
-                ..default
-            },
-        }
-    }
-
     fn observable_exprs(&self) -> Vec<expr::Expression> {
         let mut exprs = Vec::new();
 

@@ -1,4 +1,3 @@
-use crate::environment::Environment;
 use crate::error::Result;
 use crate::hir::{Block, ControlFlowGraph, InlinedProgram, Operation, Program};
 use std::collections::BTreeMap;
@@ -12,12 +11,6 @@ pub struct FunctionInlining {
 type CallDepth = BTreeMap<u64, usize>;
 
 impl FunctionInlining {
-    pub fn new_from_env(env: &Environment) -> Self {
-        Self {
-            recursion_limit: env.analysis.unwind,
-        }
-    }
-
     pub fn inline(&self, program: &Program) -> Result<InlinedProgram> {
         let entry_func = program
             .entry_function()

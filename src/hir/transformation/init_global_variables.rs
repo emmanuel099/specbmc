@@ -1,4 +1,3 @@
-use crate::environment::{AddressRange, Environment, SecurityLevel};
 use crate::error::Result;
 use crate::expr::{
     BitVector, BranchTargetBuffer, Cache, CacheValue, Expression, Memory, PatternHistoryTable,
@@ -23,24 +22,6 @@ pub struct InitGlobalVariables {
 }
 
 impl InitGlobalVariables {
-    pub fn new_from_env(env: &Environment) -> Self {
-        let memory_policy = &env.policy.memory;
-        let register_policy = &env.policy.registers;
-
-        Self {
-            cache_available: env.architecture.cache,
-            btb_available: env.architecture.branch_target_buffer,
-            pht_available: env.architecture.pattern_history_table,
-            memory_default_low: memory_policy.default_level == SecurityLevel::Low,
-            low_memory_addresses: address_ranges_to_addresses(&memory_policy.low),
-            high_memory_addresses: address_ranges_to_addresses(&memory_policy.high),
-            registers_default_low: register_policy.default_level == SecurityLevel::Low,
-            low_registers: register_policy.low.clone(),
-            high_registers: register_policy.high.clone(),
-            start_with_empty_cache: env.analysis.start_with_empty_cache,
-        }
-    }
-
     /// Havoc registers and make low-registers indistinguishable
     fn init_registers(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
         // All variables which are live at the entry block are considered uninitialized and
@@ -199,16 +180,4 @@ fn havoc_variable(block: &mut Block, var: Variable) -> Result<()> {
 
 fn low_equivalent(block: &mut Block, expr: Expression) {
     block.indistinguishable(expr).labels_mut().pseudo();
-}
-
-fn address_ranges_to_addresses(address_ranges: &HashSet<AddressRange>) -> BTreeSet<u64> {
-    let mut addresses = BTreeSet::new();
-
-    address_ranges.iter().for_each(|range| {
-        for addr in range.addresses() {
-            addresses.insert(addr);
-        }
-    });
-
-    addresses
 }
