@@ -112,6 +112,20 @@ impl Default for Observe {
     }
 }
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
+pub enum Model {
+    #[serde(rename = "components")]
+    Components, // Components model: Observe Observe microarchitectual components like cache, branch-target buffer, ...
+    #[serde(rename = "pc")]
+    ProgramCounter, // PC model: Observe program counter and memory loads
+}
+
+impl Default for Model {
+    fn default() -> Self {
+        Self::Components
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Analysis {
     #[serde(default = "enabled")]
@@ -133,6 +147,8 @@ pub struct Analysis {
     #[serde(default)]
     pub observe: Observe,
     #[serde(default)]
+    pub model: Model,
+    #[serde(default)]
     pub program_entry: Option<String>,
 }
 
@@ -148,6 +164,7 @@ impl Default for Analysis {
             recursion_limit: 0,
             start_with_empty_cache: false,
             observe: Observe::default(),
+            model: Model::default(),
             program_entry: None,
         }
     }

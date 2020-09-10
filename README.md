@@ -41,6 +41,7 @@ OPTIONS:
     -e, --env <FILE>                 Sets environment file to use (arguments overwrite it)
         --lir <FILE>                 Prints LIR program into file (plain text)
         --mir <FILE>                 Prints MIR program into file (DOT)
+        --model <MODEL>              Sets analysis model type [possible values: components, pc]
         --observe <OBSERVE>          Sets observation type [possible values: sequential, parallel]
     -o, --opt <LEVEL>                Sets optimization level [possible values: none, basic, full]
     -p, --predictor <STRATEGY>       Sets predictor strategy [possible values: invert, choose]
@@ -119,6 +120,10 @@ analysis:
   #                 see `test/window_branch_leak_size_three.muasm`.
   #   - full:       Same as parallel but transient execution can resolve at any time.
   observe: parallel
+  # Type of analysis model: components, pc [default: components]
+  #   - components: Observe microarchitectual components like cache, branch-target buffer, ...
+  #   - pc:         Observe program counter and memory loads (cheaper than components model)
+  model: components
   # The program entry point: string [default: entry point from binary]
   program_entry: "main"
 

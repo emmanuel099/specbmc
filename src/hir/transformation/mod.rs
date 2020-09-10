@@ -10,6 +10,7 @@ mod loop_unwinding;
 mod non_spec_obs_equiv;
 mod observations;
 mod optimization;
+mod pc_model_observations;
 mod ssa_transformation;
 mod transient_execution;
 
@@ -21,6 +22,9 @@ pub use self::loop_unwinding::{LoopUnwinding, LoopUnwindingBuilder};
 pub use self::non_spec_obs_equiv::{NonSpecObsEquivalence, NonSpecObsEquivalenceBuilder};
 pub use self::observations::{Observations, ObservationsBuilder};
 pub use self::optimization::Optimizer;
+pub use self::pc_model_observations::{
+    ProgramCounterModelObservations, ProgramCounterModelObservationsBuilder,
+};
 pub use self::ssa_transformation::{SSAForm, SSATransformation};
 pub use self::transient_execution::{TransientExecution, TransientExecutionBuilder};
 
@@ -97,6 +101,15 @@ impl<T: Transform<ControlFlowGraph>> Transform<InlinedProgram> for T {
 pub fn create_transformations(
     env: &environment::Environment,
 ) -> Result<Vec<Box<dyn Transform<InlinedProgram>>>> {
+    match env.analysis.model {
+        environment::Model::Components => create_components_model_transformations(env),
+        environment::Model::ProgramCounter => create_pc_model_transformations(env),
+    }
+}
+
+pub fn create_components_model_transformations(
+    env: &environment::Environment,
+) -> Result<Vec<Box<dyn Transform<InlinedProgram>>>> {
     let mut steps: Vec<Box<dyn Transform<InlinedProgram>>> = Vec::new();
 
     steps.push(Box::new(loop_unwinding(env)?));
@@ -126,6 +139,37 @@ pub fn create_transformations(
     if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
         steps.push(Box::new(non_spec_obs_equivalence(env)?));
     }
+
+    steps.push(Box::new(SSATransformation::new(SSAForm::Pruned)));
+
+    match env.optimization_level {
+        environment::OptimizationLevel::Disabled => {}
+        environment::OptimizationLevel::Basic => {
+            steps.push(Box::new(Optimizer::basic()));
+        }
+        environment::OptimizationLevel::Full => {
+            steps.push(Box::new(Optimizer::full()));
+        }
+    }
+
+    Ok(steps)
+}
+
+pub fn create_pc_model_transformations(
+    env: &environment::Environment,
+) -> Result<Vec<Box<dyn Transform<InlinedProgram>>>> {
+    let mut steps: Vec<Box<dyn Transform<InlinedProgram>>> = Vec::new();
+
+    steps.push(Box::new(loop_unwinding(env)?));
+    steps.push(Box::new(instruction_effects(env)?));
+
+    if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
+        steps.push(Box::new(transient_execution(env)?));
+    }
+
+    steps.push(Box::new(pc_model_observations(env)?));
+
+    steps.push(Box::new(init_global_variables(env, &HashSet::new())?));
 
     steps.push(Box::new(SSATransformation::new(SSAForm::Pruned)));
 
@@ -187,6 +231,18 @@ fn observations(
                 .build()?)
         }
     }
+}
+
+fn pc_model_observations(
+    env: &environment::Environment,
+) -> Result<ProgramCounterModelObservations> {
+    Ok(ProgramCounterModelObservationsBuilder::default()
+        .check(env.analysis.check)
+        .observe_program_counter(
+            env.architecture.branch_target_buffer || env.architecture.pattern_history_table,
+        )
+        .observe_memory_loads(env.architecture.cache)
+        .build()?)
 }
 
 fn init_global_variables(

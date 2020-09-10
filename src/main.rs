@@ -32,6 +32,7 @@ struct Arguments {
     solver: Option<environment::Solver>,
     predictor_strategy: Option<environment::PredictorStrategy>,
     observe: Option<environment::Observe>,
+    model: Option<environment::Model>,
     program_entry: Option<String>,
     unwind: Option<usize>,
     unwinding_guard: Option<environment::UnwindingGuard>,
@@ -94,6 +95,14 @@ fn parse_arguments() -> Arguments {
                 .value_name("OBSERVE")
                 .possible_values(&["sequential", "parallel", "full"])
                 .help("Sets observation type")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("model")
+                .long("model")
+                .value_name("MODEL")
+                .possible_values(&["components", "pc"])
+                .help("Sets analysis model type")
                 .takes_value(true),
         )
         .arg(
@@ -255,6 +264,12 @@ fn parse_arguments() -> Arguments {
         _ => panic!("unknown observe type"),
     };
 
+    let parse_model = |model: &str| match model {
+        "components" => Model::Components,
+        "pc" => Model::ProgramCounter,
+        _ => panic!("unknown model type"),
+    };
+
     let parse_solver = |solver: &str| match solver {
         "z3" => Solver::Z3,
         "cvc4" => Solver::CVC4,
@@ -279,6 +294,7 @@ fn parse_arguments() -> Arguments {
             .value_of("predictor_strategy")
             .map(parse_predictory_strategy),
         observe: matches.value_of("observe").map(parse_observe),
+        model: matches.value_of("model").map(parse_model),
         program_entry: matches.value_of("program_entry").map(String::from),
         unwind: matches
             .value_of("unwind")
@@ -345,6 +361,10 @@ fn build_environment(arguments: &Arguments) -> Result<environment::Environment> 
 
     if let Some(observe) = arguments.observe {
         env.analysis.observe = observe;
+    }
+
+    if let Some(model) = arguments.model {
+        env.analysis.model = model;
     }
 
     if let Some(solver) = arguments.solver {
