@@ -1,5 +1,6 @@
 use crate::environment;
-use std::collections::{BTreeSet, HashSet};
+use crate::expr;
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 mod explicit_effects;
 mod function_inlining;
@@ -125,21 +126,6 @@ pub fn create_transformations(
         ));
     }
 
-    steps.push(Box::new(
-        InitGlobalVariablesBuilder::default()
-            .cache_available(env.architecture.cache)
-            .btb_available(env.architecture.branch_target_buffer)
-            .pht_available(env.architecture.pattern_history_table)
-            .memory_default_security_level(env.policy.memory.default_level)
-            .low_memory_addresses(address_ranges_to_addresses(&env.policy.memory.low))
-            .high_memory_addresses(address_ranges_to_addresses(&env.policy.memory.high))
-            .registers_default_security_level(env.policy.registers.default_level)
-            .low_registers(env.policy.registers.low.clone())
-            .high_registers(env.policy.registers.high.clone())
-            .start_with_empty_cache(env.analysis.start_with_empty_cache)
-            .build()?,
-    ));
-
     match env.analysis.observe {
         environment::Observe::Sequential => {
             steps.push(Box::new(
@@ -168,6 +154,38 @@ pub fn create_transformations(
     }
 
     steps.push(Box::new(ExplicitEffects::default()));
+
+    {
+        let low_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.low);
+        let high_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.high);
+
+        let mut low_security_variables = env.policy.registers.low.clone();
+        low_security_variables.insert(expr::Predictor::variable().name().to_owned());
+        low_security_variables.insert(expr::Cache::variable().name().to_owned());
+        low_security_variables.insert(expr::BranchTargetBuffer::variable().name().to_owned());
+        low_security_variables.insert(expr::PatternHistoryTable::variable().name().to_owned());
+
+        let high_security_variables = env.policy.registers.high.clone();
+
+        let mut initial_variable_value = HashMap::new();
+        if env.analysis.start_with_empty_cache {
+            let empty_cache =
+                expr::Expression::constant(expr::CacheValue::empty().into(), expr::Sort::cache());
+            initial_variable_value.insert(expr::Cache::variable().name().to_owned(), empty_cache);
+        }
+
+        steps.push(Box::new(
+            InitGlobalVariablesBuilder::default()
+                .default_memory_security_level(env.policy.memory.default_level)
+                .low_security_memory_addresses(low_security_memory_addresses)
+                .high_security_memory_addresses(high_security_memory_addresses)
+                .default_variable_security_level(env.policy.registers.default_level)
+                .low_security_variables(low_security_variables)
+                .high_security_variables(high_security_variables)
+                .initial_variable_value(initial_variable_value)
+                .build()?,
+        ));
+    }
 
     if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
         steps.push(Box::new(
