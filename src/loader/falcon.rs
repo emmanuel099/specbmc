@@ -379,6 +379,9 @@ fn translate_expr(expr: &il::Expression) -> Result<expr::Expression> {
         il::Expression::Shr(lhs, rhs) => {
             expr::BitVector::lshr(translate_expr(lhs)?, translate_expr(rhs)?)
         }
+        il::Expression::AShr(lhs, rhs) => {
+            expr::BitVector::ashr(translate_expr(lhs)?, translate_expr(rhs)?)
+        }
         il::Expression::Cmpeq(lhs, rhs) => {
             expr::Expression::equal(translate_expr(lhs)?, translate_expr(rhs)?)
         }
