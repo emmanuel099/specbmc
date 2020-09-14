@@ -33,10 +33,10 @@ impl Sort {
         Self::bit_vector(environment::WORD_SIZE)
     }
 
-    pub fn array(range: &Self, domain: &Self) -> Self {
+    pub fn array(range: Self, domain: Self) -> Self {
         Self::Array {
-            range: Box::new(range.clone()),
-            domain: Box::new(domain.clone()),
+            range: Box::new(range),
+            domain: Box::new(domain),
         }
     }
 

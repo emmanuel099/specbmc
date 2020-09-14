@@ -505,7 +505,7 @@ impl Sort2Smt for expr::Sort {
 
 fn define_memory<T>(solver: &mut Solver<T>, access_widths: &[usize]) -> Result<()> {
     // memory type
-    let mem_array_sort = expr::Sort::array(&expr::Sort::word(), &expr::Sort::bit_vector(8));
+    let mem_array_sort = expr::Sort::array(expr::Sort::word(), expr::Sort::bit_vector(8));
     solver.define_null_sort(&expr::Sort::memory(), &mem_array_sort)?;
 
     // memory load functions
@@ -588,7 +588,7 @@ fn define_predictor<T>(solver: &mut Solver<T>) -> Result<()> {
 
 fn define_cache<T>(solver: &mut Solver<T>, access_widths: &[usize]) -> Result<()> {
     // cache type
-    let cache_set_sort = expr::Sort::array(&expr::Sort::word(), &expr::Sort::boolean());
+    let cache_set_sort = expr::Sort::array(expr::Sort::word(), expr::Sort::boolean());
     solver.define_null_sort(&expr::Sort::cache(), &cache_set_sort)?;
 
     // cache fetch
@@ -640,7 +640,7 @@ fn define_cache<T>(solver: &mut Solver<T>, access_widths: &[usize]) -> Result<()
 
 fn define_btb<T>(solver: &mut Solver<T>) -> Result<()> {
     // btb type
-    let btb_array_sort = expr::Sort::array(&expr::Sort::word(), &expr::Sort::word());
+    let btb_array_sort = expr::Sort::array(expr::Sort::word(), expr::Sort::word());
     solver.define_null_sort(&expr::Sort::branch_target_buffer(), &btb_array_sort)?;
 
     // btb functions
@@ -666,7 +666,7 @@ fn define_pht<T>(solver: &mut Solver<T>) -> Result<()> {
     // pht type
     solver.define_null_sort(
         &expr::Sort::pattern_history_table(),
-        &expr::Sort::array(&expr::Sort::word(), &expr::Sort::boolean()),
+        &expr::Sort::array(expr::Sort::word(), expr::Sort::boolean()),
     )?;
 
     // pht functions
@@ -803,7 +803,7 @@ mod parser {
                 sort,
                 char(')'),
             )),
-            |(_, _, range, _, domain, _)| expr::Sort::array(&range, &domain),
+            |(_, _, range, _, domain, _)| expr::Sort::array(range, domain),
         )(input)
     }
 
