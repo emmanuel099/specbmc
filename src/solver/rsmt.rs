@@ -227,6 +227,7 @@ impl Expr2Smt<&expr::Sort> for expr::Operator {
             Self::BitVector(op) => op.expr_to_smt2(w, sort),
             Self::Array(op) => op.expr_to_smt2(w, sort),
             Self::List(op) => op.expr_to_smt2(w, sort),
+            Self::Tuple(op) => op.expr_to_smt2(w, sort),
             Self::Memory(op) => op.expr_to_smt2(w, sort),
             Self::Predictor(op) => op.expr_to_smt2(w, sort),
             Self::Cache(op) => op.expr_to_smt2(w, sort),
@@ -418,6 +419,21 @@ impl Expr2Smt<&expr::Sort> for expr::List {
     }
 }
 
+impl Expr2Smt<&expr::Sort> for expr::Tuple {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, sort: &expr::Sort) -> SmtRes<()>
+    where
+        Writer: ::std::io::Write,
+    {
+        let field_count = sort.unwrap_tuple().len();
+
+        match self {
+            Self::Make => write!(w, "tuple{}", field_count)?,
+            Self::Get(field) => write!(w, "tuple{}-field{}", field_count, field)?,
+        };
+        Ok(())
+    }
+}
+
 impl Expr2Smt<&expr::Sort> for expr::Memory {
     fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
     where
@@ -512,6 +528,14 @@ impl Sort2Smt for expr::Sort {
             Self::List { domain } => {
                 write!(w, "(List ")?;
                 domain.sort_to_smt2(w)?;
+                write!(w, ")")?
+            }
+            Self::Tuple { fields } => {
+                write!(w, "(Tuple{}", fields.len())?;
+                for field in fields {
+                    write!(w, " ")?;
+                    field.sort_to_smt2(w)?;
+                }
                 write!(w, ")")?
             }
             Self::Memory => write!(w, "Memory")?,

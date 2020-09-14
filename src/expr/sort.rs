@@ -9,6 +9,7 @@ pub enum Sort {
     BitVector(usize),
     Array { range: Box<Sort>, domain: Box<Sort> },
     List { domain: Box<Sort> },
+    Tuple { fields: Vec<Sort> },
     // Arch
     Memory,
     Predictor,
@@ -45,6 +46,10 @@ impl Sort {
         Self::List {
             domain: Box::new(domain),
         }
+    }
+
+    pub fn tuple(fields: Vec<Sort>) -> Self {
+        Self::Tuple { fields }
     }
 
     pub fn memory() -> Self {
@@ -105,6 +110,13 @@ impl Sort {
     pub fn is_list(&self) -> bool {
         match self {
             Self::List { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_tuple(&self) -> bool {
+        match self {
+            Self::Tuple { .. } => true,
             _ => false,
         }
     }
@@ -192,6 +204,14 @@ impl Sort {
         }
     }
 
+    pub fn expect_tuple(&self) -> Result<()> {
+        if self.is_tuple() {
+            Ok(())
+        } else {
+            Err(format!("Expected Tuple but was {}", self).into())
+        }
+    }
+
     pub fn expect_memory(&self) -> Result<()> {
         if self.is_memory() {
             Ok(())
@@ -260,6 +280,13 @@ impl Sort {
             _ => panic!("Expected List"),
         }
     }
+
+    pub fn unwrap_tuple(&self) -> &[Self] {
+        match self {
+            Self::Tuple { fields } => fields,
+            _ => panic!("Expected Tuple"),
+        }
+    }
 }
 
 impl fmt::Display for Sort {
@@ -270,6 +297,18 @@ impl fmt::Display for Sort {
             Self::BitVector(width) => write!(f, "BitVec<{}>", width),
             Self::Array { range, domain } => write!(f, "Array<{}, {}>", range, domain),
             Self::List { domain } => write!(f, "List<{}>", domain),
+            Self::Tuple { fields } => {
+                write!(f, "Tuple<")?;
+                let mut is_first = true;
+                for sort in fields.iter() {
+                    if !is_first {
+                        write!(f, " x ")?;
+                    }
+                    write!(f, "x {}", sort)?;
+                    is_first = false;
+                }
+                write!(f, ">")
+            }
             Self::Memory => write!(f, "Memory"),
             Self::Predictor => write!(f, "Predictor"),
             Self::Cache => write!(f, "Cache"),

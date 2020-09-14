@@ -11,6 +11,7 @@ mod integer;
 mod list;
 mod optimization;
 mod sort;
+mod tuple;
 mod variable;
 
 pub use self::arch::*;
@@ -22,6 +23,7 @@ pub use self::integer::Integer;
 pub use self::list::List;
 pub use self::optimization::*;
 pub use self::sort::Sort;
+pub use self::tuple::Tuple;
 pub use self::variable::Variable;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
@@ -37,6 +39,7 @@ pub enum Operator {
     BitVector(BitVector),
     Array(Array),
     List(List),
+    Tuple(Tuple),
     // Arch
     Memory(Memory),
     Predictor(Predictor),
@@ -60,6 +63,7 @@ impl_operator_from!(Integer);
 impl_operator_from!(BitVector);
 impl_operator_from!(Array);
 impl_operator_from!(List);
+impl_operator_from!(Tuple);
 impl_operator_from!(Memory);
 impl_operator_from!(Predictor);
 impl_operator_from!(Cache);
@@ -80,6 +84,7 @@ impl fmt::Display for Operator {
             Self::BitVector(op) => op.fmt(f),
             Self::Array(op) => op.fmt(f),
             Self::List(op) => op.fmt(f),
+            Self::Tuple(op) => op.fmt(f),
             Self::Memory(op) => op.fmt(f),
             Self::Predictor(op) => op.fmt(f),
             Self::Cache(op) => op.fmt(f),
