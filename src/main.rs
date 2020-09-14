@@ -49,6 +49,7 @@ struct Arguments {
     smt_file: Option<String>,
     input_file: String,
     print_assembly_info: bool,
+    show_environment: bool,
 }
 
 fn parse_arguments() -> Arguments {
@@ -235,6 +236,11 @@ fn parse_arguments() -> Arguments {
                 .long("assembly-info")
                 .help("Prints assembly info and exits"),
         )
+        .arg(
+            Arg::with_name("show_environment")
+                .long("show-env")
+                .help("Prints the environment to console"),
+        )
         .get_matches();
 
     let parse_optimization_level = |level: &str| match level {
@@ -319,6 +325,7 @@ fn parse_arguments() -> Arguments {
         smt_file: matches.value_of("smt_file").map(String::from),
         input_file: matches.value_of("input_file").map(String::from).unwrap(),
         print_assembly_info: matches.is_present("print_assembly_info"),
+        show_environment: matches.is_present("show_environment"),
     }
 }
 
@@ -466,7 +473,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
 
     let env = build_environment(arguments)?;
 
-    if env.debug {
+    if arguments.show_environment || env.debug {
         println!("{}:\n{}\n---", "Environment".bold(), style(&env).cyan());
     }
 
