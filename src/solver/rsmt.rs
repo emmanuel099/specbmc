@@ -226,6 +226,7 @@ impl Expr2Smt<&expr::Sort> for expr::Operator {
             Self::Integer(op) => op.expr_to_smt2(w, sort),
             Self::BitVector(op) => op.expr_to_smt2(w, sort),
             Self::Array(op) => op.expr_to_smt2(w, sort),
+            Self::List(op) => op.expr_to_smt2(w, sort),
             Self::Memory(op) => op.expr_to_smt2(w, sort),
             Self::Predictor(op) => op.expr_to_smt2(w, sort),
             Self::Cache(op) => op.expr_to_smt2(w, sort),
@@ -402,6 +403,21 @@ impl Expr2Smt<&expr::Sort> for expr::Array {
     }
 }
 
+impl Expr2Smt<&expr::Sort> for expr::List {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
+    where
+        Writer: ::std::io::Write,
+    {
+        match self {
+            Self::Nil => write!(w, "nil")?,
+            Self::Insert => write!(w, "insert")?,
+            Self::Head => write!(w, "head")?,
+            Self::Tail => write!(w, "tail")?,
+        };
+        Ok(())
+    }
+}
+
 impl Expr2Smt<&expr::Sort> for expr::Memory {
     fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
     where
@@ -490,6 +506,11 @@ impl Sort2Smt for expr::Sort {
                 write!(w, "(Array ")?;
                 range.sort_to_smt2(w)?;
                 write!(w, " ")?;
+                domain.sort_to_smt2(w)?;
+                write!(w, ")")?
+            }
+            Self::List { domain } => {
+                write!(w, "(List ")?;
                 domain.sort_to_smt2(w)?;
                 write!(w, ")")?
             }

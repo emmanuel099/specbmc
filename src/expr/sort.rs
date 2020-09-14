@@ -8,6 +8,7 @@ pub enum Sort {
     Integer,
     BitVector(usize),
     Array { range: Box<Sort>, domain: Box<Sort> },
+    List { domain: Box<Sort> },
     // Arch
     Memory,
     Predictor,
@@ -36,6 +37,12 @@ impl Sort {
     pub fn array(range: Self, domain: Self) -> Self {
         Self::Array {
             range: Box::new(range),
+            domain: Box::new(domain),
+        }
+    }
+
+    pub fn list(domain: Self) -> Self {
+        Self::List {
             domain: Box::new(domain),
         }
     }
@@ -91,6 +98,13 @@ impl Sort {
     pub fn is_array(&self) -> bool {
         match self {
             Self::Array { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_list(&self) -> bool {
+        match self {
+            Self::List { .. } => true,
             _ => false,
         }
     }
@@ -170,6 +184,14 @@ impl Sort {
         }
     }
 
+    pub fn expect_list(&self) -> Result<()> {
+        if self.is_list() {
+            Ok(())
+        } else {
+            Err(format!("Expected List but was {}", self).into())
+        }
+    }
+
     pub fn expect_memory(&self) -> Result<()> {
         if self.is_memory() {
             Ok(())
@@ -231,6 +253,13 @@ impl Sort {
             _ => panic!("Expected Array"),
         }
     }
+
+    pub fn unwrap_list(&self) -> &Self {
+        match self {
+            Self::List { domain } => domain,
+            _ => panic!("Expected List"),
+        }
+    }
 }
 
 impl fmt::Display for Sort {
@@ -240,6 +269,7 @@ impl fmt::Display for Sort {
             Self::Integer => write!(f, "Integer"),
             Self::BitVector(width) => write!(f, "BitVec<{}>", width),
             Self::Array { range, domain } => write!(f, "Array<{}, {}>", range, domain),
+            Self::List { domain } => write!(f, "List<{}>", domain),
             Self::Memory => write!(f, "Memory"),
             Self::Predictor => write!(f, "Predictor"),
             Self::Cache => write!(f, "Cache"),

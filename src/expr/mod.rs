@@ -8,6 +8,7 @@ mod bitvector;
 mod boolean;
 mod constant;
 mod integer;
+mod list;
 mod optimization;
 mod sort;
 mod variable;
@@ -18,6 +19,7 @@ pub use self::bitvector::{BitVector, BitVectorValue};
 pub use self::boolean::Boolean;
 pub use self::constant::Constant;
 pub use self::integer::Integer;
+pub use self::list::List;
 pub use self::optimization::*;
 pub use self::sort::Sort;
 pub use self::variable::Variable;
@@ -34,6 +36,7 @@ pub enum Operator {
     Integer(Integer),
     BitVector(BitVector),
     Array(Array),
+    List(List),
     // Arch
     Memory(Memory),
     Predictor(Predictor),
@@ -56,6 +59,7 @@ impl_operator_from!(Boolean);
 impl_operator_from!(Integer);
 impl_operator_from!(BitVector);
 impl_operator_from!(Array);
+impl_operator_from!(List);
 impl_operator_from!(Memory);
 impl_operator_from!(Predictor);
 impl_operator_from!(Cache);
@@ -75,6 +79,7 @@ impl fmt::Display for Operator {
             Self::Integer(op) => op.fmt(f),
             Self::BitVector(op) => op.fmt(f),
             Self::Array(op) => op.fmt(f),
+            Self::List(op) => op.fmt(f),
             Self::Memory(op) => op.fmt(f),
             Self::Predictor(op) => op.fmt(f),
             Self::Cache(op) => op.fmt(f),
