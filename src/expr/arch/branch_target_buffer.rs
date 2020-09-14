@@ -17,7 +17,9 @@ impl fmt::Display for BranchTargetBuffer {
 
 impl BranchTargetBuffer {
     pub fn variable() -> Variable {
-        Variable::new("_btb", Sort::branch_target_buffer())
+        let mut var = Variable::new("_btb", Sort::branch_target_buffer());
+        var.labels_mut().rollback_persistent();
+        var
     }
 
     pub fn track(btb: Expression, location: Expression, target: Expression) -> Result<Expression> {

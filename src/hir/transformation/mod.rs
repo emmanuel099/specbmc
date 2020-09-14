@@ -137,7 +137,7 @@ pub fn create_components_model_transformations(
     steps.push(Box::new(init_global_variables(env, &observable_variables)?));
 
     if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
-        steps.push(Box::new(non_spec_obs_equivalence(env)?));
+        steps.push(Box::new(NonSpecObsEquivalence::default()));
     }
 
     steps.push(Box::new(SSATransformation::new(SSAForm::Pruned)));
@@ -275,14 +275,6 @@ fn init_global_variables(
         .low_security_variables(low_security_variables)
         .high_security_variables(high_security_variables)
         .initial_variable_value(initial_variable_value)
-        .build()?)
-}
-
-fn non_spec_obs_equivalence(env: &environment::Environment) -> Result<NonSpecObsEquivalence> {
-    Ok(NonSpecObsEquivalenceBuilder::default()
-        .cache_available(env.architecture.cache)
-        .btb_available(env.architecture.branch_target_buffer)
-        .pht_available(env.architecture.pattern_history_table)
         .build()?)
 }
 

@@ -1,5 +1,60 @@
 use crate::expr::Sort;
+use std::collections::BTreeSet;
 use std::fmt;
+
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+pub enum Label {
+    RollbackPersistent,
+}
+
+impl fmt::Display for Label {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::RollbackPersistent => write!(f, "rollback-persistent"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Default)]
+pub struct Labels {
+    labels: BTreeSet<Label>,
+}
+
+impl Labels {
+    pub fn rollback_persistent(&mut self) -> &mut Self {
+        self.labels.insert(Label::RollbackPersistent);
+        self
+    }
+
+    /// Returns whether this `Variable` survives a transient-execution rollback or not.
+    pub fn is_rollback_persistent(&self) -> bool {
+        self.labels.contains(&Label::RollbackPersistent)
+    }
+
+    pub fn merge(&mut self, other: &Labels) {
+        other.labels.iter().for_each(|&label| {
+            self.labels.insert(label);
+        });
+    }
+}
+
+impl fmt::Display for Labels {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.labels.is_empty() {
+            return Ok(());
+        }
+        write!(f, "[")?;
+        let mut is_first = true;
+        for label in &self.labels {
+            if !is_first {
+                write!(f, ", ")?;
+            }
+            write!(f, "{}", label)?;
+            is_first = false;
+        }
+        write!(f, "]")
+    }
+}
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Variable {
@@ -7,6 +62,7 @@ pub struct Variable {
     sort: Box<Sort>,
     version: Option<usize>,     // Version in SSA form
     composition: Option<usize>, // Composition Number when self-composed
+    labels: Labels,
 }
 
 impl Variable {
@@ -20,6 +76,7 @@ impl Variable {
             sort: Box::new(sort),
             version: None,
             composition: None,
+            labels: Labels::default(),
         }
     }
 
@@ -64,6 +121,16 @@ impl Variable {
             None => String::default(),
         };
         format!("{}{}{}", self.name, version_str, composition_str)
+    }
+
+    /// Retrieve the labels of this `Edge`.
+    pub fn labels(&self) -> &Labels {
+        &self.labels
+    }
+
+    /// Retrieve a mutable reference to the labels of this `Edge`.
+    pub fn labels_mut(&mut self) -> &mut Labels {
+        &mut self.labels
     }
 
     /// Returns a copy of the variable with the composition number set to `composition`.

@@ -1,14 +1,10 @@
 use crate::error::Result;
-use crate::expr::{BranchTargetBuffer, Cache, Expression, PatternHistoryTable, Sort, Variable};
+use crate::expr::{Expression, Variable};
 use crate::hir::{ControlFlowGraph, Instruction, Operation};
 use crate::ir::Transform;
 
 #[derive(Default, Builder, Debug)]
-pub struct NonSpecObsEquivalence {
-    cache_available: bool,
-    btb_available: bool,
-    pht_available: bool,
-}
+pub struct NonSpecObsEquivalence {}
 
 impl NonSpecObsEquivalence {
     /// Initially each microarchitectual component has the same state as their non-speculative counterpart.
@@ -16,24 +12,18 @@ impl NonSpecObsEquivalence {
         &self,
         cfg: &mut ControlFlowGraph,
     ) -> Result<()> {
-        let mut eq_vars: Vec<(Variable, Variable)> = Vec::new();
-        if self.cache_available {
-            let cache_spec = Cache::variable();
-            eq_vars.push((cache_nonspec(), cache_spec));
-        }
-        if self.btb_available {
-            let btb_spec = BranchTargetBuffer::variable();
-            eq_vars.push((btb_nonspec(), btb_spec));
-        }
-        if self.pht_available {
-            let pht_spec = PatternHistoryTable::variable();
-            eq_vars.push((pht_nonspec(), pht_spec));
-        }
+        let vars: Vec<Variable> = cfg
+            .variables()
+            .into_iter()
+            .filter(|var| var.labels().is_rollback_persistent())
+            .cloned()
+            .collect();
 
         let entry_block = cfg.entry_block_mut()?;
-        for (lhs, rhs) in eq_vars {
+        for var in vars {
+            let ns_var = create_nonspec_variable_equivalent(&var);
             entry_block
-                .assume(Expression::equal(lhs.into(), rhs.into())?)?
+                .assume(Expression::equal(ns_var.into(), var.into())?)?
                 .labels_mut()
                 .pseudo();
         }
@@ -101,7 +91,7 @@ fn create_nonspec_indistinguishable_equivalent(inst: &Instruction) -> Instructio
 /// affecting their non-speculative counterparts will be added.
 fn instruction_requires_nonspec_equivalent(inst: &Instruction) -> bool {
     let requires_nonspec_equivalent =
-        |var: &Variable| -> bool { var.sort().is_rollback_persistent() };
+        |var: &Variable| -> bool { var.labels().is_rollback_persistent() };
 
     inst.variables()
         .into_iter()
@@ -124,23 +114,16 @@ fn create_nonspec_instruction_equivalent(inst: &Instruction) -> Instruction {
     nonspec_inst
 }
 
+fn create_nonspec_variable_equivalent(var: &Variable) -> Variable {
+    assert!(var.labels().is_rollback_persistent());
+
+    let name = format!("{}_ns", var.name());
+    let sort = var.sort().clone();
+    Variable::new(name, sort)
+}
+
 fn replace_variable_with_nonspec_equivalent(var: &mut Variable) {
-    match var.sort() {
-        Sort::Cache => *var = cache_nonspec(),
-        Sort::BranchTargetBuffer => *var = btb_nonspec(),
-        Sort::PatternHistoryTable => *var = pht_nonspec(),
-        _ => {}
-    };
-}
-
-fn cache_nonspec() -> Variable {
-    Variable::new("_cache_ns", Sort::cache())
-}
-
-fn btb_nonspec() -> Variable {
-    Variable::new("_btb_ns", Sort::branch_target_buffer())
-}
-
-fn pht_nonspec() -> Variable {
-    Variable::new("_pht_ns", Sort::pattern_history_table())
+    if var.labels().is_rollback_persistent() {
+        *var = create_nonspec_variable_equivalent(var);
+    }
 }

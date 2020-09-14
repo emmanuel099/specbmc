@@ -21,7 +21,9 @@ impl fmt::Display for Cache {
 
 impl Cache {
     pub fn variable() -> Variable {
-        Variable::new("_cache", Sort::cache())
+        let mut var = Variable::new("_cache", Sort::cache());
+        var.labels_mut().rollback_persistent();
+        var
     }
 
     pub fn fetch(bit_width: usize, cache: Expression, addr: Expression) -> Result<Expression> {

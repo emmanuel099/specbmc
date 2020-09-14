@@ -231,14 +231,6 @@ impl Sort {
             _ => panic!("Expected Array"),
         }
     }
-
-    /// Returns whether this `Sort` survives a transient-execution rollback or not.
-    pub fn is_rollback_persistent(&self) -> bool {
-        match self {
-            Self::Cache | Self::BranchTargetBuffer | Self::PatternHistoryTable => true,
-            _ => false,
-        }
-    }
 }
 
 impl fmt::Display for Sort {

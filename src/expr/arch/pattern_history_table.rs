@@ -19,7 +19,9 @@ impl fmt::Display for PatternHistoryTable {
 
 impl PatternHistoryTable {
     pub fn variable() -> Variable {
-        Variable::new("_pht", Sort::pattern_history_table())
+        let mut var = Variable::new("_pht", Sort::pattern_history_table());
+        var.labels_mut().rollback_persistent();
+        var
     }
 
     pub fn taken(pht: Expression, location: Expression) -> Result<Expression> {
