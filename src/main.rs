@@ -41,6 +41,7 @@ struct Arguments {
     debug: bool,
     skip_solving: bool,
     skip_cex: bool,
+    cex_file: String,
     cfg_file: Option<String>,
     transient_cfg_file: Option<String>,
     call_graph_file: Option<String>,
@@ -182,6 +183,14 @@ fn parse_arguments() -> Arguments {
                 .help("Skips generating counterexample"),
         )
         .arg(
+            Arg::with_name("cex_file")
+                .long("cex")
+                .value_name("FILE")
+                .help("Prints counterexample into file (DOT)")
+                .default_value("cex.dot")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("cfg_file")
                 .long("cfg")
                 .value_name("FILE")
@@ -317,6 +326,7 @@ fn parse_arguments() -> Arguments {
         debug: matches.is_present("debug"),
         skip_solving: matches.is_present("skip_solving"),
         skip_cex: matches.is_present("skip_cex"),
+        cex_file: matches.value_of("cex_file").map(String::from).unwrap(),
         cfg_file: matches.value_of("cfg_file").map(String::from),
         transient_cfg_file: matches.value_of("transient_cfg_file").map(String::from),
         call_graph_file: matches.value_of("call_graph_file").map(String::from),
@@ -558,10 +568,15 @@ fn check_program(arguments: &Arguments) -> Result<()> {
             println!("{}", "Leak detected!".bold().red());
 
             if env.generate_counterexample {
+                println!(
+                    "{} Generate counterexample ({})",
+                    bullet_point, arguments.cex_file
+                );
+
                 let counter_example = cex::build_counter_example(&hir_program, model.as_ref())?;
                 counter_example
                     .control_flow_graph()
-                    .render_to_file(Path::new("cex.dot"))?;
+                    .render_to_file(Path::new(&arguments.cex_file))?;
             }
 
             process::exit(2);
