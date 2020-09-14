@@ -127,19 +127,28 @@ impl Expr2Smt<()> for expr::Expression {
     where
         Writer: ::std::io::Write,
     {
+        self.expr_to_smt2(w, self.sort())
+    }
+}
+
+impl Expr2Smt<&expr::Sort> for expr::Expression {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
+    where
+        Writer: ::std::io::Write,
+    {
         if let Some(lowered_expr) = lower_to_smt(self) {
             // Self has been lowered, encode the lowered expression instead.
-            return lowered_expr.expr_to_smt2(w, ());
+            return lowered_expr.expr_to_smt2(w, self.sort());
         }
 
         if self.operands().is_empty() {
-            self.operator().expr_to_smt2(w, ())
+            self.operator().expr_to_smt2(w, self.sort())
         } else {
             write!(w, "(")?;
-            self.operator().expr_to_smt2(w, ())?;
+            self.operator().expr_to_smt2(w, self.sort())?;
             for operand in self.operands() {
                 write!(w, " ")?;
-                operand.expr_to_smt2(w, ())?;
+                operand.expr_to_smt2(w, operand.sort())?;
             }
             write!(w, ")")?;
             Ok(())
@@ -186,14 +195,14 @@ fn lower_to_smt_bitvec(
     }
 }
 
-impl Expr2Smt<()> for expr::Operator {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+impl Expr2Smt<&expr::Sort> for expr::Operator {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, sort: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
         match self {
             Self::Variable(v) => v.sym_to_smt2(w, ()),
-            Self::Constant(c) => c.expr_to_smt2(w, ()),
+            Self::Constant(c) => c.expr_to_smt2(w, sort),
             Self::Ite => {
                 write!(w, "ite")?;
                 Ok(())
@@ -213,21 +222,21 @@ impl Expr2Smt<()> for expr::Operator {
                 write!(w, ")")?;
                 Ok(())
             }
-            Self::Boolean(op) => op.expr_to_smt2(w, ()),
-            Self::Integer(op) => op.expr_to_smt2(w, ()),
-            Self::BitVector(op) => op.expr_to_smt2(w, ()),
-            Self::Array(op) => op.expr_to_smt2(w, ()),
-            Self::Memory(op) => op.expr_to_smt2(w, ()),
-            Self::Predictor(op) => op.expr_to_smt2(w, ()),
-            Self::Cache(op) => op.expr_to_smt2(w, ()),
-            Self::BranchTargetBuffer(op) => op.expr_to_smt2(w, ()),
-            Self::PatternHistoryTable(op) => op.expr_to_smt2(w, ()),
+            Self::Boolean(op) => op.expr_to_smt2(w, sort),
+            Self::Integer(op) => op.expr_to_smt2(w, sort),
+            Self::BitVector(op) => op.expr_to_smt2(w, sort),
+            Self::Array(op) => op.expr_to_smt2(w, sort),
+            Self::Memory(op) => op.expr_to_smt2(w, sort),
+            Self::Predictor(op) => op.expr_to_smt2(w, sort),
+            Self::Cache(op) => op.expr_to_smt2(w, sort),
+            Self::BranchTargetBuffer(op) => op.expr_to_smt2(w, sort),
+            Self::PatternHistoryTable(op) => op.expr_to_smt2(w, sort),
         }
     }
 }
 
-impl Expr2Smt<()> for expr::Constant {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+impl Expr2Smt<&expr::Sort> for expr::Constant {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, sort: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
@@ -248,14 +257,14 @@ impl Expr2Smt<()> for expr::Constant {
                 write!(w, "(_ bv{} {})", bv.value(), bv.bits())?;
                 Ok(())
             }
-            Self::Cache(value) => value.expr_to_smt2(w, ()),
+            Self::Cache(value) => value.expr_to_smt2(w, sort),
             _ => unimplemented!(),
         }
     }
 }
 
-impl Expr2Smt<()> for expr::CacheValue {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+impl Expr2Smt<&expr::Sort> for expr::CacheValue {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
@@ -292,8 +301,8 @@ impl Expr2Smt<()> for expr::CacheValue {
     }
 }
 
-impl Expr2Smt<()> for expr::Boolean {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+impl Expr2Smt<&expr::Sort> for expr::Boolean {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
@@ -308,8 +317,8 @@ impl Expr2Smt<()> for expr::Boolean {
     }
 }
 
-impl Expr2Smt<()> for expr::Integer {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+impl Expr2Smt<&expr::Sort> for expr::Integer {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
@@ -329,8 +338,8 @@ impl Expr2Smt<()> for expr::Integer {
     }
 }
 
-impl Expr2Smt<()> for expr::BitVector {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+impl Expr2Smt<&expr::Sort> for expr::BitVector {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
@@ -380,8 +389,8 @@ impl Expr2Smt<()> for expr::BitVector {
     }
 }
 
-impl Expr2Smt<()> for expr::Array {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+impl Expr2Smt<&expr::Sort> for expr::Array {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
@@ -393,8 +402,8 @@ impl Expr2Smt<()> for expr::Array {
     }
 }
 
-impl Expr2Smt<()> for expr::Memory {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+impl Expr2Smt<&expr::Sort> for expr::Memory {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
@@ -406,8 +415,8 @@ impl Expr2Smt<()> for expr::Memory {
     }
 }
 
-impl Expr2Smt<()> for expr::Predictor {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+impl Expr2Smt<&expr::Sort> for expr::Predictor {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
@@ -420,8 +429,8 @@ impl Expr2Smt<()> for expr::Predictor {
     }
 }
 
-impl Expr2Smt<()> for expr::Cache {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+impl Expr2Smt<&expr::Sort> for expr::Cache {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
@@ -433,8 +442,8 @@ impl Expr2Smt<()> for expr::Cache {
     }
 }
 
-impl Expr2Smt<()> for expr::BranchTargetBuffer {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+impl Expr2Smt<&expr::Sort> for expr::BranchTargetBuffer {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
@@ -445,8 +454,8 @@ impl Expr2Smt<()> for expr::BranchTargetBuffer {
     }
 }
 
-impl Expr2Smt<()> for expr::PatternHistoryTable {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: ()) -> SmtRes<()>
+impl Expr2Smt<&expr::Sort> for expr::PatternHistoryTable {
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
