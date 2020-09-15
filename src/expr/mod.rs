@@ -205,6 +205,13 @@ impl Expression {
         variables
     }
 
+    pub fn subexpressions(&self) -> Vec<&Self> {
+        vec![self]
+            .into_iter()
+            .chain(self.operands.iter().flat_map(Self::subexpressions))
+            .collect()
+    }
+
     pub fn is_constant(&self) -> bool {
         match &self.operator {
             Operator::Constant(_) => true,
