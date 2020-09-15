@@ -107,7 +107,7 @@ impl Node {
         }
     }
 
-    /// Get each `Variable` referenced by this `Operation`.
+    /// Get each `Variable` referenced by this `Node`.
     pub fn variables(&self) -> Vec<&Variable> {
         self.variables_used()
             .into_iter()

@@ -13,7 +13,9 @@ pub struct Program {
 impl Program {
     /// Create a new empty `Program`.
     pub fn new() -> Self {
-        Self { nodes: vec![] }
+        Self {
+            nodes: Vec::default(),
+        }
     }
 
     /// Returns a reference to the node at the given index.
@@ -60,6 +62,56 @@ impl Program {
     pub fn assume(&mut self, condition: Expression) -> Result<()> {
         self.nodes.push(Node::assume(condition)?);
         Ok(())
+    }
+
+    /// Get each `Variable` used by this `Program`.
+    pub fn variables_used(&self) -> Vec<&Variable> {
+        self.nodes.iter().flat_map(Node::variables_used).collect()
+    }
+
+    /// Get a mutable reference to each `Variable` used by this `Program`.
+    pub fn variables_used_mut(&mut self) -> Vec<&mut Variable> {
+        self.nodes
+            .iter_mut()
+            .flat_map(Node::variables_used_mut)
+            .collect()
+    }
+
+    /// Get each `Variable` defined by this `Program`.
+    pub fn variables_defined(&self) -> Vec<&Variable> {
+        self.nodes
+            .iter()
+            .flat_map(Node::variables_defined)
+            .collect()
+    }
+
+    /// Get a mutable reference to each `Variable` defined by this `Program`.
+    pub fn variables_defined_mut(&mut self) -> Vec<&mut Variable> {
+        self.nodes
+            .iter_mut()
+            .flat_map(Node::variables_defined_mut)
+            .collect()
+    }
+
+    /// Get each `Variable` referenced by this `Program`.
+    pub fn variables(&self) -> Vec<&Variable> {
+        self.variables_used()
+            .into_iter()
+            .chain(self.variables_defined().into_iter())
+            .collect()
+    }
+
+    /// Get each `Expression` of this `Program`.
+    pub fn expressions(&self) -> Vec<&Expression> {
+        self.nodes.iter().flat_map(Node::expressions).collect()
+    }
+
+    /// Get a mutable reference to each `Expression` of this `Program`.
+    pub fn expressions_mut(&mut self) -> Vec<&mut Expression> {
+        self.nodes
+            .iter_mut()
+            .flat_map(Node::expressions_mut)
+            .collect()
     }
 }
 
