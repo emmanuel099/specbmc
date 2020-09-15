@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::expr::{Expression, Variable};
 use std::fmt;
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Node {
     /// A simple comment.

@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::expr::{Expression, Memory, Variable};
 use std::fmt;
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum Operation {
     /// Assign the value given in expression to the variable indicated.
