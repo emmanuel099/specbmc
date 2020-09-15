@@ -14,8 +14,11 @@ use std::path::Path;
 use std::rc::Rc;
 use std::str::FromStr;
 
+type SolverType = environment::Solver;
+
 pub struct RSMTSolver {
     solver: Rc<RefCell<rsmt2::Solver<Parser>>>,
+    solver_type: SolverType,
 }
 
 impl RSMTSolver {
@@ -32,7 +35,10 @@ impl RSMTSolver {
         let parser = Parser::new();
         let solver = Rc::new(RefCell::new(Solver::new(conf, parser)?));
 
-        Ok(Self { solver })
+        Ok(Self {
+            solver,
+            solver_type: env.solver,
+        })
     }
 }
 
@@ -44,11 +50,28 @@ impl DumpFormula for RSMTSolver {
     }
 }
 
+// There is no other (easy) way to propagate this information along expr_to_smt2.
+// The solver type is required for list encoding.
+thread_local!(static SOLVER_TYPE: RefCell<Option<SolverType>> = RefCell::new(None));
+fn solver_type() -> SolverType {
+    SOLVER_TYPE.with(|type_cell| {
+        let solver_type = type_cell.borrow_mut();
+        solver_type.unwrap()
+    })
+}
+
 impl AssertionCheck for RSMTSolver {
     fn encode_program(&mut self, program: &lir::Program) -> Result<()> {
         let mut solver = self.solver.borrow_mut();
 
-        solver.set_logic(Logic::QF_AUFBV)?;
+        SOLVER_TYPE.with(|type_cell| {
+            let mut solver_type = type_cell.borrow_mut();
+            *solver_type = Some(self.solver_type);
+        });
+
+        if self.solver_type == SolverType::Yices2 {
+            solver.set_logic(Logic::QF_AUFBV)?;
+        }
 
         let access_widths = vec![8, 16, 32, 64, 128, 256, 512];
 
@@ -57,6 +80,20 @@ impl AssertionCheck for RSMTSolver {
         define_cache(&mut solver, &access_widths)?;
         define_btb(&mut solver)?;
         define_pht(&mut solver)?;
+
+        match self.solver_type {
+            SolverType::Yices2 => {
+                // Does not support declare_datatypes
+            }
+            SolverType::CVC4 => {
+                define_tuple(&mut solver)?;
+                define_list(&mut solver)?;
+            }
+            SolverType::Z3 => {
+                define_tuple(&mut solver)?;
+                // Z3 has builtin theory of lists
+            }
+        }
 
         let mut assertions: Vec<expr::Expression> = Vec::new();
 
@@ -405,13 +442,27 @@ impl Expr2Smt<&expr::Sort> for expr::Array {
 }
 
 impl Expr2Smt<&expr::Sort> for expr::List {
-    fn expr_to_smt2<Writer>(&self, w: &mut Writer, _: &expr::Sort) -> SmtRes<()>
+    fn expr_to_smt2<Writer>(&self, w: &mut Writer, sort: &expr::Sort) -> SmtRes<()>
     where
         Writer: ::std::io::Write,
     {
         match self {
-            Self::Nil => write!(w, "nil")?,
-            Self::Insert => write!(w, "insert")?,
+            Self::Nil => {
+                if solver_type() == SolverType::CVC4 {
+                    write!(w, "(as nil ")?;
+                    sort.sort_to_smt2(w)?;
+                    write!(w, ")")?
+                } else {
+                    write!(w, "nil")?;
+                }
+            }
+            Self::Cons => {
+                if solver_type() == SolverType::Z3 {
+                    write!(w, "insert")?
+                } else {
+                    write!(w, "cons")?
+                }
+            }
             Self::Head => write!(w, "head")?,
             Self::Tail => write!(w, "tail")?,
         };
@@ -734,6 +785,31 @@ fn define_pht<T>(solver: &mut Solver<T>) -> Result<()> {
         &expr::Sort::pattern_history_table(),
         "(store pht location false)",
     )?;
+
+    Ok(())
+}
+
+fn define_tuple<T>(solver: &mut Solver<T>) -> Result<()> {
+    for field_count in 1..10 {
+        let sort_name = format!("Tuple{}", field_count);
+        let types: Vec<String> = (0..field_count).map(|i| format!("T{}", i)).collect();
+        let fun: String = (0..field_count).fold(format!("tuple{}", field_count), |acc, i| {
+            acc + &format!(" (tuple{}-field{} T{})", field_count, i, i)
+        });
+
+        solver.declare_datatypes(&[(sort_name, field_count, types, vec![format!("({})", fun)])])?;
+    }
+
+    Ok(())
+}
+
+fn define_list<T>(solver: &mut Solver<T>) -> Result<()> {
+    solver.declare_datatypes(&[(
+        "List",
+        1,
+        vec!["T"],
+        vec!["(nil)", "(cons (head T) (tail (List T)))"],
+    )])?;
 
     Ok(())
 }

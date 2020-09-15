@@ -5,7 +5,7 @@ use std::fmt;
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub enum List {
     Nil,
-    Insert,
+    Cons,
     Head,
     Tail,
 }
@@ -14,7 +14,7 @@ impl fmt::Display for List {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Nil => write!(f, "nil"),
-            Self::Insert => write!(f, "insert"),
+            Self::Cons => write!(f, "cons"),
             Self::Head => write!(f, "head"),
             Self::Tail => write!(f, "tail"),
         }
@@ -26,14 +26,14 @@ impl List {
         Expression::new(Self::Nil.into(), vec![], sort)
     }
 
-    pub fn insert(head: Expression, tail: Expression) -> Result<Expression> {
+    pub fn cons(head: Expression, tail: Expression) -> Result<Expression> {
         tail.sort().expect_list()?;
         let domain = tail.sort().unwrap_list();
         head.sort().expect_sort(domain)?;
 
         let result_sort = tail.sort().clone();
         Ok(Expression::new(
-            Self::Insert.into(),
+            Self::Cons.into(),
             vec![head, tail],
             result_sort,
         ))
