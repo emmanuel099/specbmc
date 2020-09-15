@@ -119,6 +119,7 @@ analysis:
   #                 Much cheaper than `full` but may miss some special types of control-flow leaks,
   #                 see `test/window_branch_leak_size_three.muasm`.
   #   - full:       Same as parallel but transient execution can resolve at any time.
+  #   - trace:      Same as parallel but full trace instead of individual observations.
   observe: parallel
   # Type of analysis model: components, pc [default: components]
   #   - components: Observe microarchitectual components like cache, branch-target buffer, ...

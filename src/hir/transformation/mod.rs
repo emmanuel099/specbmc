@@ -12,6 +12,7 @@ mod observations;
 mod optimization;
 mod pc_model_observations;
 mod ssa_transformation;
+mod trace_observations;
 mod transient_execution;
 
 pub use self::explicit_effects::{ExplicitEffects, ExplicitEffectsBuilder};
@@ -26,6 +27,7 @@ pub use self::pc_model_observations::{
     ProgramCounterModelObservations, ProgramCounterModelObservationsBuilder,
 };
 pub use self::ssa_transformation::{SSAForm, SSATransformation};
+pub use self::trace_observations::{TraceObservations, TraceObservationsBuilder};
 pub use self::transient_execution::{TransientExecution, TransientExecutionBuilder};
 
 use crate::error::Result;
@@ -132,7 +134,7 @@ pub fn create_components_model_transformations(
         observable_variables.insert(expr::PatternHistoryTable::variable());
     }
 
-    steps.push(Box::new(observations(env, &observable_variables)?));
+    steps.push(observations(env, &observable_variables)?);
 
     steps.push(Box::new(init_global_variables(env, &observable_variables)?));
 
@@ -214,21 +216,34 @@ fn transient_execution(env: &environment::Environment) -> Result<TransientExecut
 fn observations(
     env: &environment::Environment,
     observable_variables: &HashSet<expr::Variable>,
-) -> Result<Observations> {
+) -> Result<Box<dyn Transform<InlinedProgram>>> {
     match env.analysis.observe {
-        environment::Observe::Sequential => Ok(ObservationsBuilder::default()
-            .observable_variables(observable_variables.clone())
-            .observe_variable_writes(false)
-            .observe_at_control_flow_joins(false)
-            .observe_at_end_of_program(true)
-            .build()?),
-        environment::Observe::Parallel | environment::Observe::Full => {
-            Ok(ObservationsBuilder::default()
+        environment::Observe::Sequential => Ok(Box::new(
+            ObservationsBuilder::default()
+                .observable_variables(observable_variables.clone())
+                .observe_variable_writes(false)
+                .observe_at_control_flow_joins(false)
+                .observe_at_end_of_program(true)
+                .build()?,
+        )),
+        environment::Observe::Parallel | environment::Observe::Full => Ok(Box::new(
+            ObservationsBuilder::default()
                 .observable_variables(observable_variables.clone())
                 .observe_variable_writes(true)
                 .observe_at_control_flow_joins(true)
                 .observe_at_end_of_program(true)
-                .build()?)
+                .build()?,
+        )),
+        environment::Observe::Trace => {
+            if env.solver == environment::Solver::Yices2 {
+                // Requires theory of lists and user-defined datatypes
+                return Err("Trace observe with Yices2 solver is currently not supported ".into());
+            }
+            Ok(Box::new(
+                TraceObservationsBuilder::default()
+                    .observable_variables(observable_variables.clone())
+                    .build()?,
+            ))
         }
     }
 }

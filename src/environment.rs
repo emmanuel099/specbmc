@@ -104,6 +104,8 @@ pub enum Observe {
     Parallel, // Parallel without intermediate resolve edges (faster than full; may miss some control-flow leaks)
     #[serde(rename = "full")]
     Full, // Same as parallel but with intermediate resolve edges
+    #[serde(rename = "trace")]
+    Trace, // Same as parallel but full trace instead of individual observations
 }
 
 impl Default for Observe {
