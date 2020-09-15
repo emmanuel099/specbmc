@@ -30,19 +30,21 @@ FLAGS:
     -d, --debug            Enables debug mode
     -h, --help             Prints help information
     -a, --assembly-info    Prints assembly info and exits
+        --show-env         Prints the environment to console
         --skip-cex         Skips generating counterexample
         --skip-solving     Skips solving SMT formula
     -V, --version          Prints version information
 
 OPTIONS:
         --call-graph <FILE>          Prints call graph into file (DOT)
+        --cex <FILE>                 Prints counterexample into file (DOT) [default: cex.dot]
         --cfg <FILE>                 Prints control-flow graph into file (DOT)
     -c, --check <TYPE>               Sets leak check type [possible values: all, normal, transient]
     -e, --env <FILE>                 Sets environment file to use (arguments overwrite it)
         --lir <FILE>                 Prints LIR program into file (plain text)
         --mir <FILE>                 Prints MIR program into file (DOT)
         --model <MODEL>              Sets analysis model type [possible values: components, pc]
-        --observe <OBSERVE>          Sets observation type [possible values: sequential, parallel]
+        --observe <OBSERVE>          Sets observation type [possible values: sequential, parallel, full, trace]
     -o, --opt <LEVEL>                Sets optimization level [possible values: none, basic, full]
     -p, --predictor <STRATEGY>       Sets predictor strategy [possible values: invert, choose]
         --entry <NAME|ADDRESS>       Sets name/address of the program entry function
