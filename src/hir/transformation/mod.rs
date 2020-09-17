@@ -204,12 +204,17 @@ fn instruction_effects(env: &environment::Environment) -> Result<InstructionEffe
 }
 
 fn transient_execution(env: &environment::Environment) -> Result<TransientExecution> {
+    let intermediate_resolve = match env.analysis.observe {
+        environment::Observe::Sequential | environment::Observe::Full => true,
+        environment::Observe::Parallel | environment::Observe::Trace => false,
+    };
+
     Ok(TransientExecutionBuilder::default()
         .spectre_pht(env.analysis.spectre_pht)
         .spectre_stl(env.analysis.spectre_stl)
         .predictor_strategy(env.analysis.predictor_strategy)
         .speculation_window(env.architecture.speculation_window)
-        .intermediate_resolve(env.analysis.observe != environment::Observe::Parallel)
+        .intermediate_resolve(intermediate_resolve)
         .build()?)
 }
 
