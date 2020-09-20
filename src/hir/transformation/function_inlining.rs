@@ -42,7 +42,7 @@ impl FunctionInlining {
                         .get(&address)
                         .cloned()
                         .unwrap_or_default();
-                    if func_call_depth >= self.recursion_limit {
+                    if func_call_depth > self.recursion_limit {
                         continue;
                     }
 
@@ -171,7 +171,7 @@ mod tests {
 
         // When: Inline
         let inliner = FunctionInliningBuilder::default()
-            .recursion_limit(2)
+            .recursion_limit(0)
             .build()
             .unwrap();
 
@@ -280,7 +280,7 @@ mod tests {
 
         // When: Inline
         let inliner = FunctionInliningBuilder::default()
-            .recursion_limit(2)
+            .recursion_limit(0)
             .build()
             .unwrap();
 
@@ -423,7 +423,7 @@ mod tests {
 
         // When: Inline
         let inliner = FunctionInliningBuilder::default()
-            .recursion_limit(2)
+            .recursion_limit(0)
             .build()
             .unwrap();
 
@@ -481,6 +481,97 @@ mod tests {
 
         /*debug_cfg(
             "test_inline_function_a_in_b_and_c_in_b",
+            inlined_program.control_flow_graph(),
+            expected_program.control_flow_graph(),
+        );*/
+
+        assert_eq!(expected_program, inlined_program);
+    }
+
+    #[test]
+    fn test_inline_function_a_in_a_with_recursion_limit_zero() {
+        // Given: One function a; a calls a
+        let program = {
+            let cfg_a = {
+                let mut cfg = ControlFlowGraph::new();
+
+                let mut block = Block::new(0);
+                block
+                    .assign(Boolean::variable("a"), Boolean::constant(false))
+                    .unwrap();
+                block.call(BitVector::constant_u64(1, 64)).unwrap();
+                block
+                    .assign(Boolean::variable("b"), Boolean::constant(false))
+                    .unwrap();
+                cfg.add_block(block).unwrap();
+
+                cfg.set_entry(0).unwrap();
+                cfg.set_exit(0).unwrap();
+
+                cfg
+            };
+
+            let mut program = Program::new();
+            program
+                .insert_function(Function::new(1, Some("a".to_owned()), cfg_a))
+                .unwrap();
+
+            program
+                .set_entry(ProgramEntry::Name("a".to_owned()))
+                .unwrap();
+
+            program
+        };
+
+        // When: Inline
+        let inliner = FunctionInliningBuilder::default()
+            .recursion_limit(0)
+            .build()
+            .unwrap();
+
+        let inlined_program = inliner.inline(&program).unwrap();
+
+        // Then:
+        let expected_program = {
+            let mut cfg = ControlFlowGraph::new();
+
+            let mut block0 = Block::new(0);
+            block0
+                .assign(Boolean::variable("a"), Boolean::constant(false))
+                .unwrap();
+            block0.call(BitVector::constant_u64(1, 64)).unwrap();
+            cfg.add_block(block0).unwrap();
+
+            let mut block1 = Block::new(1);
+            block1
+                .assign(Boolean::variable("b"), Boolean::constant(false))
+                .unwrap();
+            cfg.add_block(block1).unwrap();
+
+            let mut block2 = Block::new(2);
+            block2
+                .assign(Boolean::variable("a"), Boolean::constant(false))
+                .unwrap();
+            block2.call(BitVector::constant_u64(1, 64)).unwrap();
+            block2
+                .assign(Boolean::variable("b"), Boolean::constant(false))
+                .unwrap();
+            cfg.add_block(block2).unwrap();
+
+            cfg.unconditional_edge(0, 2).unwrap().labels_mut().call();
+            cfg.unconditional_edge(2, 1)
+                .unwrap()
+                .labels_mut()
+                .r#return();
+
+            cfg.set_entry(0).unwrap();
+            cfg.set_exit(1).unwrap();
+
+            InlinedProgram::new(cfg)
+        };
+
+        /*debug_cfg(
+            "test_inline_function_a_in_a_with_recursion_limit_one",
             inlined_program.control_flow_graph(),
             expected_program.control_flow_graph(),
         );*/
@@ -553,97 +644,6 @@ mod tests {
                 .assign(Boolean::variable("a"), Boolean::constant(false))
                 .unwrap();
             block2.call(BitVector::constant_u64(1, 64)).unwrap();
-            block2
-                .assign(Boolean::variable("b"), Boolean::constant(false))
-                .unwrap();
-            cfg.add_block(block2).unwrap();
-
-            cfg.unconditional_edge(0, 2).unwrap().labels_mut().call();
-            cfg.unconditional_edge(2, 1)
-                .unwrap()
-                .labels_mut()
-                .r#return();
-
-            cfg.set_entry(0).unwrap();
-            cfg.set_exit(1).unwrap();
-
-            InlinedProgram::new(cfg)
-        };
-
-        /*debug_cfg(
-            "test_inline_function_a_in_a_with_recursion_limit_one",
-            inlined_program.control_flow_graph(),
-            expected_program.control_flow_graph(),
-        );*/
-
-        assert_eq!(expected_program, inlined_program);
-    }
-
-    #[test]
-    fn test_inline_function_a_in_a_with_recursion_limit_two() {
-        // Given: One function a; a calls a
-        let program = {
-            let cfg_a = {
-                let mut cfg = ControlFlowGraph::new();
-
-                let mut block = Block::new(0);
-                block
-                    .assign(Boolean::variable("a"), Boolean::constant(false))
-                    .unwrap();
-                block.call(BitVector::constant_u64(1, 64)).unwrap();
-                block
-                    .assign(Boolean::variable("b"), Boolean::constant(false))
-                    .unwrap();
-                cfg.add_block(block).unwrap();
-
-                cfg.set_entry(0).unwrap();
-                cfg.set_exit(0).unwrap();
-
-                cfg
-            };
-
-            let mut program = Program::new();
-            program
-                .insert_function(Function::new(1, Some("a".to_owned()), cfg_a))
-                .unwrap();
-
-            program
-                .set_entry(ProgramEntry::Name("a".to_owned()))
-                .unwrap();
-
-            program
-        };
-
-        // When: Inline
-        let inliner = FunctionInliningBuilder::default()
-            .recursion_limit(2)
-            .build()
-            .unwrap();
-
-        let inlined_program = inliner.inline(&program).unwrap();
-
-        // Then:
-        let expected_program = {
-            let mut cfg = ControlFlowGraph::new();
-
-            let mut block0 = Block::new(0);
-            block0
-                .assign(Boolean::variable("a"), Boolean::constant(false))
-                .unwrap();
-            block0.call(BitVector::constant_u64(1, 64)).unwrap();
-            cfg.add_block(block0).unwrap();
-
-            let mut block1 = Block::new(1);
-            block1
-                .assign(Boolean::variable("b"), Boolean::constant(false))
-                .unwrap();
-            cfg.add_block(block1).unwrap();
-
-            let mut block2 = Block::new(2);
-            block2
-                .assign(Boolean::variable("a"), Boolean::constant(false))
-                .unwrap();
-            block2.call(BitVector::constant_u64(1, 64)).unwrap();
             cfg.add_block(block2).unwrap();
 
             let mut block3 = Block::new(3);
@@ -689,7 +689,7 @@ mod tests {
     }
 
     #[test]
-    fn test_inline_function_a_in_a_twice_with_recursion_limit_one() {
+    fn test_inline_function_a_in_a_twice_with_recursion_limit_zero() {
         // Given: One functions a and a; a calls a twice
         let program = {
             let cfg_a = {
@@ -729,7 +729,7 @@ mod tests {
 
         // When: Inline
         let inliner = FunctionInliningBuilder::default()
-            .recursion_limit(1)
+            .recursion_limit(0)
             .build()
             .unwrap();
 
@@ -815,7 +815,7 @@ mod tests {
     }
 
     #[test]
-    fn test_inline_function_a_in_b_with_recursion_limit_two() {
+    fn test_inline_function_a_in_b_with_recursion_limit_one() {
         // Given: Two function a and b; a calls b and b calls a
         let program = {
             let cfg_a = {
@@ -873,7 +873,7 @@ mod tests {
 
         // When: Inline
         let inliner = FunctionInliningBuilder::default()
-            .recursion_limit(2)
+            .recursion_limit(1)
             .build()
             .unwrap();
 
