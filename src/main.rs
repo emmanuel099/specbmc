@@ -507,7 +507,7 @@ fn check_program(arguments: &Arguments) -> Result<()> {
         call_graph.render_to_file(Path::new(path))?;
     }
     let function_inlining = hir::transformation::FunctionInliningBuilder::default()
-        .recursion_limit(env.analysis.unwind)
+        .recursion_limit(env.analysis.recursion_limit)
         .build()?;
     let mut hir_program = function_inlining.inline(&program)?;
 
