@@ -6,6 +6,7 @@ mod explicit_effects;
 mod explicit_program_counter;
 mod function_inlining;
 mod init_global_variables;
+mod init_memory;
 mod init_stack;
 mod instruction_effects;
 mod loop_unwinding;
@@ -20,6 +21,7 @@ pub use self::explicit_effects::{ExplicitEffects, ExplicitEffectsBuilder};
 pub use self::explicit_program_counter::{ExplicitProgramCounter, ExplicitProgramCounterBuilder};
 pub use self::function_inlining::{FunctionInlining, FunctionInliningBuilder};
 pub use self::init_global_variables::{InitGlobalVariables, InitGlobalVariablesBuilder};
+pub use self::init_memory::{InitMemory, InitMemoryBuilder};
 pub use self::init_stack::{InitStack, InitStackBuilder};
 pub use self::instruction_effects::{InstructionEffects, InstructionEffectsBuilder};
 pub use self::loop_unwinding::{LoopUnwinding, LoopUnwindingBuilder};
@@ -139,6 +141,8 @@ pub fn create_transformations(
             steps.push(observations_pc(env, &observable_variables)?);
         }
     }
+
+    steps.push(Box::new(init_memory(env)?));
 
     if env.setup.init_stack {
         steps.push(Box::new(InitStack::default()));
@@ -278,9 +282,6 @@ fn init_global_variables(
     env: &environment::Environment,
     observable_variables: &HashSet<expr::Variable>,
 ) -> Result<InitGlobalVariables> {
-    let low_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.low);
-    let high_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.high);
-
     let mut low_security_variables = env.policy.registers.low.clone();
     low_security_variables.insert(expr::Predictor::variable().name().to_owned());
     for var in observable_variables {
@@ -297,13 +298,21 @@ fn init_global_variables(
     }
 
     Ok(InitGlobalVariablesBuilder::default()
-        .default_memory_security_level(env.policy.memory.default_level)
-        .low_security_memory_addresses(low_security_memory_addresses)
-        .high_security_memory_addresses(high_security_memory_addresses)
         .default_variable_security_level(env.policy.registers.default_level)
         .low_security_variables(low_security_variables)
         .high_security_variables(high_security_variables)
         .initial_variable_value(initial_variable_value)
+        .build()?)
+}
+
+fn init_memory(env: &environment::Environment) -> Result<InitMemory> {
+    let low_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.low);
+    let high_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.high);
+
+    Ok(InitMemoryBuilder::default()
+        .default_memory_security_level(env.policy.memory.default_level)
+        .low_security_memory_addresses(low_security_memory_addresses)
+        .high_security_memory_addresses(high_security_memory_addresses)
         .build()?)
 }
 
