@@ -1,6 +1,6 @@
 use crate::environment::{PredictorStrategy, SPECULATION_WINDOW_SIZE};
 use crate::error::Result;
-use crate::expr::{BitVector, Boolean, Predictor, Sort, Variable};
+use crate::expr::{BitVector, Boolean, Expression, Predictor, Sort, Variable};
 use crate::hir::{Block, ControlFlowGraph, Edge, Operation, RemovedEdgeGuard};
 use crate::ir::Transform;
 use std::collections::{BTreeMap, HashSet};
@@ -29,6 +29,9 @@ impl InstructionRef {
 pub struct TransientExecution {
     spectre_pht: bool,
     spectre_stl: bool,
+    // Allows to skip STL speculation for specific variables.
+    // If the address only contains ignored variables, then the STL encoding for the store instruction will be skipped.
+    stl_ignored_variables: HashSet<String>,
     predictor_strategy: PredictorStrategy,
     speculation_window: usize,
     // If disabled, no intermediate resolve edges will be added, meaning
@@ -81,8 +84,8 @@ impl TransientExecution {
                     .unwrap();
 
                 match inst.operation() {
-                    Operation::Store { .. } => {
-                        if self.spectre_stl {
+                    Operation::Store { address, .. } => {
+                        if self.spectre_stl && !self.skip_stl(address) {
                             // The `Store` instruction can speculatively be by-passed.
                             add_transient_execution_start(
                                 &mut default_cfg,
@@ -141,8 +144,8 @@ impl TransientExecution {
                     .unwrap();
 
                 match inst.operation() {
-                    Operation::Store { .. } => {
-                        if self.spectre_stl {
+                    Operation::Store { address, .. } => {
+                        if self.spectre_stl && !self.skip_stl(address) {
                             transient_store(
                                 &mut transient_cfg,
                                 &mut transient_entry_points,
@@ -180,6 +183,13 @@ impl TransientExecution {
 
         Ok((transient_cfg, transient_entry_points))
     }
+
+    fn skip_stl(&self, address: &Expression) -> bool {
+        address
+            .variables()
+            .iter()
+            .all(|var| self.stl_ignored_variables.contains(var.name()))
+    }
 }
 
 impl Default for TransientExecution {
@@ -187,6 +197,7 @@ impl Default for TransientExecution {
         Self {
             spectre_pht: false,
             spectre_stl: false,
+            stl_ignored_variables: HashSet::default(),
             predictor_strategy: PredictorStrategy::default(),
             speculation_window: 100,
             intermediate_resolve: true,

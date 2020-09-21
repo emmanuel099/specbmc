@@ -10,6 +10,9 @@ use std::path::Path;
 pub const SPECULATION_WINDOW_SIZE: usize = 10;
 pub const WORD_SIZE: usize = 64;
 
+pub const STACK_POINTER: &str = "rsp";
+pub const BASE_POINTER: &str = "rbp";
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Serialize, Deserialize)]
 pub enum OptimizationLevel {
     #[serde(rename = "none")]
