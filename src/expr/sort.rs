@@ -302,9 +302,9 @@ impl fmt::Display for Sort {
                 let mut is_first = true;
                 for sort in fields.iter() {
                     if !is_first {
-                        write!(f, " x ")?;
+                        write!(f, ", ")?;
                     }
-                    write!(f, "x {}", sort)?;
+                    write!(f, "{}", sort)?;
                     is_first = false;
                 }
                 write!(f, ">")
