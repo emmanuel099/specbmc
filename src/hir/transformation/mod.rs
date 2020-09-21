@@ -3,6 +3,7 @@ use crate::expr;
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 mod explicit_effects;
+mod explicit_program_counter;
 mod function_inlining;
 mod init_global_variables;
 mod instruction_effects;
@@ -10,12 +11,12 @@ mod loop_unwinding;
 mod non_spec_obs_equiv;
 mod observations;
 mod optimization;
-mod pc_model_observations;
 mod ssa_transformation;
 mod trace_observations;
 mod transient_execution;
 
 pub use self::explicit_effects::{ExplicitEffects, ExplicitEffectsBuilder};
+pub use self::explicit_program_counter::{ExplicitProgramCounter, ExplicitProgramCounterBuilder};
 pub use self::function_inlining::{FunctionInlining, FunctionInliningBuilder};
 pub use self::init_global_variables::{InitGlobalVariables, InitGlobalVariablesBuilder};
 pub use self::instruction_effects::{InstructionEffects, InstructionEffectsBuilder};
@@ -23,9 +24,6 @@ pub use self::loop_unwinding::{LoopUnwinding, LoopUnwindingBuilder};
 pub use self::non_spec_obs_equiv::{NonSpecObsEquivalence, NonSpecObsEquivalenceBuilder};
 pub use self::observations::{Observations, ObservationsBuilder};
 pub use self::optimization::Optimizer;
-pub use self::pc_model_observations::{
-    ProgramCounterModelObservations, ProgramCounterModelObservationsBuilder,
-};
 pub use self::ssa_transformation::{SSAForm, SSATransformation};
 pub use self::trace_observations::{TraceObservations, TraceObservationsBuilder};
 pub use self::transient_execution::{TransientExecution, TransientExecutionBuilder};
@@ -169,9 +167,19 @@ pub fn create_pc_model_transformations(
         steps.push(Box::new(transient_execution(env)?));
     }
 
-    steps.push(Box::new(pc_model_observations(env)?));
+    steps.push(Box::new(explicit_program_counter(env)?));
 
-    steps.push(Box::new(init_global_variables(env, &HashSet::new())?));
+    let mut observable_variables = HashSet::new();
+    observable_variables.insert(ExplicitProgramCounter::pc_variable());
+    observable_variables.insert(ExplicitProgramCounter::address_variable());
+
+    steps.push(observations_pc(env, &observable_variables)?);
+
+    steps.push(Box::new(init_global_variables(env, &observable_variables)?));
+
+    if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
+        steps.push(Box::new(NonSpecObsEquivalence::default()));
+    }
 
     steps.push(Box::new(SSATransformation::new(SSAForm::Pruned)));
 
@@ -247,7 +255,7 @@ fn observations(
         environment::Observe::Trace => {
             if env.solver == environment::Solver::Yices2 {
                 // Requires theory of lists and user-defined datatypes
-                return Err("Trace observe with Yices2 solver is currently not supported ".into());
+                return Err("Trace observe with Yices2 solver is currently not supported".into());
             }
             Ok(Box::new(
                 TraceObservationsBuilder::default()
@@ -258,11 +266,38 @@ fn observations(
     }
 }
 
-fn pc_model_observations(
+fn observations_pc(
     env: &environment::Environment,
-) -> Result<ProgramCounterModelObservations> {
-    Ok(ProgramCounterModelObservationsBuilder::default()
-        .check(env.analysis.check)
+    observable_variables: &HashSet<expr::Variable>,
+) -> Result<Box<dyn Transform<InlinedProgram>>> {
+    match env.analysis.observe {
+        environment::Observe::Sequential => {
+            Err("Sequential observe is not allowed for program counter model".into())
+        }
+        environment::Observe::Parallel | environment::Observe::Full => Ok(Box::new(
+            ObservationsBuilder::default()
+                .observable_variables(observable_variables.clone())
+                .observe_variable_writes(true)
+                .observe_at_control_flow_joins(false)
+                .observe_at_end_of_program(false)
+                .build()?,
+        )),
+        environment::Observe::Trace => {
+            if env.solver == environment::Solver::Yices2 {
+                // Requires theory of lists and user-defined datatypes
+                return Err("Trace observe with Yices2 solver is currently not supported".into());
+            }
+            Ok(Box::new(
+                TraceObservationsBuilder::default()
+                    .observable_variables(observable_variables.clone())
+                    .build()?,
+            ))
+        }
+    }
+}
+
+fn explicit_program_counter(env: &environment::Environment) -> Result<ExplicitProgramCounter> {
+    Ok(ExplicitProgramCounterBuilder::default()
         .observe_program_counter(
             env.architecture.branch_target_buffer || env.architecture.pattern_history_table,
         )
