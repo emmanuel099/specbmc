@@ -101,79 +101,42 @@ impl<T: Transform<ControlFlowGraph>> Transform<InlinedProgram> for T {
 pub fn create_transformations(
     env: &environment::Environment,
 ) -> Result<Vec<Box<dyn Transform<InlinedProgram>>>> {
+    let mut steps: Vec<Box<dyn Transform<InlinedProgram>>> = Vec::new();
+
+    steps.push(Box::new(loop_unwinding(env)?));
+    steps.push(Box::new(instruction_effects(env)?));
+
+    if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
+        steps.push(Box::new(transient_execution(env)?));
+    }
+
+    let mut observable_variables = HashSet::new();
+
     match env.analysis.model {
-        environment::Model::Components => create_components_model_transformations(env),
-        environment::Model::ProgramCounter => create_pc_model_transformations(env),
-    }
-}
+        environment::Model::Components => {
+            steps.push(Box::new(ExplicitEffects::default()));
 
-pub fn create_components_model_transformations(
-    env: &environment::Environment,
-) -> Result<Vec<Box<dyn Transform<InlinedProgram>>>> {
-    let mut steps: Vec<Box<dyn Transform<InlinedProgram>>> = Vec::new();
+            if env.architecture.cache {
+                observable_variables.insert(expr::Cache::variable());
+            }
+            if env.architecture.branch_target_buffer {
+                observable_variables.insert(expr::BranchTargetBuffer::variable());
+            }
+            if env.architecture.pattern_history_table {
+                observable_variables.insert(expr::PatternHistoryTable::variable());
+            }
 
-    steps.push(Box::new(loop_unwinding(env)?));
-    steps.push(Box::new(instruction_effects(env)?));
-
-    if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
-        steps.push(Box::new(transient_execution(env)?));
-    }
-
-    steps.push(Box::new(ExplicitEffects::default()));
-
-    let mut observable_variables = HashSet::new();
-    if env.architecture.cache {
-        observable_variables.insert(expr::Cache::variable());
-    }
-    if env.architecture.branch_target_buffer {
-        observable_variables.insert(expr::BranchTargetBuffer::variable());
-    }
-    if env.architecture.pattern_history_table {
-        observable_variables.insert(expr::PatternHistoryTable::variable());
-    }
-
-    steps.push(observations(env, &observable_variables)?);
-
-    steps.push(Box::new(init_global_variables(env, &observable_variables)?));
-
-    if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
-        steps.push(Box::new(NonSpecObsEquivalence::default()));
-    }
-
-    steps.push(Box::new(SSATransformation::new(SSAForm::Pruned)));
-
-    match env.optimization_level {
-        environment::OptimizationLevel::Disabled => {}
-        environment::OptimizationLevel::Basic => {
-            steps.push(Box::new(Optimizer::basic()));
+            steps.push(observations(env, &observable_variables)?);
         }
-        environment::OptimizationLevel::Full => {
-            steps.push(Box::new(Optimizer::full()));
+        environment::Model::ProgramCounter => {
+            steps.push(Box::new(explicit_program_counter(env)?));
+
+            observable_variables.insert(ExplicitProgramCounter::pc_variable());
+            observable_variables.insert(ExplicitProgramCounter::address_variable());
+
+            steps.push(observations_pc(env, &observable_variables)?);
         }
     }
-
-    Ok(steps)
-}
-
-pub fn create_pc_model_transformations(
-    env: &environment::Environment,
-) -> Result<Vec<Box<dyn Transform<InlinedProgram>>>> {
-    let mut steps: Vec<Box<dyn Transform<InlinedProgram>>> = Vec::new();
-
-    steps.push(Box::new(loop_unwinding(env)?));
-    steps.push(Box::new(instruction_effects(env)?));
-
-    if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
-        steps.push(Box::new(transient_execution(env)?));
-    }
-
-    steps.push(Box::new(explicit_program_counter(env)?));
-
-    let mut observable_variables = HashSet::new();
-    observable_variables.insert(ExplicitProgramCounter::pc_variable());
-    observable_variables.insert(ExplicitProgramCounter::address_variable());
-
-    steps.push(observations_pc(env, &observable_variables)?);
 
     steps.push(Box::new(init_global_variables(env, &observable_variables)?));
 
