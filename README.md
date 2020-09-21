@@ -158,6 +158,9 @@ policy:
     # List of low-security memory locations [default: empty] (only makes sense when default is high)
     low: []
 
+setup:
+  init_stack: false
+
 # Debug mode: false, true [default: false]
 debug: false
 ```

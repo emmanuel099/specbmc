@@ -6,6 +6,7 @@ mod explicit_effects;
 mod explicit_program_counter;
 mod function_inlining;
 mod init_global_variables;
+mod init_stack;
 mod instruction_effects;
 mod loop_unwinding;
 mod non_spec_obs_equiv;
@@ -19,6 +20,7 @@ pub use self::explicit_effects::{ExplicitEffects, ExplicitEffectsBuilder};
 pub use self::explicit_program_counter::{ExplicitProgramCounter, ExplicitProgramCounterBuilder};
 pub use self::function_inlining::{FunctionInlining, FunctionInliningBuilder};
 pub use self::init_global_variables::{InitGlobalVariables, InitGlobalVariablesBuilder};
+pub use self::init_stack::{InitStack, InitStackBuilder};
 pub use self::instruction_effects::{InstructionEffects, InstructionEffectsBuilder};
 pub use self::loop_unwinding::{LoopUnwinding, LoopUnwindingBuilder};
 pub use self::non_spec_obs_equiv::{NonSpecObsEquivalence, NonSpecObsEquivalenceBuilder};
@@ -136,6 +138,10 @@ pub fn create_transformations(
 
             steps.push(observations_pc(env, &observable_variables)?);
         }
+    }
+
+    if env.setup.init_stack {
+        steps.push(Box::new(InitStack::default()));
     }
 
     steps.push(Box::new(init_global_variables(env, &observable_variables)?));

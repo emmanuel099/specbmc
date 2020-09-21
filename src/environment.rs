@@ -272,6 +272,18 @@ impl Default for SecurityPolicy {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Setup {
+    #[serde(default = "disabled")]
+    pub init_stack: bool,
+}
+
+impl Default for Setup {
+    fn default() -> Self {
+        Self { init_stack: false }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Environment {
     #[serde(rename = "optimization", default)]
     pub optimization_level: OptimizationLevel,
@@ -283,6 +295,8 @@ pub struct Environment {
     pub architecture: Architecture,
     #[serde(default)]
     pub policy: SecurityPolicy,
+    #[serde(default)]
+    pub setup: Setup,
     #[serde(default = "disabled")]
     pub debug: bool,
     #[serde(default = "enabled")]
@@ -306,6 +320,7 @@ impl Default for Environment {
             analysis: Analysis::default(),
             architecture: Architecture::default(),
             policy: SecurityPolicy::default(),
+            setup: Setup::default(),
             debug: false,
             generate_counterexample: true,
         }
