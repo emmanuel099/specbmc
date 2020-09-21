@@ -4,6 +4,8 @@ use crate::expr::{BitVector, Expression, Memory, Variable};
 use crate::hir::{Block, ControlFlowGraph};
 use crate::ir::Transform;
 
+const STACK_BASE: u64 = 0xffff_0000_0000;
+
 #[derive(Default, Builder, Debug)]
 pub struct InitStack {}
 
@@ -31,6 +33,14 @@ impl Transform<ControlFlowGraph> for InitStack {
             .assume(BitVector::ult(
                 stack_pointer.clone().into(),
                 base_pointer.into(),
+            )?)?
+            .labels_mut()
+            .pseudo();
+
+        entry_block
+            .assume(BitVector::ugt(
+                stack_pointer.clone().into(),
+                BitVector::word_constant(STACK_BASE),
             )?)?
             .labels_mut()
             .pseudo();
