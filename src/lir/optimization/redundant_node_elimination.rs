@@ -18,10 +18,6 @@ impl RedundantNodeElimination {
 }
 
 impl Optimization for RedundantNodeElimination {
-    /// Remove all dead nodes from the given program.
-    ///
-    /// `Assert` and `Assume` nodes are considered as critical,
-    /// meaning that they (including their dependencies) will remain.
     fn optimize(&self, program: &mut Program) -> Result<OptimizationResult> {
         let duplicated_indices = compute_duplicated_node_indices(program);
 
