@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::expr::{Expression, Variable};
 use crate::hir::{ControlFlowGraph, Instruction, Operation};
 use crate::ir::Transform;
+use std::collections::HashSet;
 
 #[derive(Default, Builder, Debug)]
 pub struct NonSpecObsEquivalence {}
@@ -12,7 +13,7 @@ impl NonSpecObsEquivalence {
         &self,
         cfg: &mut ControlFlowGraph,
     ) -> Result<()> {
-        let vars: Vec<Variable> = cfg
+        let vars: HashSet<Variable> = cfg
             .variables()
             .into_iter()
             .filter(|var| var.labels().is_rollback_persistent())
