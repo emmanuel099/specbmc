@@ -43,17 +43,19 @@ impl Transform<ControlFlowGraph> for NonSpecObsEquivalence {
     }
 
     fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
-        for block in cfg.blocks_mut() {
+        for block in cfg
+            .blocks_mut()
+            .iter_mut()
+            .filter(|block| !block.is_transient())
+        {
             let mut instructions_to_insert = Vec::new();
 
-            let is_transient = block.is_transient();
             for (index, inst) in block.instructions().iter().enumerate() {
                 if inst.is_observable() {
                     let mut nonspec_inst = create_nonspec_indistinguishable_equivalent(inst);
                     nonspec_inst.labels_mut().pseudo();
                     instructions_to_insert.push((index, nonspec_inst));
-                } else if !is_transient && instruction_requires_nonspec_equivalent(inst) {
-                    // Non-speculative counterparts are only affected during non-transient execution.
+                } else if instruction_requires_nonspec_equivalent(inst) {
                     let mut nonspec_inst = create_nonspec_instruction_equivalent(inst);
                     nonspec_inst.labels_mut().pseudo();
                     instructions_to_insert.push((index, nonspec_inst));
