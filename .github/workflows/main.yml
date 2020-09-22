@@ -39,5 +39,8 @@ jobs:
       - name: Install CVC4
         run: sudo apt install -y cvc4
 
+      - name: Install Z3
+        run: sudo apt install -y z3
+
       - name: Run system tests
         run: python3 test.py
