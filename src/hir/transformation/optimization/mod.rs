@@ -16,7 +16,6 @@ use copy_propagation::CopyPropagation;
 use dead_code_elimination::DeadCodeElimination;
 use expression_simplification::ExpressionSimplification;
 use phi_elimination::PhiElimination;
-use redundant_instruction_elimination::RedundantInstructionElimination;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum OptimizationResult {
@@ -63,7 +62,7 @@ impl Optimizer {
                 Box::new(PhiElimination::new()),
                 Box::new(DeadCodeElimination::new()),
             ],
-            post_optimizations: vec![Box::new(RedundantInstructionElimination::new())],
+            post_optimizations: Vec::new(),
             repetitions: 5,
         }
     }

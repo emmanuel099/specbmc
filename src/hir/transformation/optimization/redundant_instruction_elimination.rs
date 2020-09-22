@@ -14,6 +14,7 @@ use std::collections::{HashMap, HashSet};
 pub struct RedundantInstructionElimination {}
 
 impl RedundantInstructionElimination {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {}
     }
