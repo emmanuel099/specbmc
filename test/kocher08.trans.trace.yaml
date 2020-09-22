@@ -1,0 +1,17 @@
+solver: z3
+analysis:
+    spectre_pht: true
+    spectre_stl: false
+    check: only_transient_leaks
+    observe: trace
+architecture:
+    cache: true
+    btb: false
+    pht: false
+policy:
+    registers:
+        default: low
+    memory:
+        default: high
+test:
+    expect: unsafe
