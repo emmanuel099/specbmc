@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::expr::{Expression, Variable};
+use crate::expr::Variable;
 use crate::hir::{ControlFlowGraph, Instruction, Operation};
 use crate::ir::Transform;
 use std::collections::HashSet;
@@ -24,7 +24,7 @@ impl NonSpecObsEquivalence {
         for var in vars {
             let ns_var = create_nonspec_variable_equivalent(&var);
             entry_block
-                .assume(Expression::equal(ns_var.into(), var.into())?)?
+                .assign(ns_var, var.into())?
                 .labels_mut()
                 .pseudo();
         }
