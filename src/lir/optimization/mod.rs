@@ -2,6 +2,7 @@ use crate::environment::{Environment, OptimizationLevel};
 use crate::error::Result;
 use crate::lir::Program;
 
+mod assertion_elimination;
 mod constant_folding;
 mod constant_propagation;
 mod copy_propagation;
@@ -9,6 +10,7 @@ mod dead_code_elimination;
 mod expression_simplification;
 mod redundant_node_elimination;
 
+use assertion_elimination::AssertionElimination;
 use constant_folding::ConstantFolding;
 use constant_propagation::ConstantPropagation;
 use copy_propagation::CopyPropagation;
@@ -77,7 +79,10 @@ impl Optimizer {
                 Box::new(CopyPropagation::new()),
                 Box::new(DeadCodeElimination::new()),
             ],
-            post_optimizations: vec![Box::new(RedundantNodeElimination::new())],
+            post_optimizations: vec![
+                Box::new(AssertionElimination::new()),
+                Box::new(RedundantNodeElimination::new()),
+            ],
             repetitions: 5,
         }
     }
@@ -91,7 +96,10 @@ impl Optimizer {
                 Box::new(ExpressionSimplification::new()),
                 Box::new(CopyPropagation::new()),
             ],
-            post_optimizations: vec![Box::new(RedundantNodeElimination::new())],
+            post_optimizations: vec![
+                Box::new(AssertionElimination::new()),
+                Box::new(RedundantNodeElimination::new()),
+            ],
             repetitions: 5,
         }
     }
