@@ -20,7 +20,7 @@ impl fmt::Display for PatternHistoryTable {
 impl PatternHistoryTable {
     pub fn variable() -> Variable {
         let mut var = Variable::new("_pht", Sort::pattern_history_table());
-        var.labels_mut().rollback_persistent();
+        var.set_rollback_persistent(true);
         var
     }
 

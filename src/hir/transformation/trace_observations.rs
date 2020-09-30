@@ -98,7 +98,7 @@ impl TraceObservations {
 
     fn trace_var(&self) -> Variable {
         let mut var = Variable::new("_trace", self.trace_sort());
-        var.labels_mut().rollback_persistent();
+        var.set_rollback_persistent(true);
         var
     }
 }

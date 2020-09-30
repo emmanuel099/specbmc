@@ -12,13 +12,13 @@ pub struct ExplicitProgramCounter {
 impl ExplicitProgramCounter {
     pub fn address_variable() -> Variable {
         let mut var = BitVector::word_variable("_address");
-        var.labels_mut().rollback_persistent();
+        var.set_rollback_persistent(true);
         var
     }
 
     pub fn pc_variable() -> Variable {
         let mut var = BitVector::word_variable("_pc");
-        var.labels_mut().rollback_persistent();
+        var.set_rollback_persistent(true);
         var
     }
 }

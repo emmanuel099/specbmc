@@ -280,7 +280,7 @@ impl Transform<ControlFlowGraph> for TransientExecution {
 fn reorder_buffer_vars(cfg: &ControlFlowGraph) -> HashSet<&Variable> {
     cfg.variables_written()
         .into_iter()
-        .filter(|var| !var.labels().is_rollback_persistent())
+        .filter(|var| !var.is_rollback_persistent())
         .collect()
 }
 

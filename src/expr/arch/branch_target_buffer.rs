@@ -18,7 +18,7 @@ impl fmt::Display for BranchTargetBuffer {
 impl BranchTargetBuffer {
     pub fn variable() -> Variable {
         let mut var = Variable::new("_btb", Sort::branch_target_buffer());
-        var.labels_mut().rollback_persistent();
+        var.set_rollback_persistent(true);
         var
     }
 

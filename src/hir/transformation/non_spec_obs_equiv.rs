@@ -16,7 +16,7 @@ impl NonSpecObsEquivalence {
         let vars: HashSet<Variable> = cfg
             .variables()
             .into_iter()
-            .filter(|var| var.labels().is_rollback_persistent())
+            .filter(|var| var.is_rollback_persistent())
             .cloned()
             .collect();
 
@@ -93,8 +93,7 @@ fn create_nonspec_indistinguishable_equivalent(inst: &Instruction) -> Instructio
 /// For each operation which affects microarchitectual components an equivalent operation
 /// affecting their non-speculative counterparts will be added.
 fn instruction_requires_nonspec_equivalent(inst: &Instruction) -> bool {
-    let requires_nonspec_equivalent =
-        |var: &Variable| -> bool { var.labels().is_rollback_persistent() };
+    let requires_nonspec_equivalent = |var: &Variable| -> bool { var.is_rollback_persistent() };
 
     inst.variables()
         .into_iter()
@@ -118,7 +117,7 @@ fn create_nonspec_instruction_equivalent(inst: &Instruction) -> Instruction {
 }
 
 fn create_nonspec_variable_equivalent(var: &Variable) -> Variable {
-    assert!(var.labels().is_rollback_persistent());
+    assert!(var.is_rollback_persistent());
 
     let name = format!("{}_ns", var.name());
     let sort = var.sort().clone();
@@ -126,7 +125,7 @@ fn create_nonspec_variable_equivalent(var: &Variable) -> Variable {
 }
 
 fn replace_variable_with_nonspec_equivalent(var: &mut Variable) {
-    if var.labels().is_rollback_persistent() {
+    if var.is_rollback_persistent() {
         *var = create_nonspec_variable_equivalent(var);
     }
 }

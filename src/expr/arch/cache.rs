@@ -22,7 +22,7 @@ impl fmt::Display for Cache {
 impl Cache {
     pub fn variable() -> Variable {
         let mut var = Variable::new("_cache", Sort::cache());
-        var.labels_mut().rollback_persistent();
+        var.set_rollback_persistent(true);
         var
     }
 
