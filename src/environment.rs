@@ -155,6 +155,8 @@ pub struct Analysis {
     pub model: Model,
     #[serde(default)]
     pub program_entry: Option<String>,
+    #[serde(default)]
+    pub inline_ignore: HashSet<String>,
 }
 
 impl Default for Analysis {
@@ -171,6 +173,7 @@ impl Default for Analysis {
             observe: Observe::default(),
             model: Model::default(),
             program_entry: None,
+            inline_ignore: HashSet::default(),
         }
     }
 }

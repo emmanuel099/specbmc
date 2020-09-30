@@ -1,11 +1,12 @@
 use crate::error::Result;
 use crate::hir::{Block, ControlFlowGraph, InlinedProgram, Operation, Program};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::convert::TryInto;
 
 #[derive(Default, Builder, Debug)]
 pub struct FunctionInlining {
     recursion_limit: usize,
+    ignored_functions: HashSet<String>,
 }
 
 type CallDepth = BTreeMap<u64, usize>;
@@ -44,6 +45,11 @@ impl FunctionInlining {
                         .unwrap_or_default();
                     if func_call_depth > self.recursion_limit {
                         continue;
+                    }
+                    if let Some(name) = func.name() {
+                        if self.ignored_functions.contains(name) {
+                            continue;
+                        }
                     }
 
                     let ret_block_index = cfg.split_block_at(block_index, call_inst_index + 1)?;
@@ -172,6 +178,7 @@ mod tests {
         // When: Inline
         let inliner = FunctionInliningBuilder::default()
             .recursion_limit(0)
+            .ignored_functions(HashSet::default())
             .build()
             .unwrap();
 
@@ -281,6 +288,7 @@ mod tests {
         // When: Inline
         let inliner = FunctionInliningBuilder::default()
             .recursion_limit(0)
+            .ignored_functions(HashSet::default())
             .build()
             .unwrap();
 
@@ -424,6 +432,7 @@ mod tests {
         // When: Inline
         let inliner = FunctionInliningBuilder::default()
             .recursion_limit(0)
+            .ignored_functions(HashSet::default())
             .build()
             .unwrap();
 
@@ -526,6 +535,7 @@ mod tests {
         // When: Inline
         let inliner = FunctionInliningBuilder::default()
             .recursion_limit(0)
+            .ignored_functions(HashSet::default())
             .build()
             .unwrap();
 
@@ -617,6 +627,7 @@ mod tests {
         // When: Inline
         let inliner = FunctionInliningBuilder::default()
             .recursion_limit(1)
+            .ignored_functions(HashSet::default())
             .build()
             .unwrap();
 
@@ -730,6 +741,7 @@ mod tests {
         // When: Inline
         let inliner = FunctionInliningBuilder::default()
             .recursion_limit(0)
+            .ignored_functions(HashSet::default())
             .build()
             .unwrap();
 
@@ -874,6 +886,7 @@ mod tests {
         // When: Inline
         let inliner = FunctionInliningBuilder::default()
             .recursion_limit(1)
+            .ignored_functions(HashSet::default())
             .build()
             .unwrap();
 

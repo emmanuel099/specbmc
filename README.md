@@ -129,6 +129,8 @@ analysis:
   model: components
   # The program entry point: string [default: entry point from binary]
   program_entry: "main"
+  # List of function names which should not be inlined
+  inline_ignore: []
 
 # Architecture
 architecture:
