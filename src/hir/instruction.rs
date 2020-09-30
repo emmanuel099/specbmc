@@ -3,68 +3,57 @@
 use crate::error::Result;
 use crate::expr::{Expression, Variable};
 use crate::hir::{Effect, Operation};
-use std::collections::BTreeSet;
+use bitflags::bitflags;
 use std::fmt;
 
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
-pub enum Label {
-    Pseudo, // Instruction isn't part of the assembly
-    Helper, // A single complex instruction may be described by multiple simpler instructions, which can be marked as helpers (e.g. update of the status register).
-}
-
-impl fmt::Display for Label {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Pseudo => write!(f, "pseudo"),
-            Self::Helper => write!(f, "helper"),
-        }
+bitflags! {
+    #[derive(Default)]
+    pub struct Labels: u32 {
+        const PSEUDO = 0b00001; // Instruction isn't part of the assembly
+        const HELPER = 0b00010; // A single complex instruction may be described by multiple simpler instructions, which can be marked as helpers (e.g. update of the status register).
     }
-}
-
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Default)]
-pub struct Labels {
-    labels: BTreeSet<Label>,
 }
 
 impl Labels {
     pub fn pseudo(&mut self) -> &mut Self {
-        self.labels.insert(Label::Pseudo);
+        *self |= Labels::PSEUDO;
         self
     }
 
     pub fn is_pseudo(&self) -> bool {
-        self.labels.contains(&Label::Pseudo)
+        self.contains(Labels::PSEUDO)
     }
 
     pub fn helper(&mut self) -> &mut Self {
-        self.labels.insert(Label::Helper);
+        *self |= Labels::HELPER;
         self
     }
 
     pub fn is_helper(&self) -> bool {
-        self.labels.contains(&Label::Helper)
+        self.contains(Labels::HELPER)
     }
 
     pub fn merge(&mut self, other: &Labels) {
-        other.labels.iter().for_each(|&label| {
-            self.labels.insert(label);
-        });
+        *self |= *other;
     }
 }
 
 impl fmt::Display for Labels {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.labels.is_empty() {
+        if self.is_empty() {
             return Ok(());
         }
         write!(f, "[")?;
         let mut is_first = true;
-        for label in &self.labels {
+        if self.is_pseudo() {
+            write!(f, "pseudo")?;
+            is_first = false;
+        }
+        if self.is_helper() {
             if !is_first {
                 write!(f, ", ")?;
             }
-            write!(f, "{}", label)?;
-            is_first = false;
+            write!(f, "helper")?;
         }
         write!(f, "]")
     }

@@ -1,100 +1,107 @@
 use crate::expr::{Expression, Variable};
+use bitflags::bitflags;
 use falcon::graph;
-use std::collections::BTreeSet;
 use std::fmt;
 
-#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
-pub enum Label {
-    Taken,
-    Speculate,
-    Rollback,
-    Call,
-    Return,
-}
-
-impl fmt::Display for Label {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Taken => write!(f, "taken"),
-            Self::Speculate => write!(f, "speculate"),
-            Self::Rollback => write!(f, "rollback"),
-            Self::Call => write!(f, "call"),
-            Self::Return => write!(f, "return"),
-        }
+bitflags! {
+    #[derive(Default)]
+    pub struct Labels: u32 {
+        const TAKEN     = 0b00001;
+        const SPECULATE = 0b00010;
+        const ROLLBACK  = 0b00100;
+        const CALL      = 0b01000;
+        const RETURN    = 0b10000;
     }
-}
-
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Default)]
-pub struct Labels {
-    labels: BTreeSet<Label>,
 }
 
 impl Labels {
     pub fn taken(&mut self) -> &mut Self {
-        self.labels.insert(Label::Taken);
+        *self |= Labels::TAKEN;
         self
     }
 
     pub fn is_taken(&self) -> bool {
-        self.labels.contains(&Label::Taken)
+        self.contains(Labels::TAKEN)
     }
 
     pub fn speculate(&mut self) -> &mut Self {
-        self.labels.insert(Label::Speculate);
+        *self |= Labels::SPECULATE;
         self
     }
 
     pub fn is_speculate(&self) -> bool {
-        self.labels.contains(&Label::Speculate)
+        self.contains(Labels::SPECULATE)
     }
 
     pub fn rollback(&mut self) -> &mut Self {
-        self.labels.insert(Label::Rollback);
+        *self |= Labels::ROLLBACK;
         self
     }
 
     pub fn is_rollback(&self) -> bool {
-        self.labels.contains(&Label::Rollback)
+        self.contains(Labels::ROLLBACK)
     }
 
     pub fn call(&mut self) -> &mut Self {
-        self.labels.insert(Label::Call);
+        *self |= Labels::CALL;
         self
     }
 
     pub fn is_call(&self) -> bool {
-        self.labels.contains(&Label::Call)
+        self.contains(Labels::CALL)
     }
 
     pub fn r#return(&mut self) -> &mut Self {
-        self.labels.insert(Label::Return);
+        *self |= Labels::RETURN;
         self
     }
 
     pub fn is_return(&self) -> bool {
-        self.labels.contains(&Label::Return)
+        self.contains(Labels::RETURN)
     }
 
     pub fn merge(&mut self, other: &Labels) {
-        other.labels.iter().for_each(|&label| {
-            self.labels.insert(label);
-        });
+        *self |= *other;
     }
 }
 
 impl fmt::Display for Labels {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.labels.is_empty() {
+        if self.is_empty() {
             return Ok(());
         }
         write!(f, "[")?;
         let mut is_first = true;
-        for label in &self.labels {
+        if self.is_taken() {
+            write!(f, "taken")?;
+            is_first = false;
+        }
+        if self.is_speculate() {
             if !is_first {
                 write!(f, ", ")?;
             }
-            write!(f, "{}", label)?;
+            write!(f, "speculate")?;
             is_first = false;
+        }
+        if self.is_rollback() {
+            if !is_first {
+                write!(f, ", ")?;
+            }
+            write!(f, "rollback")?;
+            is_first = false;
+        }
+        if self.is_call() {
+            if !is_first {
+                write!(f, ", ")?;
+            }
+            write!(f, "call")?;
+            is_first = false;
+        }
+        if self.is_return() {
+            if !is_first {
+                write!(f, ", ")?;
+            }
+            write!(f, "return")?;
         }
         write!(f, "]")
     }

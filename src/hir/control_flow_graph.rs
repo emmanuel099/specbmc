@@ -564,7 +564,7 @@ impl ControlFlowGraph {
             }
 
             // The labels of the outgoing edge will be merged into all the rewired edges
-            let outgoing_edge_labels = outgoing_edge.labels().clone();
+            let outgoing_edge_labels = *outgoing_edge.labels();
 
             // Rewire predecessor's outgoing edges from self to successor
             for predecessor in predecessors {
