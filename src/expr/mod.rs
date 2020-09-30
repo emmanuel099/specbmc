@@ -98,7 +98,7 @@ impl fmt::Display for Operator {
 pub struct Expression {
     operator: Operator,
     operands: Vec<Expression>,
-    sort: Sort,
+    sort: Box<Sort>,
 }
 
 impl Expression {
@@ -106,7 +106,7 @@ impl Expression {
         Self {
             operator,
             operands,
-            sort,
+            sort: Box::new(sort),
         }
     }
 
