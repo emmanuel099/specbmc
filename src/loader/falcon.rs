@@ -411,7 +411,12 @@ fn translate_expr(expr: &il::Expression) -> Result<expr::Expression> {
             }
         }
         il::Expression::Sext(bits, src) => {
-            expr::BitVector::sign_extend_abs(*bits, translate_expr(src)?)
+            let expr = translate_expr(src)?;
+            let expr = match expr.sort() {
+                expr::Sort::Boolean => expr::BitVector::from_boolean(1, expr)?,
+                _ => expr,
+            };
+            expr::BitVector::sign_extend_abs(*bits, expr)
         }
         il::Expression::Trun(bits, src) => {
             let expr = translate_expr(src)?;
