@@ -230,12 +230,14 @@ impl FalconTranslator {
             }
             il::Operation::Store { index, src } => {
                 let address = translate_expr(index)?;
+                let address = maybe_cast(address, &expr::Sort::word())?;
                 let expr = translate_expr(src)?;
                 block.store(address, expr)
             }
             il::Operation::Load { dst, index } => {
                 let variable = translate_scalar(dst)?;
                 let address = translate_expr(index)?;
+                let address = maybe_cast(address, &expr::Sort::word())?;
                 block.load(variable, address)
             }
             il::Operation::Branch { target } => {
@@ -309,6 +311,13 @@ fn maybe_cast(expr: expr::Expression, target_sort: &expr::Sort) -> Result<expr::
         (expr::Sort::Boolean, expr::Sort::BitVector(1)) => expr::BitVector::to_boolean(expr),
         (expr::Sort::BitVector(bit_width), expr::Sort::Boolean) => {
             expr::BitVector::from_boolean(*bit_width, expr)
+        }
+        (expr::Sort::BitVector(target_bit_width), expr::Sort::BitVector(src_bit_width)) => {
+            if src_bit_width < target_bit_width {
+                expr::BitVector::zero_extend_abs(*target_bit_width, expr)
+            } else {
+                Ok(expr)
+            }
         }
         _ => Ok(expr),
     }
