@@ -77,7 +77,13 @@ impl loader::Loader for FalconLoader {
             let hir_func = translator.translate_function(function)?;
             hir_prog.insert_function(hir_func)?;
         }
-        hir_prog.set_entry(hir::ProgramEntry::Address(elf.program_entry()))?;
+
+        if hir_prog
+            .set_entry(hir::ProgramEntry::Address(elf.program_entry()))
+            .is_err()
+        {
+            println!("Failed to set ELF program entry, no default program entry will be set");
+        }
 
         for (&start_address, section) in elf.memory()?.sections() {
             let end_address = start_address + section.len() as u64;
