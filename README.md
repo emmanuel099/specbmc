@@ -160,8 +160,13 @@ policy:
     # List of low-security memory locations [default: empty] (only makes sense when default is high)
     low: []
 
+# Initial Setup
 setup:
+  # Prepare stack (0xffff_0000_0000 < rsp <= rbp) and return address
   init_stack: false
+  # Initial register content (key is register name, value is register content)
+  registers:
+    ...
 
 # Debug mode: false, true [default: false]
 debug: false
@@ -197,6 +202,10 @@ policy:
       - # section B
         start: 0x300000
         end: 0x301000
+setup:
+  registers:
+    rdi: 0x10
+    rsi: 0x11
 ```
 
 #### Environment Auto-loading:

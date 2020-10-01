@@ -296,6 +296,9 @@ fn init_global_variables(
             expr::Expression::constant(expr::CacheValue::empty().into(), expr::Sort::cache());
         initial_variable_value.insert(expr::Cache::variable().name().to_owned(), empty_cache);
     }
+    for (reg, &value) in &env.setup.register_content {
+        initial_variable_value.insert(reg.clone(), expr::BitVector::word_constant(value));
+    }
 
     Ok(InitGlobalVariablesBuilder::default()
         .default_variable_security_level(env.policy.registers.default_level)

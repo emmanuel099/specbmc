@@ -1,7 +1,7 @@
 use crate::error::Result;
 use serde::{Deserialize, Serialize};
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
@@ -278,11 +278,16 @@ impl Default for SecurityPolicy {
 pub struct Setup {
     #[serde(default = "disabled")]
     pub init_stack: bool,
+    #[serde(rename = "registers", default)]
+    pub register_content: HashMap<String, u64>,
 }
 
 impl Default for Setup {
     fn default() -> Self {
-        Self { init_stack: false }
+        Self {
+            init_stack: false,
+            register_content: HashMap::default(),
+        }
     }
 }
 
