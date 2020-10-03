@@ -1,6 +1,6 @@
 use crate::environment;
 use crate::expr;
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 mod explicit_effects;
 mod explicit_program_counter;
@@ -312,10 +312,18 @@ fn init_memory(env: &environment::Environment) -> Result<InitMemory> {
     let low_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.low);
     let high_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.high);
 
+    let mut initial_memory_content = BTreeMap::new();
+    for (&address, bytes) in &env.setup.memory_content {
+        for (i, &byte) in bytes.iter().enumerate() {
+            initial_memory_content.insert(address + i as u64, byte);
+        }
+    }
+
     Ok(InitMemoryBuilder::default()
         .default_memory_security_level(env.policy.memory.default_level)
         .low_security_memory_addresses(low_security_memory_addresses)
         .high_security_memory_addresses(high_security_memory_addresses)
+        .initial_memory_content(initial_memory_content)
         .build()?)
 }
 

@@ -167,6 +167,9 @@ setup:
   # Initial register content (key is register name, value is register content)
   registers:
     ...
+  # Initial memory content (key is address, value is sequence of bytes)
+  memory:
+    ...
 
 # Debug mode: false, true [default: false]
 debug: false
@@ -206,6 +209,9 @@ setup:
   registers:
     rdi: 0x10
     rsi: 0x11
+  memory:
+    0x10: [0x0a, 0x0b]
+    0x12: [0x0c]
 ```
 
 #### Environment Auto-loading:

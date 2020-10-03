@@ -3,13 +3,14 @@ use crate::error::Result;
 use crate::expr::{BitVector, Expression, Memory, Variable};
 use crate::hir::{Block, ControlFlowGraph};
 use crate::ir::Transform;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Builder, Debug)]
 pub struct InitMemory {
     default_memory_security_level: SecurityLevel,
     low_security_memory_addresses: BTreeSet<u64>,
     high_security_memory_addresses: BTreeSet<u64>,
+    initial_memory_content: BTreeMap<u64, u8>,
 }
 
 impl Default for InitMemory {
@@ -18,6 +19,7 @@ impl Default for InitMemory {
             default_memory_security_level: SecurityLevel::High,
             low_security_memory_addresses: BTreeSet::new(),
             high_security_memory_addresses: BTreeSet::new(),
+            initial_memory_content: BTreeMap::new(),
         }
     }
 }
@@ -40,10 +42,10 @@ impl Transform<ControlFlowGraph> for InitMemory {
         match self.default_memory_security_level {
             SecurityLevel::Low => {
                 low_equivalent(entry_block, Memory::variable().into());
-                for address in &self.high_security_memory_addresses {
+                for &address in &self.high_security_memory_addresses {
                     let secret_var = BitVector::variable("_secret", 8);
                     havoc_variable(entry_block, secret_var.clone())?;
-                    let addr = BitVector::word_constant(*address);
+                    let addr = BitVector::word_constant(address);
                     entry_block
                         .store(addr, secret_var.into())?
                         .labels_mut()
@@ -51,13 +53,19 @@ impl Transform<ControlFlowGraph> for InitMemory {
                 }
             }
             SecurityLevel::High => {
-                for address in &self.low_security_memory_addresses {
-                    let addr = BitVector::word_constant(*address);
+                for &address in &self.low_security_memory_addresses {
+                    let addr = BitVector::word_constant(address);
                     let memory_content_at_address =
                         Memory::load(8, Memory::variable().into(), addr)?;
                     low_equivalent(entry_block, memory_content_at_address);
                 }
             }
+        }
+
+        for (&address, &byte) in &self.initial_memory_content {
+            let addr = BitVector::word_constant(address);
+            let value = BitVector::constant_u64(byte.into(), 8);
+            entry_block.store(addr, value)?;
         }
 
         Ok(())

@@ -280,6 +280,8 @@ pub struct Setup {
     pub init_stack: bool,
     #[serde(rename = "registers", default)]
     pub register_content: HashMap<String, u64>,
+    #[serde(rename = "memory", default)]
+    pub memory_content: HashMap<u64, Vec<u8>>,
 }
 
 impl Default for Setup {
@@ -287,6 +289,7 @@ impl Default for Setup {
         Self {
             init_stack: false,
             register_content: HashMap::default(),
+            memory_content: HashMap::default(),
         }
     }
 }
