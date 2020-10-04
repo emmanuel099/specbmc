@@ -63,7 +63,7 @@ impl Optimizer {
                 Box::new(DeadCodeElimination::new()),
             ],
             post_optimizations: Vec::new(),
-            repetitions: 5,
+            repetitions: 30,
         }
     }
 }
