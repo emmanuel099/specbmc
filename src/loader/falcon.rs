@@ -6,7 +6,7 @@ use crate::util::AbsoluteDifference;
 use falcon::il;
 use falcon::loader::{Elf, Loader};
 use falcon::translator;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::convert::TryInto;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
@@ -63,18 +63,17 @@ impl loader::Loader for FalconLoader {
         let elf = load_elf(&self.file_path)?;
         let program = lift_elf(&elf)?;
 
-        let translator = FalconTranslator {
-            function_addresses: program
-                .functions()
-                .into_iter()
-                .map(il::Function::address)
-                .collect(),
-        };
+        let function_addresses: HashSet<u64> = program
+            .functions()
+            .into_iter()
+            .map(il::Function::address)
+            .collect();
 
         let mut hir_prog = hir::Program::new();
 
         for function in program.functions() {
-            let hir_func = translator.translate_function(function)?;
+            let mut hir_func = translate_function(function)?;
+            reconstruct_calls(&mut hir_func, &function_addresses);
             hir_prog.insert_function(hir_func)?;
         }
 
@@ -93,6 +92,65 @@ impl loader::Loader for FalconLoader {
         }
 
         Ok(hir_prog)
+    }
+}
+
+fn reconstruct_calls(func: &mut hir::Function, function_addresses: &HashSet<u64>) {
+    let cfg = func.control_flow_graph_mut();
+
+    let mut calls: BTreeMap<usize, Vec<usize>> = BTreeMap::default();
+
+    for block in cfg.blocks() {
+        for (index, inst) in block.instructions().iter().enumerate() {
+            if let hir::Operation::Branch { target } = inst.operation() {
+                if let Ok(target_address) = target.try_into() {
+                    // Check if the branch instruction is a valid jump, by checking if its target
+                    // address matches with the address of the subsequent instruction.
+                    // The reason for this check is, that while some branch targets are valid function addresses,
+                    // the target functions may be "invoked" using a jump instead of a call instruction.
+                    let is_last_instruction = index == (block.instruction_count() - 1);
+                    let successor_inst_addr = if is_last_instruction {
+                        cfg.successor_indices(block.index())
+                            .ok()
+                            .and_then(|indices| {
+                                if indices.len() != 1 {
+                                    return None;
+                                }
+                                let successor_index = indices[0];
+                                let successor = cfg.block(successor_index).unwrap();
+                                successor.address()
+                            })
+                    } else {
+                        block
+                            .instruction(index + 1)
+                            .and_then(hir::Instruction::address)
+                    };
+
+                    let is_valid_jump = if let Some(inst_addr) = successor_inst_addr {
+                        target_address == inst_addr
+                    } else {
+                        false
+                    };
+                    if is_valid_jump {
+                        continue;
+                    }
+
+                    if function_addresses.contains(&target_address) {
+                        calls.entry(block.index()).or_default().push(index);
+                    }
+                }
+            }
+        }
+    }
+
+    for (block_index, inst_indices) in calls {
+        let block = cfg.block_mut(block_index).unwrap();
+        for inst_index in inst_indices {
+            let inst = block.instruction_mut(inst_index).unwrap();
+            if let hir::Operation::Branch { target } = inst.operation() {
+                *inst.operation_mut() = hir::Operation::call(target.clone()).unwrap();
+            }
+        }
     }
 }
 
@@ -137,161 +195,146 @@ fn translate_memory_permissions(
     permissions
 }
 
-struct FalconTranslator {
-    function_addresses: HashSet<u64>,
+fn translate_function(function: &il::Function) -> Result<hir::Function> {
+    let cfg = translate_control_flow_graph(function.control_flow_graph())?;
+    Ok(hir::Function::new(
+        function.address(),
+        Some(function.name()),
+        cfg,
+    ))
 }
 
-impl FalconTranslator {
-    pub fn translate_function(&self, function: &il::Function) -> Result<hir::Function> {
-        let cfg = self.translate_control_flow_graph(function.control_flow_graph())?;
-        Ok(hir::Function::new(
-            function.address(),
-            Some(function.name()),
-            cfg,
-        ))
+fn translate_control_flow_graph(src_cfg: &il::ControlFlowGraph) -> Result<hir::ControlFlowGraph> {
+    let mut cfg = hir::ControlFlowGraph::new();
+
+    for block in src_cfg.blocks() {
+        cfg.add_block(translate_block(block)?)?;
     }
 
-    fn translate_control_flow_graph(
-        &self,
-        src_cfg: &il::ControlFlowGraph,
-    ) -> Result<hir::ControlFlowGraph> {
-        let mut cfg = hir::ControlFlowGraph::new();
-
-        for block in src_cfg.blocks() {
-            cfg.add_block(self.translate_block(block)?)?;
-        }
-
-        for src_edge in src_cfg.edges() {
-            match src_edge.condition() {
-                Some(condition) => {
-                    let condition = translate_expr(condition)?;
-                    let edge = cfg.conditional_edge(src_edge.head(), src_edge.tail(), condition)?;
-                    if is_taken_edge(src_cfg, src_edge)? {
-                        edge.labels_mut().taken();
-                    }
-                }
-                None => {
-                    cfg.unconditional_edge(src_edge.head(), src_edge.tail())?;
-                }
-            }
-        }
-
-        // Add a dedicated entry block.
-        // This makes sure that the entry block has no predecessors.
-        let start_blocks: Vec<usize> = cfg
-            .graph()
-            .vertices_without_predecessors()
-            .iter()
-            .map(|block| block.index())
-            .collect();
-        let entry = cfg.new_block().index();
-        for start_block in start_blocks {
-            cfg.unconditional_edge(entry, start_block)?;
-        }
-        cfg.set_entry(entry)?;
-
-        // Add a dedicated exit block and connect all end blocks (= blocks without successor) to it.
-        // This makes sure that there is only a single end block.
-        let end_blocks: Vec<usize> = cfg
-            .graph()
-            .vertices_without_successors()
-            .iter()
-            .map(|block| block.index())
-            .collect();
-        let exit = cfg.new_block().index();
-        for end_block in end_blocks {
-            cfg.unconditional_edge(end_block, exit)?;
-        }
-        cfg.set_exit(exit)?;
-
-        cfg.simplify()?;
-
-        Ok(cfg)
-    }
-
-    fn translate_block(&self, src_block: &il::Block) -> Result<hir::Block> {
-        let mut block = hir::Block::new(src_block.index());
-
-        for instruction in src_block.instructions() {
-            let inst = self.translate_operation(&mut block, instruction.operation())?;
-            inst.set_address(instruction.address());
-        }
-
-        label_helper_instructions(&mut block);
-
-        Ok(block)
-    }
-
-    fn translate_operation<'a>(
-        &self,
-        block: &'a mut hir::Block,
-        operation: &il::Operation,
-    ) -> Result<&'a mut hir::Instruction> {
-        match operation {
-            il::Operation::Assign { dst, src } => {
-                let variable = translate_scalar(dst)?;
-                let expr = translate_expr(src)?;
-                let expr = maybe_cast(expr, variable.sort())?;
-                block.assign(variable, expr)
-            }
-            il::Operation::Store { index, src } => {
-                let address = translate_expr(index)?;
-                let address = maybe_cast(address, &expr::Sort::word())?;
-                let expr = translate_expr(src)?;
-                block.store(address, expr)
-            }
-            il::Operation::Load { dst, index } => {
-                let variable = translate_scalar(dst)?;
-                let address = translate_expr(index)?;
-                let address = maybe_cast(address, &expr::Sort::word())?;
-                block.load(variable, address)
-            }
-            il::Operation::Branch { target } => {
-                let target = translate_expr(target)?;
-                if let Ok(address) = (&target).try_into() {
-                    if self.function_addresses.contains(&address) {
-                        return block.call(target);
-                    }
-                }
-                block.branch(target)
-            }
-            il::Operation::Conditional {
-                condition,
-                operation,
-            } => {
+    for src_edge in src_cfg.edges() {
+        match src_edge.condition() {
+            Some(condition) => {
                 let condition = translate_expr(condition)?;
-                match operation.deref() {
-                    il::Operation::Assign { dst, src } => {
-                        let variable = translate_scalar(dst)?;
-                        let expr = translate_expr(src)?;
-                        let expr = maybe_cast(expr, variable.sort())?;
-                        // Only assign new value if condition holds, otherwise assign identity
-                        let expr = expr::Expression::ite(condition, expr, variable.clone().into())?;
-                        block.assign(variable, expr)
-                    }
-                    il::Operation::Branch { target } => {
-                        let target = translate_expr(&target)?;
-                        block.conditional_branch(condition, target)
-                    }
-                    _ => unimplemented!(
-                        "Translation for conditional {:#?} is not implemented",
-                        operation
-                    ),
+                let edge = cfg.conditional_edge(src_edge.head(), src_edge.tail(), condition)?;
+                if is_taken_edge(src_cfg, src_edge)? {
+                    edge.labels_mut().taken();
                 }
             }
-            il::Operation::Intrinsic { intrinsic } => {
-                if SPECULATION_BARRIERS.contains(&intrinsic.mnemonic()) {
-                    Ok(block.barrier())
-                } else {
-                    Ok(block.skip())
-                }
+            None => {
+                cfg.unconditional_edge(src_edge.head(), src_edge.tail())?;
             }
-            il::Operation::Nop { placeholder } => {
-                if let Some(operation) = placeholder {
-                    self.translate_operation(block, operation)
-                } else {
-                    Ok(block.skip())
+        }
+    }
+
+    // Add a dedicated entry block.
+    // This makes sure that the entry block has no predecessors.
+    let start_blocks: Vec<usize> = cfg
+        .graph()
+        .vertices_without_predecessors()
+        .iter()
+        .map(|block| block.index())
+        .collect();
+    let entry = cfg.new_block().index();
+    for start_block in start_blocks {
+        cfg.unconditional_edge(entry, start_block)?;
+    }
+    cfg.set_entry(entry)?;
+
+    // Add a dedicated exit block and connect all end blocks (= blocks without successor) to it.
+    // This makes sure that there is only a single end block.
+    let end_blocks: Vec<usize> = cfg
+        .graph()
+        .vertices_without_successors()
+        .iter()
+        .map(|block| block.index())
+        .collect();
+    let exit = cfg.new_block().index();
+    for end_block in end_blocks {
+        cfg.unconditional_edge(end_block, exit)?;
+    }
+    cfg.set_exit(exit)?;
+
+    cfg.simplify()?;
+
+    Ok(cfg)
+}
+
+fn translate_block(src_block: &il::Block) -> Result<hir::Block> {
+    let mut block = hir::Block::new(src_block.index());
+
+    for instruction in src_block.instructions() {
+        let inst = translate_operation(&mut block, instruction.operation())?;
+        inst.set_address(instruction.address());
+    }
+
+    label_helper_instructions(&mut block);
+
+    Ok(block)
+}
+
+fn translate_operation<'a>(
+    block: &'a mut hir::Block,
+    operation: &il::Operation,
+) -> Result<&'a mut hir::Instruction> {
+    match operation {
+        il::Operation::Assign { dst, src } => {
+            let variable = translate_scalar(dst)?;
+            let expr = translate_expr(src)?;
+            let expr = maybe_cast(expr, variable.sort())?;
+            block.assign(variable, expr)
+        }
+        il::Operation::Store { index, src } => {
+            let address = translate_expr(index)?;
+            let address = maybe_cast(address, &expr::Sort::word())?;
+            let expr = translate_expr(src)?;
+            block.store(address, expr)
+        }
+        il::Operation::Load { dst, index } => {
+            let variable = translate_scalar(dst)?;
+            let address = translate_expr(index)?;
+            let address = maybe_cast(address, &expr::Sort::word())?;
+            block.load(variable, address)
+        }
+        il::Operation::Branch { target } => {
+            let target = translate_expr(target)?;
+            block.branch(target)
+        }
+        il::Operation::Conditional {
+            condition,
+            operation,
+        } => {
+            let condition = translate_expr(condition)?;
+            match operation.deref() {
+                il::Operation::Assign { dst, src } => {
+                    let variable = translate_scalar(dst)?;
+                    let expr = translate_expr(src)?;
+                    let expr = maybe_cast(expr, variable.sort())?;
+                    // Only assign new value if condition holds, otherwise assign identity
+                    let expr = expr::Expression::ite(condition, expr, variable.clone().into())?;
+                    block.assign(variable, expr)
                 }
+                il::Operation::Branch { target } => {
+                    let target = translate_expr(&target)?;
+                    block.conditional_branch(condition, target)
+                }
+                _ => unimplemented!(
+                    "Translation for conditional {:#?} is not implemented",
+                    operation
+                ),
+            }
+        }
+        il::Operation::Intrinsic { intrinsic } => {
+            if SPECULATION_BARRIERS.contains(&intrinsic.mnemonic()) {
+                Ok(block.barrier())
+            } else {
+                Ok(block.skip())
+            }
+        }
+        il::Operation::Nop { placeholder } => {
+            if let Some(operation) = placeholder {
+                translate_operation(block, operation)
+            } else {
+                Ok(block.skip())
             }
         }
     }
