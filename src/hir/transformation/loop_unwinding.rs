@@ -2,6 +2,7 @@ use crate::environment::UnwindingGuard;
 use crate::error::Result;
 use crate::hir::{ControlFlowGraph, RemovedEdgeGuard};
 use crate::ir::Transform;
+use falcon::graph::LoopTree;
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Default, Builder, Debug)]
@@ -96,14 +97,18 @@ impl LoopUnwinding {
         Ok(loop_nodes_unwound)
     }
 
-    pub fn unwind_cfg(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+    pub fn loop_tree(cfg: &ControlFlowGraph) -> Result<LoopTree> {
         let entry = cfg.entry()?;
 
         if !cfg.graph().is_reducible(entry)? {
             println!("Warning: CFG is not reducible!");
         }
 
-        let loop_tree = cfg.graph().compute_loop_tree(entry)?;
+        Ok(cfg.graph().compute_loop_tree(entry)?)
+    }
+
+    pub fn unwind_cfg(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
+        let loop_tree = Self::loop_tree(cfg)?;
         let parent_loop_ids = loop_tree.compute_predecessors()?;
         let loops = loop_tree.vertices();
 

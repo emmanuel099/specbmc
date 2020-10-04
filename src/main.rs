@@ -45,6 +45,7 @@ struct Arguments {
     cfg_file: Option<String>,
     transient_cfg_file: Option<String>,
     call_graph_file: Option<String>,
+    loop_tree_file: Option<String>,
     mir_file: Option<String>,
     lir_file: Option<String>,
     smt_file: Option<String>,
@@ -212,6 +213,13 @@ fn parse_arguments() -> Arguments {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("loop_tree_file")
+                .long("loop-tree")
+                .value_name("FILE")
+                .help("Prints loop tree into file (DOT)")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("mir_file")
                 .long("mir")
                 .value_name("FILE")
@@ -331,6 +339,7 @@ fn parse_arguments() -> Arguments {
         cfg_file: matches.value_of("cfg_file").map(String::from),
         transient_cfg_file: matches.value_of("transient_cfg_file").map(String::from),
         call_graph_file: matches.value_of("call_graph_file").map(String::from),
+        loop_tree_file: matches.value_of("loop_tree_file").map(String::from),
         mir_file: matches.value_of("mir_file").map(String::from),
         lir_file: matches.value_of("lir_file").map(String::from),
         smt_file: matches.value_of("smt_file").map(String::from),
@@ -516,6 +525,12 @@ fn check_program(arguments: &Arguments) -> Result<()> {
         hir_program
             .control_flow_graph()
             .render_to_file(Path::new(path))?;
+    }
+
+    if let Some(path) = &arguments.loop_tree_file {
+        let loop_tree =
+            hir::transformation::LoopUnwinding::loop_tree(hir_program.control_flow_graph())?;
+        loop_tree.render_to_file(Path::new(path))?;
     }
 
     println!("{} Transform HIR ...", bullet_point);
