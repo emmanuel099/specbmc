@@ -42,6 +42,7 @@ OPTIONS:
     -c, --check <TYPE>               Sets leak check type [possible values: all, normal, transient]
     -e, --env <FILE>                 Sets environment file to use (arguments overwrite it)
         --lir <FILE>                 Prints LIR program into file (plain text)
+        --loop-tree <FILE>           Prints loop tree into file (DOT)
         --mir <FILE>                 Prints MIR program into file (DOT)
         --model <MODEL>              Sets analysis model type [possible values: components, pc]
         --observe <OBSERVE>          Sets observation type [possible values: sequential, parallel, full, trace]
