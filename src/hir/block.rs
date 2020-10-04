@@ -15,6 +15,8 @@ pub struct Block {
     phi_nodes: Vec<PhiNode>,
     /// Is this block part of transient execution?
     transient: bool,
+    /// If this block is a loop header, the loop id will be tracked
+    loop_id: Option<usize>,
 }
 
 impl Block {
@@ -24,6 +26,7 @@ impl Block {
             instructions: Vec::new(),
             phi_nodes: Vec::new(),
             transient: false,
+            loop_id: None,
         }
     }
 
@@ -60,6 +63,18 @@ impl Block {
     /// Returns whether this `Block` is part of transient execution or not.
     pub fn is_transient(&self) -> bool {
         self.transient
+    }
+
+    /// Set the loop id of this `Block`.
+    /// None if the block is not a loop header.
+    pub fn set_loop_id(&mut self, loop_id: Option<usize>) {
+        self.loop_id = loop_id;
+    }
+
+    /// Returns the loop id of this `Block`.
+    /// None if the block is not a loop header.
+    pub fn loop_id(&self) -> Option<usize> {
+        self.loop_id
     }
 
     /// Returns instructions for this `Block`
@@ -370,6 +385,9 @@ impl fmt::Display for Block {
         write!(f, "[ Block: 0x{:X}", self.index)?;
         if self.transient {
             write!(f, ", Transient")?;
+        }
+        if let Some(id) = self.loop_id {
+            write!(f, ", Loop 0x{:X}", id)?;
         }
         writeln!(f, " ]")?;
         for phi_node in self.phi_nodes() {

@@ -171,7 +171,8 @@ pub fn create_transformations(
 
 fn loop_unwinding(env: &environment::Environment) -> Result<LoopUnwinding> {
     Ok(LoopUnwindingBuilder::default()
-        .unwinding_bound(env.analysis.unwind)
+        .default_unwinding_bound(env.analysis.unwind)
+        .unwinding_bound(env.analysis.unwind_loop.clone())
         .unwinding_guard(env.analysis.unwinding_guard)
         .build()?)
 }

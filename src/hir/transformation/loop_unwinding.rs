@@ -6,11 +6,20 @@ use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Default, Builder, Debug)]
 pub struct LoopUnwinding {
-    unwinding_bound: usize,
+    /// unwinding bound for a specific loop
+    unwinding_bound: BTreeMap<usize, usize>,
+    default_unwinding_bound: usize,
     unwinding_guard: UnwindingGuard,
 }
 
 impl LoopUnwinding {
+    fn unwinding_bound_for_loop(&self, loop_id: usize) -> usize {
+        self.unwinding_bound
+            .get(&loop_id)
+            .copied()
+            .unwrap_or(self.default_unwinding_bound)
+    }
+
     fn unwind_loop(
         &self,
         cfg: &mut ControlFlowGraph,
@@ -24,7 +33,10 @@ impl LoopUnwinding {
             .filter(|node| loop_nodes.contains(node))
             .collect();
 
-        if self.unwinding_bound == 0 {
+        let loop_id = cfg.block(loop_header).unwrap().loop_id().unwrap();
+        let k = self.unwinding_bound_for_loop(loop_id);
+
+        if k == 0 {
             // No unwinding, only delete back edges to get rid of the loop and we are done
             for &back_node in &back_nodes {
                 cfg.remove_edge(back_node, loop_header, self.removed_edge_guard())?;
@@ -58,7 +70,7 @@ impl LoopUnwinding {
         // Then repeatedly duplicate the loop nodes for the remaining k-2 iterations.
         // The back edges of iteration i are rewired to the iteration i+1.
         let mut next_loop_header = last_loop_header;
-        for _ in 1..self.unwinding_bound {
+        for _ in 1..k {
             let new_block_indices = cfg.duplicate_blocks(loop_nodes)?;
             let current_loop_header = new_block_indices[&loop_header];
 
@@ -94,6 +106,13 @@ impl LoopUnwinding {
         let loop_tree = cfg.graph().compute_loop_tree(entry)?;
         let parent_loop_ids = loop_tree.compute_predecessors()?;
         let loops = loop_tree.vertices();
+
+        // First set the loop IDs of all loop header blocks to keep track of them during unwinding.
+        // Block duplication causes that head block IDs and loop IDs will diverge.
+        for l in &loops {
+            let header_block = cfg.block_mut(l.header())?;
+            header_block.set_loop_id(Some(l.header()));
+        }
 
         // Initialize the set of nodes for each loop.
         // The set of nodes for each loop will grow during unwinding.
@@ -143,7 +162,7 @@ impl Transform<ControlFlowGraph> for LoopUnwinding {
     }
 
     fn description(&self) -> String {
-        format!("Unwind loops (k={})", self.unwinding_bound)
+        format!("Unwind loops (k={})", self.default_unwinding_bound)
     }
 
     fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
@@ -219,6 +238,10 @@ mod tests {
             cfg.conditional_edge(block0_index, block1_index, not_l.clone())
                 .unwrap();
 
+            cfg.block_mut(block0_index)
+                .unwrap()
+                .set_loop_id(Some(block0_index));
+
             cfg.set_entry(block0_index).unwrap();
             cfg.set_exit(block1_index).unwrap();
 
@@ -227,7 +250,8 @@ mod tests {
 
         // When: Unwind with k=0
         let unwinder = LoopUnwindingBuilder::default()
-            .unwinding_bound(0)
+            .default_unwinding_bound(0)
+            .unwinding_bound(BTreeMap::default())
             .unwinding_guard(UnwindingGuard::Assumption)
             .build()
             .unwrap();
@@ -244,6 +268,10 @@ mod tests {
 
             cfg.conditional_edge(block0_index, block1_index, not_l)
                 .unwrap();
+
+            cfg.block_mut(block0_index)
+                .unwrap()
+                .set_loop_id(Some(block0_index));
 
             cfg.set_entry(block0_index).unwrap();
             cfg.set_exit(block1_index).unwrap();
@@ -278,6 +306,10 @@ mod tests {
             cfg.conditional_edge(block0_index, block1_index, not_l.clone())
                 .unwrap();
 
+            cfg.block_mut(block0_index)
+                .unwrap()
+                .set_loop_id(Some(block0_index));
+
             cfg.set_entry(block0_index).unwrap();
             cfg.set_exit(block1_index).unwrap();
 
@@ -286,7 +318,8 @@ mod tests {
 
         // When: Unwind with k=3
         let unwinder = LoopUnwindingBuilder::default()
-            .unwinding_bound(3)
+            .default_unwinding_bound(3)
+            .unwinding_bound(BTreeMap::default())
             .unwinding_guard(UnwindingGuard::Assumption)
             .build()
             .unwrap();
@@ -319,6 +352,19 @@ mod tests {
                 .unwrap();
             cfg.conditional_edge(block2_index, block1_index, not_l)
                 .unwrap();
+
+            cfg.block_mut(block0_index)
+                .unwrap()
+                .set_loop_id(Some(block0_index));
+            cfg.block_mut(block2_index)
+                .unwrap()
+                .set_loop_id(Some(block0_index));
+            cfg.block_mut(block3_index)
+                .unwrap()
+                .set_loop_id(Some(block0_index));
+            cfg.block_mut(block4_index)
+                .unwrap()
+                .set_loop_id(Some(block0_index));
 
             cfg.set_entry(block0_index).unwrap();
             cfg.set_exit(block1_index).unwrap();
@@ -363,6 +409,13 @@ mod tests {
             cfg.conditional_edge(block2_index, block3_index, not_a.clone())
                 .unwrap();
 
+            cfg.block_mut(block0_index)
+                .unwrap()
+                .set_loop_id(Some(block0_index));
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+
             cfg.set_entry(block0_index).unwrap();
             cfg.set_exit(block3_index).unwrap();
 
@@ -371,7 +424,8 @@ mod tests {
 
         // When: Unwind with k=1
         let unwinder = LoopUnwindingBuilder::default()
-            .unwinding_bound(1)
+            .default_unwinding_bound(1)
+            .unwinding_bound(BTreeMap::default())
             .unwinding_guard(UnwindingGuard::Assumption)
             .build()
             .unwrap();
@@ -412,6 +466,25 @@ mod tests {
             cfg.conditional_edge(block8_index, block7_index, not_b)
                 .unwrap();
 
+            cfg.block_mut(block0_index)
+                .unwrap()
+                .set_loop_id(Some(block0_index));
+            cfg.block_mut(block5_index)
+                .unwrap()
+                .set_loop_id(Some(block0_index));
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+            cfg.block_mut(block4_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+            cfg.block_mut(block6_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+            cfg.block_mut(block8_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+
             cfg.set_entry(block0_index).unwrap();
             cfg.set_exit(block3_index).unwrap();
 
@@ -446,6 +519,10 @@ mod tests {
             cfg.conditional_edge(block2_index, block3_index, not_l.clone())
                 .unwrap();
 
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+
             cfg.set_entry(block1_index).unwrap();
             cfg.set_exit(block3_index).unwrap();
 
@@ -454,7 +531,8 @@ mod tests {
 
         // When: Unwind with k=0
         let unwinder = LoopUnwindingBuilder::default()
-            .unwinding_bound(0)
+            .default_unwinding_bound(0)
+            .unwinding_bound(BTreeMap::default())
             .unwinding_guard(UnwindingGuard::Assumption)
             .build()
             .unwrap();
@@ -473,6 +551,10 @@ mod tests {
             cfg.unconditional_edge(block1_index, block2_index).unwrap();
             cfg.conditional_edge(block2_index, block3_index, not_l)
                 .unwrap();
+
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
 
             cfg.set_entry(block1_index).unwrap();
             cfg.set_exit(block3_index).unwrap();
@@ -509,6 +591,10 @@ mod tests {
             cfg.conditional_edge(block2_index, block3_index, not_l.clone())
                 .unwrap();
 
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+
             cfg.set_entry(block1_index).unwrap();
             cfg.set_exit(block3_index).unwrap();
 
@@ -517,7 +603,8 @@ mod tests {
 
         // When: Unwind with k=1
         let unwinder = LoopUnwindingBuilder::default()
-            .unwinding_bound(1)
+            .default_unwinding_bound(1)
+            .unwinding_bound(BTreeMap::default())
             .unwinding_guard(UnwindingGuard::Assumption)
             .build()
             .unwrap();
@@ -542,6 +629,13 @@ mod tests {
             cfg.unconditional_edge(block4_index, block5_index).unwrap();
             cfg.conditional_edge(block5_index, block3_index, not_l)
                 .unwrap();
+
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+            cfg.block_mut(block4_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
 
             cfg.set_entry(block1_index).unwrap();
             cfg.set_exit(block3_index).unwrap();
@@ -577,6 +671,10 @@ mod tests {
                 .unwrap();
             cfg.unconditional_edge(block2_index, block1_index).unwrap(); // loop
 
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+
             cfg.set_entry(block1_index).unwrap();
             cfg.set_exit(block3_index).unwrap();
 
@@ -585,7 +683,8 @@ mod tests {
 
         // When: Unwind with k=0
         let unwinder = LoopUnwindingBuilder::default()
-            .unwinding_bound(0)
+            .default_unwinding_bound(0)
+            .unwinding_bound(BTreeMap::default())
             .unwinding_guard(UnwindingGuard::Assumption)
             .build()
             .unwrap();
@@ -607,6 +706,10 @@ mod tests {
 
             cfg.conditional_edge(block1_index, block3_index, not_l)
                 .unwrap();
+
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
 
             cfg.set_entry(block1_index).unwrap();
             cfg.set_exit(block3_index).unwrap();
@@ -643,6 +746,10 @@ mod tests {
                 .unwrap();
             cfg.unconditional_edge(block2_index, block1_index).unwrap(); // loop
 
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+
             cfg.set_entry(block1_index).unwrap();
             cfg.set_exit(block3_index).unwrap();
 
@@ -651,7 +758,8 @@ mod tests {
 
         // When: Unwind with k=1
         let unwinder = LoopUnwindingBuilder::default()
-            .unwinding_bound(1)
+            .default_unwinding_bound(1)
+            .unwinding_bound(BTreeMap::default())
             .unwinding_guard(UnwindingGuard::Assumption)
             .build()
             .unwrap();
@@ -674,6 +782,13 @@ mod tests {
             cfg.unconditional_edge(block2_index, block4_index).unwrap();
             cfg.conditional_edge(block4_index, block3_index, not_l)
                 .unwrap();
+
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+            cfg.block_mut(block4_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
 
             cfg.set_entry(block1_index).unwrap();
             cfg.set_exit(block3_index).unwrap();
@@ -711,6 +826,10 @@ mod tests {
                 .unwrap();
             cfg.unconditional_edge(block3_index, block1_index).unwrap(); // loop
 
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+
             cfg.set_entry(block1_index).unwrap();
             cfg.set_exit(block4_index).unwrap();
 
@@ -719,7 +838,8 @@ mod tests {
 
         // When: Unwind with k=0
         let unwinder = LoopUnwindingBuilder::default()
-            .unwinding_bound(0)
+            .default_unwinding_bound(0)
+            .unwinding_bound(BTreeMap::default())
             .unwinding_guard(UnwindingGuard::Assumption)
             .build()
             .unwrap();
@@ -743,6 +863,10 @@ mod tests {
             cfg.unconditional_edge(block1_index, block2_index).unwrap();
             cfg.conditional_edge(block2_index, block4_index, not_l)
                 .unwrap();
+
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
 
             cfg.set_entry(block1_index).unwrap();
             cfg.set_exit(block4_index).unwrap();
@@ -781,6 +905,10 @@ mod tests {
                 .unwrap();
             cfg.unconditional_edge(block3_index, block1_index).unwrap(); // loop
 
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+
             cfg.set_entry(block1_index).unwrap();
             cfg.set_exit(block4_index).unwrap();
 
@@ -789,7 +917,8 @@ mod tests {
 
         // When: Unwind with k=1
         let unwinder = LoopUnwindingBuilder::default()
-            .unwinding_bound(1)
+            .default_unwinding_bound(1)
+            .unwinding_bound(BTreeMap::default())
             .unwinding_guard(UnwindingGuard::Assumption)
             .build()
             .unwrap();
@@ -816,6 +945,13 @@ mod tests {
             cfg.unconditional_edge(block5_index, block6_index).unwrap();
             cfg.conditional_edge(block6_index, block4_index, not_l)
                 .unwrap();
+
+            cfg.block_mut(block1_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
+            cfg.block_mut(block5_index)
+                .unwrap()
+                .set_loop_id(Some(block1_index));
 
             cfg.set_entry(block1_index).unwrap();
             cfg.set_exit(block4_index).unwrap();

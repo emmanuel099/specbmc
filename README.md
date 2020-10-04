@@ -104,8 +104,12 @@ analysis:
   #   - choose_path: predict taken/not-taken
   #   - invert_condition: mis-predict (take the opposite)
   predictor_strategy: choose_path
-  # The number of loop iterations to unwind: n >= 0 [default: 0]
+  # The default number of loop iterations to unwind: n >= 0 [default: 0]
   unwind: 0
+  # The number of loop iterations to unwind for specific loops (key is loop id, value is unwinding bound >= 0)
+  # If no specific loop bound is given, the default unwinding bound is used instead.
+  unwind_loop:
+    ...
   # Add either unwinding assumptions or assertions: assumption, assertion [default: assumption]
   unwinding_guard: assumption
   # Recursion limit for recursive function-inlining: # n >= 0 [default: 0]
@@ -185,6 +189,9 @@ analysis:
   spectre_stl: false
   check: only_transient_leaks
   unwind: 10
+  unwind_loop:
+    0x42: 30
+    0x100: 5
   recursion_limit: 5
   program_entry: "main"
 architecture:

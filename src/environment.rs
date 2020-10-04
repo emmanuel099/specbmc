@@ -1,7 +1,7 @@
 use crate::error::Result;
 use serde::{Deserialize, Serialize};
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
@@ -141,8 +141,12 @@ pub struct Analysis {
     pub check: Check,
     #[serde(default)]
     pub predictor_strategy: PredictorStrategy,
+    /// Default loop unwinding bound
     #[serde(default)]
     pub unwind: usize,
+    /// Unwinding bounds for specific loops
+    #[serde(default)]
+    pub unwind_loop: BTreeMap<usize, usize>,
     #[serde(default)]
     pub unwinding_guard: UnwindingGuard,
     #[serde(default)]
@@ -167,6 +171,7 @@ impl Default for Analysis {
             check: Check::default(),
             predictor_strategy: PredictorStrategy::default(),
             unwind: 0,
+            unwind_loop: BTreeMap::default(),
             unwinding_guard: UnwindingGuard::default(),
             recursion_limit: 0,
             start_with_empty_cache: false,
