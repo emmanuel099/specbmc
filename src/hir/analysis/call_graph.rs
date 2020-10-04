@@ -1,5 +1,4 @@
 use crate::hir::{Block, Function, Instruction, Operation, Program};
-use crate::util::RenderGraph;
 use falcon::graph;
 use std::convert::TryInto;
 
@@ -92,12 +91,6 @@ impl graph::Edge for Call {
 }
 
 pub type CallGraph = graph::Graph<FunctionInfo, Call>;
-
-impl RenderGraph for CallGraph {
-    fn render_to_str(&self) -> String {
-        self.dot_graph()
-    }
-}
 
 fn function_direct_call_targets(function: &Function) -> Vec<u64> {
     function
