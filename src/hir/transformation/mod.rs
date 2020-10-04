@@ -300,6 +300,9 @@ fn init_global_variables(
     for (reg, &value) in &env.setup.register_content {
         initial_variable_value.insert(reg.clone(), expr::BitVector::word_constant(value));
     }
+    for (flag, &value) in &env.setup.flag_content {
+        initial_variable_value.insert(flag.clone(), expr::Boolean::constant(value));
+    }
 
     Ok(InitGlobalVariablesBuilder::default()
         .default_variable_security_level(env.policy.registers.default_level)

@@ -172,6 +172,9 @@ setup:
   # Initial register content (key is register name, value is register content)
   registers:
     ...
+  # Initial flag register content (key is flag name, value is boolean)
+  flags:
+    ...
   # Initial memory content (key is address, value is sequence of bytes)
   memory:
     ...
@@ -217,6 +220,8 @@ setup:
   registers:
     rdi: 0x10
     rsi: 0x11
+  flags:
+    DF: false
   memory:
     0x10: [0x0a, 0x0b]
     0x12: [0x0c]
