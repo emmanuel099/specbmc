@@ -269,7 +269,9 @@ impl Transform<ControlFlowGraph> for TransientExecution {
                 .rollback();
         }
 
+        default_cfg.remove_dead_end_blocks(RemovedEdgeGuard::Ignore)?;
         default_cfg.simplify()?;
+
         *cfg = default_cfg;
 
         Ok(())
@@ -729,13 +731,12 @@ fn remove_unreachable_transient_edges(
         })
         .collect();
 
+    // Replace all outgoing edges of rollback blocks with an unconditional edge to resolve
     for index in transient_blocks_rollback {
         for successor in cfg.successor_indices(index)? {
-            if successor == resolve_block_index {
-                continue;
-            }
-            cfg.remove_edge(index, successor, RemovedEdgeGuard::AssumeEdgeNotTaken)?;
+            cfg.remove_edge(index, successor, RemovedEdgeGuard::Ignore)?;
         }
+        cfg.unconditional_edge(index, resolve_block_index)?;
     }
 
     Ok(())
