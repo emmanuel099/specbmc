@@ -136,7 +136,7 @@ fn involved_compositions(expr: &Expression) -> Result<Vec<usize>> {
         compositions.push(composition);
     }
 
-    compositions.sort();
+    compositions.sort_unstable();
     compositions.dedup();
     Ok(compositions)
 }

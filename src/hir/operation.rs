@@ -127,87 +127,51 @@ impl Operation {
     }
 
     pub fn is_assign(&self) -> bool {
-        match self {
-            Self::Assign { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Assign { .. })
     }
 
     pub fn is_store(&self) -> bool {
-        match self {
-            Self::Store { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Store { .. } )
     }
 
     pub fn is_load(&self) -> bool {
-        match self {
-            Self::Load { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Load { .. } )
     }
 
     pub fn is_call(&self) -> bool {
-        match self {
-            Self::Call { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Call { .. } )
     }
 
     pub fn is_branch(&self) -> bool {
-        match self {
-            Self::Branch { .. } => true,
-            _ => false,
-        }
+        matches!(self,  Self::Branch { .. } )
     }
 
     pub fn is_conditional_branch(&self) -> bool {
-        match self {
-            Self::ConditionalBranch { .. } => true,
-            _ => false,
-        }
+        matches!(self,  Self::ConditionalBranch { .. } )
     }
 
     pub fn is_skip(&self) -> bool {
-        match self {
-            Self::Skip => true,
-            _ => false,
-        }
+        matches!(self, Self::Skip)
     }
 
     pub fn is_barrier(&self) -> bool {
-        match self {
-            Self::Barrier => true,
-            _ => false,
-        }
+        matches!(self, Self::Barrier)
     }
 
     pub fn is_assert(&self) -> bool {
-        match self {
-            Self::Assert { .. } => true,
-            _ => false,
-        }
+        matches!(self,  Self::Assert { .. })
     }
 
     pub fn is_assume(&self) -> bool {
-        match self {
-            Self::Assume { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Assume { .. })
     }
 
     pub fn is_observable(&self) -> bool {
-        match self {
-            Self::Observable { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Observable { .. } )
     }
 
     pub fn is_indistinguishable(&self) -> bool {
-        match self {
-            Self::Indistinguishable { .. } => true,
-            _ => false,
-        }
+        matches!(self,  Self::Indistinguishable { .. } )
     }
 
     /// Get each `Variable` read by this `Operation`.

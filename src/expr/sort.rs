@@ -73,87 +73,51 @@ impl Sort {
     }
 
     pub fn is_boolean(&self) -> bool {
-        match self {
-            Self::Boolean => true,
-            _ => false,
-        }
+        matches!(self, Self::Boolean)
     }
 
     pub fn is_integer(&self) -> bool {
-        match self {
-            Self::Integer => true,
-            _ => false,
-        }
+        matches!(self, Self::Integer)
     }
 
     pub fn is_bit_vector(&self) -> bool {
-        match self {
-            Self::BitVector(..) => true,
-            _ => false,
-        }
+        matches!(self, Self::BitVector(..))
     }
 
     pub fn is_word(&self) -> bool {
-        match self {
-            Self::BitVector(environment::WORD_SIZE) => true,
-            _ => false,
-        }
+        matches!(self, Self::BitVector(environment::WORD_SIZE))
     }
 
     pub fn is_array(&self) -> bool {
-        match self {
-            Self::Array { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Array { .. } )
     }
 
     pub fn is_list(&self) -> bool {
-        match self {
-            Self::List { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::List { .. } )
     }
 
     pub fn is_tuple(&self) -> bool {
-        match self {
-            Self::Tuple { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Tuple { .. } )
     }
 
     pub fn is_memory(&self) -> bool {
-        match self {
-            Self::Memory => true,
-            _ => false,
-        }
+        matches!(self, Self::Memory)
     }
 
     pub fn is_cache(&self) -> bool {
-        match self {
-            Self::Cache => true,
-            _ => false,
-        }
+        matches!(self, Self::Cache)
     }
 
     pub fn is_predictor(&self) -> bool {
-        match self {
-            Self::Predictor => true,
-            _ => false,
-        }
+        matches!(self, Self::Predictor)
     }
 
     pub fn is_branch_target_buffer(&self) -> bool {
-        match self {
-            Self::BranchTargetBuffer => true,
-            _ => false,
-        }
+        matches!(self, Self::BranchTargetBuffer)
     }
 
     pub fn is_pattern_history_table(&self) -> bool {
-        match self {
-            Self::PatternHistoryTable => true,
-            _ => false,
-        }
+        matches!(self, Self::PatternHistoryTable)
     }
 
     pub fn expect_boolean(&self) -> Result<()> {

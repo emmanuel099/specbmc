@@ -98,50 +98,32 @@ impl Node {
 
     /// Returns whether this node is a comment.
     pub fn is_comment(&self) -> bool {
-        match self {
-            Self::Comment(..) => true,
-            _ => false,
-        }
+        matches!(self, Self::Comment(..))
     }
 
     /// Returns whether this node is a variable binding.
     pub fn is_let(&self) -> bool {
-        match self {
-            Self::Let { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Let { .. })
     }
 
     /// Returns whether this node is an assertion.
     pub fn is_assert(&self) -> bool {
-        match self {
-            Self::Assert { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Assert { .. })
     }
 
     /// Returns whether this node is an assumption.
     pub fn is_assume(&self) -> bool {
-        match self {
-            Self::Assume { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::Assume { .. })
     }
 
     /// Returns whether this node is a hyper-assertion.
     pub fn is_hyper_assert(&self) -> bool {
-        match self {
-            Self::HyperAssert { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::HyperAssert { .. })
     }
 
     /// Returns whether this node is a hyper-assumption.
     pub fn is_hyper_assume(&self) -> bool {
-        match self {
-            Self::HyperAssume { .. } => true,
-            _ => false,
-        }
+        matches!(self, Self::HyperAssume { .. })
     }
 
     /// Get each `Variable` used by this `Node`.

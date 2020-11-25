@@ -119,7 +119,7 @@ impl Block {
     /// Deletes multiple `Instruction`s by their indices.
     pub fn remove_instructions(&mut self, indices: &[usize]) -> Result<()> {
         let mut indices = indices.to_owned();
-        indices.sort();
+        indices.sort_unstable();
         for index in indices.into_iter().rev() {
             self.remove_instruction(index)?;
         }
@@ -208,7 +208,7 @@ impl Block {
     /// Deletes multiple `PhiNode`s by their indices.
     pub fn remove_phi_nodes(&mut self, indices: &[usize]) -> Result<()> {
         let mut indices = indices.to_owned();
-        indices.sort();
+        indices.sort_unstable();
         for index in indices.into_iter().rev() {
             self.remove_phi_node(index)?;
         }

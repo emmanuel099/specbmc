@@ -223,17 +223,11 @@ impl Expression {
     }
 
     pub fn is_constant(&self) -> bool {
-        match &self.operator {
-            Operator::Constant(_) => true,
-            _ => false,
-        }
+        matches!(&self.operator, Operator::Constant(_))
     }
 
     pub fn is_nondet(&self) -> bool {
-        match &self.operator {
-            Operator::Nondet => true,
-            _ => false,
-        }
+        matches!(&self.operator, Operator::Nondet)
     }
 
     /// Returns a copy of the expression with the composition number set to `composition` for all variables.

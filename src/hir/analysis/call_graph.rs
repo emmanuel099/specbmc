@@ -20,7 +20,7 @@ pub fn call_graph(program: &Program) -> CallGraph {
         let mut call_targets = function_direct_call_targets(func);
 
         // De-duplicate targets to avoid edge insertion conflicts
-        call_targets.sort();
+        call_targets.sort_unstable();
         call_targets.dedup();
 
         for target in call_targets {

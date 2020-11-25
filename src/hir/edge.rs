@@ -205,7 +205,7 @@ impl graph::Edge for Edge {
         let mut label = format!("{}", self.labels);
         if let Some(condition) = &self.condition {
             if !label.is_empty() {
-                label.push_str("\n");
+                label.push('\n');
             }
             label.push_str(&format!("{}", condition));
         }

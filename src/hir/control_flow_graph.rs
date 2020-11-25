@@ -396,10 +396,7 @@ impl ControlFlowGraph {
     /// set, which should be the case for all conformant translators. You can
     /// also append to an empty ControlFlowGraph.
     pub fn append(&mut self, other: &Self) -> Result<()> {
-        let is_empty = match self.graph.num_vertices() {
-            0 => true,
-            _ => false,
-        };
+        let is_empty = matches!(self.graph.num_vertices(), 0);
 
         // Bring in new blocks
         let block_map = self.insert(other)?;

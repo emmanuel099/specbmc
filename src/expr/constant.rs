@@ -51,45 +51,27 @@ impl Constant {
     }
 
     pub fn is_boolean(&self) -> bool {
-        match self {
-            Self::Boolean(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Boolean(_))
     }
 
     pub fn is_integer(&self) -> bool {
-        match self {
-            Self::Integer(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Integer(_))
     }
 
     pub fn is_bit_vector(&self) -> bool {
-        match self {
-            Self::BitVector(..) => true,
-            _ => false,
-        }
+        matches!(self, Self::BitVector(..))
     }
 
     pub fn is_array(&self) -> bool {
-        match self {
-            Self::Array(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Array(_))
     }
 
     pub fn is_cache(&self) -> bool {
-        match self {
-            Self::Cache(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Cache(_))
     }
 
     pub fn is_memory(&self) -> bool {
-        match self {
-            Self::Memory(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Memory(_))
     }
 
     pub fn expect_boolean(&self) -> Result<()> {
@@ -288,7 +270,7 @@ impl TryFrom<&Constant> for u64 {
             Constant::Boolean(true) => Ok(1),
             Constant::Boolean(false) => Ok(0),
             Constant::Integer(v) => Ok(*v),
-            Constant::BitVector(v) => v.value_u64().ok_or_else(|| "failed to convert to u64"),
+            Constant::BitVector(v) => v.value_u64().ok_or("failed to convert to u64"),
             _ => Err("Cannot convert constant to u64"),
         }
     }
