@@ -21,7 +21,7 @@ serde = { version = "1.0.104", features = ["derive"] }
 serde_yaml = "0.8.11"
 console = "0.14.1"
 colored = "2.0.0"
-indicatif = "0.15.0"
+indicatif = "0.16.1"
 nom = "6.0.1"
 derivative = "2.1.1"
 derive_builder = "0.10.2"
