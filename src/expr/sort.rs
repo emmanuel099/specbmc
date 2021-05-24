@@ -89,15 +89,15 @@ impl Sort {
     }
 
     pub fn is_array(&self) -> bool {
-        matches!(self, Self::Array { .. } )
+        matches!(self, Self::Array { .. })
     }
 
     pub fn is_list(&self) -> bool {
-        matches!(self, Self::List { .. } )
+        matches!(self, Self::List { .. })
     }
 
     pub fn is_tuple(&self) -> bool {
-        matches!(self, Self::Tuple { .. } )
+        matches!(self, Self::Tuple { .. })
     }
 
     pub fn is_memory(&self) -> bool {

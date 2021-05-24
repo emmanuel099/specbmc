@@ -131,23 +131,23 @@ impl Operation {
     }
 
     pub fn is_store(&self) -> bool {
-        matches!(self, Self::Store { .. } )
+        matches!(self, Self::Store { .. })
     }
 
     pub fn is_load(&self) -> bool {
-        matches!(self, Self::Load { .. } )
+        matches!(self, Self::Load { .. })
     }
 
     pub fn is_call(&self) -> bool {
-        matches!(self, Self::Call { .. } )
+        matches!(self, Self::Call { .. })
     }
 
     pub fn is_branch(&self) -> bool {
-        matches!(self,  Self::Branch { .. } )
+        matches!(self, Self::Branch { .. })
     }
 
     pub fn is_conditional_branch(&self) -> bool {
-        matches!(self,  Self::ConditionalBranch { .. } )
+        matches!(self, Self::ConditionalBranch { .. })
     }
 
     pub fn is_skip(&self) -> bool {
@@ -159,7 +159,7 @@ impl Operation {
     }
 
     pub fn is_assert(&self) -> bool {
-        matches!(self,  Self::Assert { .. })
+        matches!(self, Self::Assert { .. })
     }
 
     pub fn is_assume(&self) -> bool {
@@ -167,11 +167,11 @@ impl Operation {
     }
 
     pub fn is_observable(&self) -> bool {
-        matches!(self, Self::Observable { .. } )
+        matches!(self, Self::Observable { .. })
     }
 
     pub fn is_indistinguishable(&self) -> bool {
-        matches!(self,  Self::Indistinguishable { .. } )
+        matches!(self, Self::Indistinguishable { .. })
     }
 
     /// Get each `Variable` read by this `Operation`.
