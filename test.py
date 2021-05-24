@@ -10,7 +10,7 @@ from pathlib import Path
 SOLVER = os.getenv('SOLVER', '')
 DEFAULT_ARGS = os.getenv('DEFAULT_ARGS', '--skip-cex')
 SPECBMC_BIN = os.getenv('SPECBMC_BIN', 'target/debug/specbmc')
-TIMEOUT = os.getenv('TIMEOUT', 60)  # seconds
+TIMEOUT = int(os.getenv('TIMEOUT', 60))  # seconds
 
 # specbmc exit codes
 EXIT_CODE_SAFE = 0
