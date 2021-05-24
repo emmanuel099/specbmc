@@ -518,7 +518,8 @@ fn check_program(arguments: &Arguments) -> Result<()> {
     let function_inlining = hir::transformation::FunctionInliningBuilder::default()
         .recursion_limit(env.analysis.recursion_limit)
         .ignored_functions(env.analysis.inline_ignore.clone())
-        .build()?;
+        .build()
+        .unwrap();
     let mut hir_program = function_inlining.inline(&program)?;
 
     if let Some(path) = &arguments.cfg_file {

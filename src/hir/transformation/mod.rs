@@ -107,11 +107,11 @@ pub fn create_transformations(
 ) -> Result<Vec<Box<dyn Transform<InlinedProgram>>>> {
     let mut steps: Vec<Box<dyn Transform<InlinedProgram>>> = Vec::new();
 
-    steps.push(Box::new(loop_unwinding(env)?));
-    steps.push(Box::new(instruction_effects(env)?));
+    steps.push(Box::new(loop_unwinding(env)));
+    steps.push(Box::new(instruction_effects(env)));
 
     if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
-        steps.push(Box::new(transient_execution(env)?));
+        steps.push(Box::new(transient_execution(env)));
     }
 
     let mut observable_variables = HashSet::new();
@@ -133,7 +133,7 @@ pub fn create_transformations(
             steps.push(observations(env, &observable_variables)?);
         }
         environment::Model::ProgramCounter => {
-            steps.push(Box::new(explicit_program_counter(env)?));
+            steps.push(Box::new(explicit_program_counter(env)));
 
             observable_variables.insert(ExplicitProgramCounter::pc_variable());
             observable_variables.insert(ExplicitProgramCounter::address_variable());
@@ -142,13 +142,13 @@ pub fn create_transformations(
         }
     }
 
-    steps.push(Box::new(init_memory(env)?));
+    steps.push(Box::new(init_memory(env)));
 
     if env.setup.init_stack {
         steps.push(Box::new(InitStack::default()));
     }
 
-    steps.push(Box::new(init_global_variables(env, &observable_variables)?));
+    steps.push(Box::new(init_global_variables(env, &observable_variables)));
 
     if env.analysis.check == environment::Check::OnlyTransientExecutionLeaks {
         steps.push(Box::new(NonSpecObsEquivalence::default()));
@@ -169,23 +169,25 @@ pub fn create_transformations(
     Ok(steps)
 }
 
-fn loop_unwinding(env: &environment::Environment) -> Result<LoopUnwinding> {
-    Ok(LoopUnwindingBuilder::default()
+fn loop_unwinding(env: &environment::Environment) -> LoopUnwinding {
+    LoopUnwindingBuilder::default()
         .default_unwinding_bound(env.analysis.unwind)
         .unwinding_bound(env.analysis.unwind_loop.clone())
         .unwinding_guard(env.analysis.unwinding_guard)
-        .build()?)
+        .build()
+        .unwrap()
 }
 
-fn instruction_effects(env: &environment::Environment) -> Result<InstructionEffects> {
-    Ok(InstructionEffectsBuilder::default()
+fn instruction_effects(env: &environment::Environment) -> InstructionEffects {
+    InstructionEffectsBuilder::default()
         .model_cache_effects(env.architecture.cache)
         .model_btb_effects(env.architecture.branch_target_buffer)
         .model_pht_effects(env.architecture.pattern_history_table)
-        .build()?)
+        .build()
+        .unwrap()
 }
 
-fn transient_execution(env: &environment::Environment) -> Result<TransientExecution> {
+fn transient_execution(env: &environment::Environment) -> TransientExecution {
     let intermediate_resolve = match env.analysis.observe {
         environment::Observe::Sequential | environment::Observe::Full => true,
         environment::Observe::Parallel | environment::Observe::Trace => false,
@@ -195,14 +197,15 @@ fn transient_execution(env: &environment::Environment) -> Result<TransientExecut
     ignored_stl_registers.insert(environment::STACK_POINTER.to_owned());
     ignored_stl_registers.insert(environment::BASE_POINTER.to_owned());
 
-    Ok(TransientExecutionBuilder::default()
+    TransientExecutionBuilder::default()
         .spectre_pht(env.analysis.spectre_pht)
         .spectre_stl(env.analysis.spectre_stl)
         .stl_ignored_variables(ignored_stl_registers)
         .predictor_strategy(env.analysis.predictor_strategy)
         .speculation_window(env.architecture.speculation_window)
         .intermediate_resolve(intermediate_resolve)
-        .build()?)
+        .build()
+        .unwrap()
 }
 
 fn observations(
@@ -216,7 +219,8 @@ fn observations(
                 .observe_variable_writes(false)
                 .observe_at_control_flow_joins(false)
                 .observe_at_end_of_program(true)
-                .build()?,
+                .build()
+                .unwrap(),
         )),
         environment::Observe::Parallel | environment::Observe::Full => Ok(Box::new(
             ObservationsBuilder::default()
@@ -224,7 +228,8 @@ fn observations(
                 .observe_variable_writes(true)
                 .observe_at_control_flow_joins(true)
                 .observe_at_end_of_program(true)
-                .build()?,
+                .build()
+                .unwrap(),
         )),
         environment::Observe::Trace => {
             if env.solver == environment::Solver::Yices2 {
@@ -234,7 +239,8 @@ fn observations(
             Ok(Box::new(
                 TraceObservationsBuilder::default()
                     .observable_variables(observable_variables.clone())
-                    .build()?,
+                    .build()
+                    .unwrap(),
             ))
         }
     }
@@ -254,7 +260,8 @@ fn observations_pc(
                 .observe_variable_writes(true)
                 .observe_at_control_flow_joins(false)
                 .observe_at_end_of_program(false)
-                .build()?,
+                .build()
+                .unwrap(),
         )),
         environment::Observe::Trace => {
             if env.solver == environment::Solver::Yices2 {
@@ -264,25 +271,27 @@ fn observations_pc(
             Ok(Box::new(
                 TraceObservationsBuilder::default()
                     .observable_variables(observable_variables.clone())
-                    .build()?,
+                    .build()
+                    .unwrap(),
             ))
         }
     }
 }
 
-fn explicit_program_counter(env: &environment::Environment) -> Result<ExplicitProgramCounter> {
-    Ok(ExplicitProgramCounterBuilder::default()
+fn explicit_program_counter(env: &environment::Environment) -> ExplicitProgramCounter {
+    ExplicitProgramCounterBuilder::default()
         .observe_program_counter(
             env.architecture.branch_target_buffer || env.architecture.pattern_history_table,
         )
         .observe_memory_loads(env.architecture.cache)
-        .build()?)
+        .build()
+        .unwrap()
 }
 
 fn init_global_variables(
     env: &environment::Environment,
     observable_variables: &HashSet<expr::Variable>,
-) -> Result<InitGlobalVariables> {
+) -> InitGlobalVariables {
     let mut low_security_variables = env.policy.registers.low.clone();
     low_security_variables.insert(expr::Predictor::variable().name().to_owned());
     for var in observable_variables {
@@ -304,15 +313,16 @@ fn init_global_variables(
         initial_variable_value.insert(flag.clone(), expr::Boolean::constant(value));
     }
 
-    Ok(InitGlobalVariablesBuilder::default()
+    InitGlobalVariablesBuilder::default()
         .default_variable_security_level(env.policy.registers.default_level)
         .low_security_variables(low_security_variables)
         .high_security_variables(high_security_variables)
         .initial_variable_value(initial_variable_value)
-        .build()?)
+        .build()
+        .unwrap()
 }
 
-fn init_memory(env: &environment::Environment) -> Result<InitMemory> {
+fn init_memory(env: &environment::Environment) -> InitMemory {
     let low_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.low);
     let high_security_memory_addresses = address_ranges_to_addresses(&env.policy.memory.high);
 
@@ -323,12 +333,13 @@ fn init_memory(env: &environment::Environment) -> Result<InitMemory> {
         }
     }
 
-    Ok(InitMemoryBuilder::default()
+    InitMemoryBuilder::default()
         .default_memory_security_level(env.policy.memory.default_level)
         .low_security_memory_addresses(low_security_memory_addresses)
         .high_security_memory_addresses(high_security_memory_addresses)
         .initial_memory_content(initial_memory_content)
-        .build()?)
+        .build()
+        .unwrap()
 }
 
 fn address_ranges_to_addresses(
