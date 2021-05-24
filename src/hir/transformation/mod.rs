@@ -105,10 +105,10 @@ impl<T: Transform<ControlFlowGraph>> Transform<InlinedProgram> for T {
 pub fn create_transformations(
     env: &environment::Environment,
 ) -> Result<Vec<Box<dyn Transform<InlinedProgram>>>> {
-    let mut steps: Vec<Box<dyn Transform<InlinedProgram>>> = Vec::new();
-
-    steps.push(Box::new(loop_unwinding(env)));
-    steps.push(Box::new(instruction_effects(env)));
+    let mut steps: Vec<Box<dyn Transform<InlinedProgram>>> = vec![
+        Box::new(loop_unwinding(env)),
+        Box::new(instruction_effects(env)),
+    ];
 
     if env.analysis.check != environment::Check::OnlyNormalExecutionLeaks {
         steps.push(Box::new(transient_execution(env)));

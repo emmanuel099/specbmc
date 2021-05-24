@@ -85,7 +85,7 @@ impl MemoryValue {
     pub fn store(&mut self, addr: u64, value: u8) {
         let (row, offset) = Self::address_to_row_and_offset(addr);
         let word = self.content.entry(row).or_insert(self.default_word);
-        *word &= !((0xFF as u64) << offset);
+        *word &= !(0xFF_u64 << offset);
         *word |= (value as u64) << offset;
     }
 

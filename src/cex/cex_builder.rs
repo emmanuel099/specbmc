@@ -146,12 +146,9 @@ fn eval_effect(
                 _ => None,
             }
         }
-        hir::Effect::CacheFetch { address, bit_width } => {
-            match address.evaluate(model, composition) {
-                Some(address) => Some(Effect::cache_fetch(address, *bit_width)),
-                _ => None,
-            }
-        }
+        hir::Effect::CacheFetch { address, bit_width } => address
+            .evaluate(model, composition)
+            .map(|address| Effect::cache_fetch(address, *bit_width)),
         hir::Effect::BranchTarget { location, target } => {
             match (
                 location.evaluate(model, composition),
