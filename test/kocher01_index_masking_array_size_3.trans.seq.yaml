@@ -1,0 +1,24 @@
+analysis:
+    spectre_pht: true
+    spectre_stl: false
+    check: only_transient_leaks
+    observe: sequential
+architecture:
+    cache: true
+    btb: false
+    pht: false
+policy:
+    registers:
+        default: low
+    memory:
+        default: high
+        low:
+            - # array1
+              start: 0x100
+              end: 0x119
+setup:
+    registers:
+        array1_size: 0x03 # -> 24 bytes
+        array1: 0x100
+test:
+    expect: unsafe # index masking leaks 0x118-0x120
