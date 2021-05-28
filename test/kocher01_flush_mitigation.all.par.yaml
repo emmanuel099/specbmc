@@ -1,4 +1,4 @@
-solver: cvc4
+solver: z3
 analysis:
     spectre_pht: true
     spectre_stl: false
