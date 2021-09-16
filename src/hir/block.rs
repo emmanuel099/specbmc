@@ -2,8 +2,7 @@ use crate::error::Result;
 use crate::expr::{Expression, Variable};
 use crate::hir::{Instruction, PhiNode};
 use falcon::graph;
-use std::cmp;
-use std::fmt;
+use std::{cmp, collections::HashSet, fmt};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Block {
@@ -339,6 +338,35 @@ impl Block {
             .into_iter()
             .chain(self.variables_written().into_iter())
             .collect()
+    }
+
+    /// Get the all free variables of this `Block`.
+    pub fn free_variables(&self) -> HashSet<&Variable> {
+        let mut free_vars = HashSet::new();
+        let mut defined_vars = HashSet::new();
+
+        self.phi_nodes().iter().for_each(|phi_node| {
+            phi_node.incoming_variables().into_iter().for_each(|var| {
+                free_vars.insert(var);
+            });
+
+            defined_vars.insert(phi_node.out());
+        });
+
+        self.instructions().iter().for_each(|inst| {
+            inst.variables_read()
+                .into_iter()
+                .filter(|var| !defined_vars.contains(var))
+                .for_each(|var| {
+                    free_vars.insert(var);
+                });
+
+            inst.variables_written().into_iter().for_each(|var| {
+                defined_vars.insert(var);
+            });
+        });
+
+        free_vars
     }
 
     /// Get each `Expression` of this `Block`.
