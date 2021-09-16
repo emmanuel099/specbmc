@@ -92,14 +92,14 @@ fn add_self_composition_constraints(
                 mir::Node::HyperAssert { condition } => {
                     let compositions = involved_compositions(condition)?;
                     lir_program.assert(Boolean::imply(
-                        hyper_execution_condition(&block, &compositions)?, // only if executed
+                        hyper_execution_condition(block, &compositions)?, // only if executed
                         condition.clone(),
                     )?)?;
                 }
                 mir::Node::HyperAssume { condition } => {
                     let compositions = involved_compositions(condition)?;
                     lir_program.assume(Boolean::imply(
-                        hyper_execution_condition(&block, &compositions)?, // only if executed
+                        hyper_execution_condition(block, &compositions)?, // only if executed
                         condition.clone(),
                     )?)?;
                 }

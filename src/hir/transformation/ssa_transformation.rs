@@ -290,7 +290,7 @@ impl SSARename for ControlFlowGraph {
             for successor in dominator_tree.successors(node)? {
                 dominator_tree_dfs_pre_order_traverse(
                     cfg,
-                    &dominator_tree,
+                    dominator_tree,
                     successor.index(),
                     versioning,
                 )?;

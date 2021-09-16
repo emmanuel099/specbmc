@@ -37,11 +37,11 @@ impl Optimization for RedundantInstructionElimination {
             // inp = intersection of all predecessor's available instructions
             let mut inp: HashSet<Instruction> = HashSet::new();
             if let Some(predecessor) = cfg.predecessor_indices(block_index)?.first() {
-                let available = available_out.get(&predecessor).unwrap();
+                let available = available_out.get(predecessor).unwrap();
                 inp = available.clone();
             }
             for predecessor in cfg.predecessor_indices(block_index)?.iter().skip(1) {
-                let available = available_out.get(&predecessor).unwrap();
+                let available = available_out.get(predecessor).unwrap();
                 inp = inp.intersection(available).cloned().collect();
             }
 

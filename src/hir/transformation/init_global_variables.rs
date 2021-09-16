@@ -35,7 +35,7 @@ impl Transform<ControlFlowGraph> for InitGlobalVariables {
 
     /// Initialize variables which are live at the entry block and make low-security variables indistinguishable
     fn transform(&self, cfg: &mut ControlFlowGraph) -> Result<()> {
-        let live_variables = analysis::live_variables(&cfg)?;
+        let live_variables = analysis::live_variables(cfg)?;
         let entry_block_index = cfg.entry()?;
         let uninitialized_vars = live_variables.live_at_entry(entry_block_index)?;
 

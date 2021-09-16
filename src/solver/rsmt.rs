@@ -106,7 +106,7 @@ impl AssertionCheck for RSMTSolver {
 
         for node in program.nodes() {
             match node {
-                lir::Node::Comment(text) => solver.comment(&text)?,
+                lir::Node::Comment(text) => solver.comment(text)?,
                 lir::Node::Let { var, expr } => {
                     if !expr.is_nondet() {
                         let assignment = expr::Expression::equal(var.clone().into(), expr.clone())?;
@@ -116,7 +116,7 @@ impl AssertionCheck for RSMTSolver {
                 lir::Node::Assert { condition } => {
                     let name = format!("_assertion{}", assertions.len());
                     let assertion = expr::Variable::new(name, expr::Sort::boolean());
-                    define_variable(&mut solver, &assertion, &condition)?;
+                    define_variable(&mut solver, &assertion, condition)?;
                     assertions.push(assertion.into())
                 }
                 lir::Node::Assume { condition } => solver.assert(&condition)?,

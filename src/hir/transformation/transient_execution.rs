@@ -61,7 +61,7 @@ pub struct TransientExecution {
 }
 
 impl TransientExecution {
-    #[allow(clippy::clippy::type_complexity)]
+    #[allow(clippy::type_complexity)]
     fn build_default_cfg(
         &self,
         cfg: &ControlFlowGraph,
@@ -515,22 +515,15 @@ fn transient_conditional_branch(
                 [edge] => {
                     // There is only one successor which is only possible because of loop unwinding.
                     // In this case we add an assumption that the condition of the edge holds.
+                    let inverted_condition = Boolean::not(edge.condition().unwrap().clone())?;
+                    cfg.block_mut(speculate_index)?
+                        .assume(inverted_condition.clone())?
+                        .labels_mut()
+                        .pseudo();
+                    let pred_edge =
+                        cfg.conditional_edge(speculate_index, edge.tail(), inverted_condition)?;
                     if edge.labels().is_taken() {
-                        let taken = Boolean::not(edge.condition().unwrap().clone())?;
-                        cfg.block_mut(speculate_index)?
-                            .assume(taken.clone())?
-                            .labels_mut()
-                            .pseudo();
-                        cfg.conditional_edge(speculate_index, edge.tail(), taken)?
-                            .labels_mut()
-                            .taken();
-                    } else {
-                        let not_taken = Boolean::not(edge.condition().unwrap().clone())?;
-                        cfg.block_mut(speculate_index)?
-                            .assume(not_taken.clone())?
-                            .labels_mut()
-                            .pseudo();
-                        cfg.conditional_edge(speculate_index, edge.tail(), not_taken)?;
+                        pred_edge.labels_mut().taken();
                     }
                 }
                 [edge1, edge2] => {

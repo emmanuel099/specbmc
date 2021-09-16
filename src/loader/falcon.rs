@@ -314,7 +314,7 @@ fn translate_operation<'a>(
                     block.assign(variable, expr)
                 }
                 il::Operation::Branch { target } => {
-                    let target = translate_expr(&target)?;
+                    let target = translate_expr(target)?;
                     block.conditional_branch(condition, target)
                 }
                 _ => unimplemented!(

@@ -17,17 +17,15 @@ impl TraceObservations {
                 .iter()
                 .enumerate()
                 .filter_map(|(index, inst)| {
-                    let vars: Vec<Variable> = inst
+                    let writes_to_observable_variable = inst
                         .variables_written()
                         .into_iter()
-                        .filter(|var| self.observable_variables.contains(var))
-                        .cloned()
-                        .collect();
+                        .any(|var| self.observable_variables.contains(var));
 
-                    if vars.is_empty() {
-                        None
-                    } else {
+                    if writes_to_observable_variable {
                         Some(index)
+                    } else {
+                        None
                     }
                 })
                 .collect();
