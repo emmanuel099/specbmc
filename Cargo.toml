@@ -15,7 +15,7 @@ num-bigint = "0.4"
 num-traits = "0.2.1"
 falcon = { git = "https://github.com/emmanuel099/falcon" }
 muasm_parser = { git = "https://github.com/emmanuel099/muasm-parser" }
-rsmt2 = { git = "https://github.com/emmanuel099/rsmt2.git" }
+rsmt2 = "0.12.0"
 bit-vec = "0.6.1"
 serde = { version = "1.0.104", features = ["derive"] }
 serde_yaml = "0.8.11"
