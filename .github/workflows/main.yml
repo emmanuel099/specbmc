@@ -14,10 +14,9 @@ jobs:
 
       - name: Install capstone 4
         run: |
-          echo 'deb http://ftp.de.debian.org/debian bullseye main' | sudo tee -a /etc/apt/sources.list &&
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 04EE7237B7D453EC &&
+          echo 'deb http://mirrors.kernel.org/ubuntu hirsute main universe' | sudo tee -a /etc/apt/sources.list &&
           sudo apt update &&
-          sudo apt install -t bullseye -y libcapstone-dev
+          sudo apt install -t hirsute -y libcapstone-dev
 
       - name: Build
         run: cargo build --verbose
