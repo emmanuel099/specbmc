@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
 
@@ -26,7 +26,7 @@ jobs:
         run: cargo test --verbose
 
       - name: Run clippy
-        run: cargo clippy --all -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: Install Yices
         env:
