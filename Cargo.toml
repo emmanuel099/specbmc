@@ -9,20 +9,20 @@ repository = "https://github.com/emmanuel099/specbmc"
 readme = "README.md"
 
 [dependencies]
-clap = "2.33.0"
+clap = "2.33"
 error-chain = "0.12"
 num-bigint = "0.4"
-num-traits = "0.2.1"
+num-traits = "0.2"
 falcon = { git = "https://github.com/emmanuel099/falcon" }
 muasm_parser = { git = "https://github.com/emmanuel099/muasm-parser" }
-rsmt2 = "0.12.0"
-bit-vec = "0.6.1"
-serde = { version = "1.0.104", features = ["derive"] }
-serde_yaml = "0.8.11"
-console = "0.14.1"
-colored = "2.0.0"
-indicatif = "0.16.1"
-nom = "7.0.0"
-derivative = "2.1.1"
-derive_builder = "0.10.2"
-bitflags = "1.2.1"
+rsmt2 = "0.12"
+bit-vec = "0.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.8"
+console = "0.15"
+colored = "2.0"
+indicatif = "0.16.2"
+nom = "7.0"
+derivative = "2.2"
+derive_builder = "0.10"
+bitflags = "1.3"
