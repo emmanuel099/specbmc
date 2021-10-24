@@ -36,10 +36,10 @@ jobs:
           sudo mv yices /usr/bin/
 
       - name: Install CVC4
-        run: sudo apt install -y cvc4
+        run: sudo apt install -t hirsute -y cvc4
 
       - name: Install Z3
-        run: sudo apt install -y z3
+        run: sudo apt install -t hirsute -y z3
 
       - name: Run system tests
         run: TIMEOUT=120 python3 test.py
