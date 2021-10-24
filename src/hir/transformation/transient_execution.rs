@@ -4,7 +4,6 @@ use crate::expr::{BitVector, Boolean, Expression, Predictor, Sort, Variable};
 use crate::hir::{Block, ControlFlowGraph, Edge, Operation, RemovedEdgeGuard};
 use crate::ir::Transform;
 use std::collections::{BTreeMap, HashSet};
-use std::convert::TryInto;
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Builder)]
 struct InstructionRef {

@@ -6,7 +6,6 @@
 //! Please note that some operators aren't yet implemented.
 
 use crate::expr::{BitVector, BitVectorValue, Boolean, Expression, Operator};
-use std::convert::TryFrom;
 
 pub trait Fold {
     /// Fold `Self`

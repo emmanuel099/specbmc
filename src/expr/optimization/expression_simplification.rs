@@ -5,7 +5,6 @@
 //! Please note that some operators aren't yet implemented.
 
 use crate::expr::{BitVector, Boolean, Constant, Expression, Integer, Operator};
-use std::convert::TryFrom;
 
 pub trait Simplify {
     /// Simplify `Self`

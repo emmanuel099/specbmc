@@ -7,7 +7,6 @@ use falcon::il;
 use falcon::loader::{Elf, Loader};
 use falcon::translator;
 use std::collections::{BTreeMap, HashSet};
-use std::convert::TryInto;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 

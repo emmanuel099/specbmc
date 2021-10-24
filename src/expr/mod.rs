@@ -1,5 +1,4 @@
 use crate::error::Result;
-use std::convert::TryFrom;
 use std::fmt;
 
 mod arch;

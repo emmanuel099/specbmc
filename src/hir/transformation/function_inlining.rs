@@ -1,7 +1,6 @@
 use crate::error::Result;
 use crate::hir::{Block, ControlFlowGraph, InlinedProgram, Operation, Program};
 use std::collections::{BTreeMap, HashSet};
-use std::convert::TryInto;
 
 #[derive(Default, Builder, Debug)]
 pub struct FunctionInlining {

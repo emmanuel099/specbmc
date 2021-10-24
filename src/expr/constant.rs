@@ -1,8 +1,6 @@
 use crate::error::Result;
 use crate::expr::{ArrayValue, BitVectorValue, CacheValue, MemoryValue};
 use num_bigint::BigUint;
-use std::convert::TryFrom;
-use std::convert::TryInto;
 use std::fmt;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]

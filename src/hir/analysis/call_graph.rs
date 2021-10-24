@@ -1,6 +1,5 @@
 use crate::hir::{Block, Function, Instruction, Operation, Program};
 use falcon::graph;
-use std::convert::TryInto;
 
 /// Computes the call graph of the program.
 /// Indirect calls are omitted.

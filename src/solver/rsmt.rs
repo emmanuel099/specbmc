@@ -8,7 +8,6 @@ use rsmt2::parse::*;
 use rsmt2::print::{Expr2Smt, Sort2Smt, Sym2Smt};
 use rsmt2::{Logic, SmtConf, SmtRes, Solver};
 use std::cell::RefCell;
-use std::convert::TryInto;
 use std::fs::File;
 use std::path::Path;
 use std::rc::Rc;
