@@ -5,13 +5,33 @@
 
 Bounded (software) model checker for speculative non-interference.
 
-`specbmc` automatically detects Spectre-PHT and Spectre-STL vulnerabilites in binary programs.
-
-![specbmc](doc/cli.gif)
+`specbmc` automatically detects Spectre-PHT and Spectre-STL vulnerabilites in binary programs
 
 Please note that `specbmc` has been implemented as part of my Master's Thesis and is therefore not considered "production ready".
 
 This work has been inspired by [Spectector](https://spectector.github.io/).
+
+## Example
+
+We check the following small binary program:
+
+```
+    cond <- x < array1_size
+    beqz cond, EndIf
+Then:
+    load v, array1 + x
+    load tmp, array2 + v << 8
+EndIf:
+    skip
+```
+
+`specbmc` detects a Spectre-PHT vulnerability ...
+
+![specbmc](doc/cli.gif)
+
+... and automatically generates a counterexample showing the leak at the second memory load (`0xF8000000000050FC:64` vs. `0xFC000000000030FC:64`).
+
+![cex](doc/cex.svg)
 
 ## Usage
 
