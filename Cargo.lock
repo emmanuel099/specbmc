@@ -488,7 +488,7 @@ dependencies = [
 [[package]]
 name = "muasm_parser"
 version = "0.1.0"
-source = "git+https://github.com/emmanuel099/muasm-parser#55eb6659264df277aa2ca5f7911f72253e9419e9"
+source = "git+https://github.com/emmanuel099/muasm-parser#16236b4066c9aa477e7113ab85b5dff774889531"
 dependencies = [
  "enum-display-derive",
  "nom 7.0.0",
