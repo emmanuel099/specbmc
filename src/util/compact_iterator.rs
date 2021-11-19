@@ -51,7 +51,7 @@ where
         };
 
         let mut max_item = min_item.clone();
-        while let Some(item) = self.it.next() {
+        for item in &mut self.it {
             if adjacent(&max_item, &item) {
                 max_item = item;
             } else {
