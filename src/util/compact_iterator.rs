@@ -4,7 +4,7 @@ pub trait CompactIterator: Iterator {
     /// Combines adjacent items into a single range.
     ///
     /// This iterator currently assumes that the items are already sorted in ascending order.
-    fn compact(self, adjacent: fn((Self::Item, Self::Item)) -> bool) -> Compact<Self>
+    fn compact(self, adjacent: fn(&Self::Item, &Self::Item) -> bool) -> Compact<Self>
     where
         Self: Sized,
         Self::Item: PartialOrd,
@@ -21,7 +21,7 @@ where
     T::Item: PartialOrd,
 {
     it: Peekable<T>,
-    adjacent: fn((T::Item, T::Item)) -> bool,
+    adjacent: fn(&T::Item, &T::Item) -> bool,
 }
 
 impl<T> Compact<T>
@@ -29,7 +29,7 @@ where
     T: Iterator,
     T::Item: PartialOrd,
 {
-    pub fn new(it: T, adjacent: fn((T::Item, T::Item)) -> bool) -> Self {
+    pub fn new(it: T, adjacent: fn(&T::Item, &T::Item) -> bool) -> Self {
         Self {
             it: it.peekable(),
             adjacent,
@@ -54,9 +54,8 @@ where
 
         let mut max_item = min_item.clone();
         while let Some(item) = self.it.peek() {
-            if adjacent((max_item.clone(), item.clone())) {
-                max_item = item.clone();
-                self.it.next();
+            if adjacent(&max_item, &item) {
+                max_item = self.it.next().unwrap();
             } else {
                 break;
             }
@@ -77,7 +76,7 @@ mod tests {
 
         // WHEN
         let compacted_items: Vec<(usize, usize)> =
-            items.into_iter().compact(|(x, y)| x + 1 == y).collect();
+            items.into_iter().compact(|&x, &y| x + 1 == y).collect();
 
         // THEN
         assert_eq!(compacted_items, vec![(1, 1), (3, 4), (6, 8), (10, 10)]);

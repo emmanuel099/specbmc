@@ -120,7 +120,7 @@ impl fmt::Display for CacheValue {
         }
         write!(f, "{{")?;
         let mut is_first = true;
-        for (addr_start, addr_end) in self.addresses.iter().compact(|(a, b)| a + 1 == *b) {
+        for (addr_start, addr_end) in self.addresses.iter().compact(|&a, &b| a + 1 == *b) {
             if !is_first {
                 write!(f, ", ")?;
             }
