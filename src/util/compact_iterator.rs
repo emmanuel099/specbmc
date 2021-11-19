@@ -5,7 +5,6 @@ pub trait CompactIterator: Iterator {
     fn compact(self, adjacent: fn(&Self::Item, &Self::Item) -> bool) -> Compact<Self>
     where
         Self: Sized,
-        Self::Item: PartialOrd,
     {
         Compact::new(self, adjacent)
     }
@@ -16,7 +15,6 @@ impl<T: Sized> CompactIterator for T where T: Iterator {}
 pub struct Compact<T>
 where
     T: Iterator,
-    T::Item: PartialOrd,
 {
     it: T,
     adjacent: fn(&T::Item, &T::Item) -> bool,
@@ -26,7 +24,6 @@ where
 impl<T> Compact<T>
 where
     T: Iterator,
-    T::Item: PartialOrd,
 {
     pub fn new(mut it: T, adjacent: fn(&T::Item, &T::Item) -> bool) -> Self {
         let next_item = it.next();
@@ -41,7 +38,7 @@ where
 impl<T> Iterator for Compact<T>
 where
     T: Iterator,
-    T::Item: PartialOrd + Clone,
+    T::Item: Clone,
 {
     type Item = (T::Item, T::Item);
 
