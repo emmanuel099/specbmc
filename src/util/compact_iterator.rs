@@ -1,9 +1,7 @@
-use std::iter::Peekable;
-
 pub trait CompactIterator: Iterator {
     /// Combines adjacent items into a single range.
     ///
-    /// This iterator currently assumes that the items are already sorted in ascending order.
+    /// This iterator assumes that the items are already sorted in ascending order.
     fn compact(self, adjacent: fn(&Self::Item, &Self::Item) -> bool) -> Compact<Self>
     where
         Self: Sized,
@@ -20,8 +18,9 @@ where
     T: Iterator,
     T::Item: PartialOrd,
 {
-    it: Peekable<T>,
+    it: T,
     adjacent: fn(&T::Item, &T::Item) -> bool,
+    next_item: Option<T::Item>,
 }
 
 impl<T> Compact<T>
@@ -29,10 +28,12 @@ where
     T: Iterator,
     T::Item: PartialOrd,
 {
-    pub fn new(it: T, adjacent: fn(&T::Item, &T::Item) -> bool) -> Self {
+    pub fn new(mut it: T, adjacent: fn(&T::Item, &T::Item) -> bool) -> Self {
+        let next_item = it.next();
         Self {
-            it: it.peekable(),
+            it,
             adjacent,
+            next_item,
         }
     }
 }
@@ -47,16 +48,17 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         let adjacent = self.adjacent;
 
-        let min_item = match self.it.next() {
+        let min_item = match self.next_item.take() {
             Some(item) => item,
             None => return None,
         };
 
         let mut max_item = min_item.clone();
-        while let Some(item) = self.it.peek() {
+        while let Some(item) = self.it.next() {
             if adjacent(&max_item, &item) {
-                max_item = self.it.next().unwrap();
+                max_item = item;
             } else {
+                self.next_item = Some(item);
                 break;
             }
         }
