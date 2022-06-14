@@ -9,7 +9,7 @@ repository = "https://github.com/emmanuel099/specbmc"
 readme = "README.md"
 
 [dependencies]
-clap = "2.33"
+clap = "3.2"
 error-chain = "0.12"
 num-bigint = "0.4"
 num-traits = "0.2"
