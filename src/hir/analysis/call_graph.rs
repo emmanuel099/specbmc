@@ -96,8 +96,7 @@ fn function_direct_call_targets(function: &Function) -> Vec<u64> {
         .control_flow_graph()
         .blocks()
         .into_iter()
-        .map(block_direct_call_targets)
-        .flatten()
+        .flat_map(block_direct_call_targets)
         .collect()
 }
 

@@ -2,6 +2,7 @@ use crate::expr::{Expression, Variable};
 use bitflags::bitflags;
 use falcon::graph;
 use std::fmt;
+use std::fmt::Write as _;
 
 bitflags! {
     #[derive(Default)]
@@ -207,7 +208,7 @@ impl graph::Edge for Edge {
             if !label.is_empty() {
                 label.push('\n');
             }
-            label.push_str(&format!("{}", condition));
+            let _ = write!(label, "{}", condition);
         }
         label
     }

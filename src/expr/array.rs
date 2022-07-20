@@ -70,9 +70,7 @@ impl ArrayValue {
     }
 
     pub fn select(&self, index: &Constant) -> Option<&Constant> {
-        self.entries
-            .get(index)
-            .or_else(|| self.default_value.as_ref())
+        self.entries.get(index).or(self.default_value.as_ref())
     }
 
     pub fn store(&mut self, index: Constant, value: Constant) {

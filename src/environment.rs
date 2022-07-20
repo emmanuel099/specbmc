@@ -279,7 +279,7 @@ impl Default for SecurityPolicy {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Setup {
     #[serde(default = "disabled")]
     pub init_stack: bool,
@@ -289,17 +289,6 @@ pub struct Setup {
     pub flag_content: HashMap<String, bool>,
     #[serde(rename = "memory", default)]
     pub memory_content: HashMap<u64, Vec<u8>>,
-}
-
-impl Default for Setup {
-    fn default() -> Self {
-        Self {
-            init_stack: false,
-            register_content: HashMap::default(),
-            flag_content: HashMap::default(),
-            memory_content: HashMap::default(),
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

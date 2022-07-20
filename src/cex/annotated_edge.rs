@@ -3,7 +3,7 @@ use crate::hir::Edge;
 use falcon::graph;
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Annotation {
     /// Is this edge executed?
     executed: bool,
@@ -18,12 +18,6 @@ impl Annotation {
     /// Returns whether this `Edge` is executed.
     pub fn executed(&self) -> bool {
         self.executed
-    }
-}
-
-impl Default for Annotation {
-    fn default() -> Self {
-        Self { executed: false }
     }
 }
 

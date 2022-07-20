@@ -2,7 +2,6 @@ use crate::error::Result;
 use crate::expr;
 use crate::hir;
 use crate::loader;
-use crate::util::AbsoluteDifference;
 use falcon::il;
 use falcon::loader::{Elf, Loader};
 use falcon::translator;

@@ -4,7 +4,7 @@ use crate::hir::{Instruction, Operation};
 use std::collections::HashMap;
 use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Annotation {
     /// Assignments produced by the underlying instruction.
     /// The target is of type Expression instead of Variable to allow e.g. `mem(50) := 5`
@@ -38,16 +38,6 @@ impl Annotation {
 
     pub fn configuration(&self) -> &HashMap<Variable, Constant> {
         &self.configuration
-    }
-}
-
-impl Default for Annotation {
-    fn default() -> Self {
-        Self {
-            assignments: Vec::new(),
-            effects: Vec::new(),
-            configuration: HashMap::new(),
-        }
     }
 }
 
