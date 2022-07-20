@@ -27,14 +27,6 @@ jobs:
       - name: Run clippy
         run: cargo clippy -- -D warnings
 
-      - name: Install Yices
-        env:
-          YICES2_ARTIFACT_URL: ${{ secrets.YICES2_ARTIFACT_URL }}
-        run: |
-          curl -L -o yices "$YICES2_ARTIFACT_URL" &&
-          chmod +x yices &&
-          sudo mv yices /usr/bin/
-
       - name: Install CVC4
         run: sudo apt install -t hirsute -y cvc4
 
