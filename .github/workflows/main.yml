@@ -31,9 +31,9 @@ jobs:
         env:
           YICES2_ARTIFACT_URL: ${{ secrets.YICES2_ARTIFACT_URL }}
         run: |
-          curl -L -o yices "$YICES2_ARTIFACT_URL" &&
-          chmod +x yices &&
-          sudo mv yices /usr/bin/
+          sudo add-apt-repository ppa:sri-csl/formal-methods
+          sudo apt-get update
+          sudo apt-get install yices2
 
       - name: Install CVC4
         run: sudo apt install -t hirsute -y cvc4
