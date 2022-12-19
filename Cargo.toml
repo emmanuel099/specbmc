@@ -18,7 +18,7 @@ muasm_parser = { git = "https://github.com/emmanuel099/muasm-parser" }
 rsmt2 = "0.12"
 bit-vec = "0.6"
 serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8"
+serde_yaml = "0.9"
 console = "0.15"
 colored = "2.0"
 indicatif = "0.16.2"
